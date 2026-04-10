@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Command Center</title>
+<link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
+<link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060b14; --card: #0d1420; --card2: #131c2e; --card3: #192438;
+  --border: #1a2540; --border2: #243050;
+  --text: #dfe6f0; --text2: #c1ccdd; --muted: #5a6e8a;
+  --accent: #4e8cff; --accent2: #2dd4bf; --accent-dim: #4e8cff30;
+  --green: #34d399; --green-dim: #34d39920; --red: #f87171; --red-dim: #f8717120;
+  --yellow: #fbbf24; --yellow-dim: #fbbf2420; --purple: #a78bfa; --purple-dim: #a78bfa20;
+  --gold: #fcd34d;
+  --mono: 'JetBrains Mono', monospace; --sans: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; min-height: 100vh; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Animations ── */
+@keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+@keyframes slideDown { from { max-height:0; opacity:0; } to { max-height:800px; opacity:1; } }
+@keyframes slideUp { from { max-height:800px; opacity:1; } to { max-height:0; opacity:0; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.fade-up { animation: fadeUp .35s ease both; }
+
+/* ── Layout ── */
+.container { max-width: 1480px; margin: 0 auto; padding: 0 28px; }
+
+/* ── Header ── */
+.header { background: linear-gradient(180deg, #0a1020 0%, var(--bg) 100%); border-bottom: 1px solid var(--border); padding: 22px 0; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px); }
+.header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+.logo-block { display: flex; align-items: center; gap: 14px; }
+.logo-icon { width: 42px; height: 42px; border-radius: 11px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.logo-title { font-size: 22px; font-weight: 700; letter-spacing: -0.6px; }
+.logo-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 7px 16px; text-align: right; }
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.stat-val { font-size: 18px; font-weight: 700; font-family: var(--mono); color: var(--accent2); }
+.btn { font-family: var(--sans); font-weight: 600; font-size: 13px; border: none; border-radius: 9px; padding: 9px 18px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #2563eb); color: #fff; }
+.btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.btn-outline { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-rss { background: var(--card); color: #fb923c; border: 1px solid #fb923c40; }
+.btn-rss:hover { background: #fb923c; color: #fff; }
+.btn-rss.active { background: #fb923c; color: #fff; }
+
+/* ── Tabs ── */
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: 20px 0 0; overflow-x: auto; }
+.tab { font-family: var(--sans); font-size: 13px; font-weight: 600; background: transparent; border: none; color: var(--muted); padding: 11px 20px; cursor: pointer; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 7px; white-space: nowrap; transition: all .15s; }
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); background: var(--card); border-radius: 8px 8px 0 0; }
+.tab-count { background: var(--border); color: var(--muted); border-radius: 10px; padding: 1px 8px; font-size: 11px; }
+.tab.active .tab-count { background: var(--accent); color: #fff; }
+
+/* ── Tab Content ── */
+.tab-content { display: none; padding: 20px 0; }
+.tab-content.active { display: block; }
+
+/* ── Search ── */
+.search-bar { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; color: var(--text); font-size: 14px; font-family: var(--sans); outline: none; width: 100%; max-width: 480px; transition: border-color .15s; }
+.search-bar:focus { border-color: var(--accent); }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; margin-top: 14px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: 13px; }
+thead th { padding: 9px 12px; text-align: left; font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; position: relative; }
+thead th:hover { color: var(--text2); }
+thead th .sort-arrow { margin-left: 4px; font-size: 10px; opacity: .4; }
+thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+tbody tr.data-row { background: var(--card); transition: background .12s; cursor: pointer; }
+tbody tr.data-row:hover { background: var(--card2); }
+tbody td { padding: 10px 12px; white-space: nowrap; }
+tbody td:first-child { border-radius: 8px 0 0 8px; }
+tbody td:last-child { border-radius: 0 8px 8px 0; }
+.mono { font-family: var(--mono); }
+.fw7 { font-weight: 700; }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.yellow { color: var(--yellow); }
+.muted { color: var(--muted); }
+.accent { color: var(--accent); }
+.accent2 { color: var(--accent2); }
+
+/* ── Expandable Detail Panel ── */
+.detail-row { display: none; }
+.detail-row.open { display: table-row; }
+.detail-row td { padding: 0; background: var(--card2); border-radius: 0 0 8px 8px; }
+.detail-panel { overflow: hidden; max-height: 0; opacity: 0; transition: max-height .4s ease, opacity .3s ease, padding .3s ease; padding: 0 20px; }
+.detail-row.open .detail-panel { max-height: 900px; opacity: 1; padding: 20px; }
+
+/* ── Badges ── */
+.badge { display: inline-block; border-radius: 6px; padding: 2px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-green { background: var(--green-dim); color: var(--green); }
+.badge-red { background: var(--red-dim); color: var(--red); }
+.badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+.badge-purple { background: var(--purple-dim); color: var(--purple); }
+.badge-accent { background: var(--accent-dim); color: var(--accent); }
+.badge-gold { background: #fcd34d20; color: var(--gold); }
+
+/* ── Shares Input ── */
+.shares-display { cursor: pointer; background: var(--border); border-radius: 4px; padding: 2px 10px; font-family: var(--mono); font-size: 12px; display: inline-block; min-width: 44px; text-align: center; transition: all .12s; }
+.shares-display:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.shares-display.has-val { background: var(--accent-dim); color: var(--accent); }
+.shares-input { width: 64px; background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; padding: 3px 6px; color: var(--text); font-family: var(--mono); font-size: 12px; text-align: center; outline: none; }
+
+/* ── Summary Cards ── */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px 18px; }
+.summary-card-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.summary-card-val { font-size: 24px; font-weight: 700; font-family: var(--mono); }
+
+/* ── Deep Dive Grid ── */
+.dd-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; font-size: 12px; }
+.dd-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.dd-label { color: var(--muted); }
+.dd-val { font-family: var(--mono); font-weight: 600; }
+.dd-banner { margin-top: 14px; background: #fcd34d12; border: 1px solid #fcd34d25; border-radius: 8px; padding: 8px 14px; font-size: 11px; color: var(--gold); }
+
+/* ── News Detail ── */
+.news-detail { padding: 16px 20px; line-height: 1.65; }
+.news-detail p { color: var(--text2); font-size: 13px; margin-bottom: 10px; }
+.news-detail a { color: var(--accent); text-decoration: none; font-weight: 600; font-size: 13px; }
+.news-detail a:hover { text-decoration: underline; }
+
+/* ── RSS Panel ── */
+.rss-panel { background: var(--card); border: 1px solid #fb923c30; border-radius: 14px; padding: 22px; margin-bottom: 20px; animation: fadeUp .3s ease both; }
+.rss-panel pre { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-size: 11px; font-family: var(--mono); color: var(--accent2); overflow: auto; max-height: 260px; line-height: 1.6; }
+.rss-info { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+.rss-info code { background: var(--card2); padding: 2px 7px; border-radius: 4px; font-family: var(--mono); color: var(--accent); font-size: 12px; }
+
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 440px; max-width: 92vw; animation: fadeUp .25s ease both; }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 14px; }
+.modal input[type=text] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 15px; font-family: var(--sans); outline: none; margin-bottom: 12px; }
+.modal input[type=text]:focus { border-color: var(--accent); }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 200px; overflow-y: auto; }
+.chip { display: inline-flex; align-items: center; gap: 5px; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-family: var(--mono); }
+.chip .x { cursor: pointer; width: 16px; height: 16px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; background: var(--border); transition: all .12s; }
+.chip .x:hover { background: var(--red); color: #fff; }
+
+/* ── Remove Btn ── */
+.remove-btn { background: var(--border); color: var(--muted); border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-family: var(--sans); transition: all .12s; }
+.remove-btn:hover { background: var(--red); color: #fff; }
+
+/* ── Footer ── */
+.footer { text-align: center; padding: 28px 0 14px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 30px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .container { padding: 0 14px; }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .dd-grid { grid-template-columns: 1fr 1fr; }
+  .summary-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header-inner">
+    <div class="logo-block">
+      <div class="logo-icon">📊</div>
+      <div>
+        <div class="logo-title">Portfolio Command Center</div>
+        <div class="logo-sub" id="headerSub">23 tickers · Loading...</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="stat-box" id="portfolioValueBox" style="display:none">
+        <div class="stat-label">Portfolio Value</div>
+        <div class="stat-val" id="portfolioValue">$0</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Ticker</button>
+      <button class="btn btn-rss" id="rssBtn" onclick="toggleRSS()">📡 RSS Feed</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <!-- RSS Panel -->
+  <div class="rss-panel" id="rssPanel" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📡</span><strong style="font-size:15px">RSS Feed</strong></div>
+      <button class="btn btn-outline" onclick="copyRSS()" id="copyRssBtn">Copy RSS XML</button>
+    </div>
+    <div class="rss-info">
+      <strong>How to subscribe:</strong><br>
+      • <strong>Auto-discovery:</strong> Most RSS readers will auto-detect the feed when you paste the site URL.<br>
+      • <strong>Direct feed URL:</strong> Point your reader to <code id="rssFeedUrl"></code> or <code id="rssAltUrl"></code><br>
+      • <strong>Link tag:</strong> The HTML includes <code>&lt;link rel="alternate" type="application/rss+xml"&gt;</code> for auto-discovery.<br>
+      • When you deploy to GitHub Pages, create both <code>feed.xml</code> and <code>rss.xml</code> in your repo root (contents below).<br>
+      • Any time news updates, regenerate those files and push — subscribers get updates automatically.
+    </div>
+    <pre id="rssContent"></pre>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="news" onclick="switchTab('news')">📰 News Feed <span class="tab-count" id="newsCount">0</span></button>
+    <button class="tab" data-tab="dividends" onclick="switchTab('dividends')">💰 Dividends <span class="tab-count" id="divCount">0</span></button>
+    <button class="tab" data-tab="growth" onclick="switchTab('growth')">📈 Growth Stocks <span class="tab-count" id="growthCount">0</span></button>
+    <button class="tab" data-tab="all" onclick="switchTab('all')">🗂️ All Holdings</button>
+  </div>
+
+  <!-- News Tab -->
+  <div class="tab-content active" id="content-news">
+    <input class="search-bar" type="text" placeholder="Search news by ticker, title, or source..." id="newsSearch" oninput="renderNews()">
+    <div class="table-wrap">
+      <table id="newsTable">
+        <thead><tr>
+          <th data-col="ticker" onclick="sortTable('newsTable','ticker')">Ticker <span class="sort-arrow">▼</span></th>
+          <th data-col="title" onclick="sortTable('newsTable','title')">Headline <span class="sort-arrow">▼</span></th>
+          <th data-col="source" onclick="sortTable('newsTable','source')">Source <span class="sort-arrow">▼</span></th>
+          <th data-col="date" onclick="sortTable('newsTable','date')" class="sorted">Date <span class="sort-arrow">▼</span></th>
+        </tr></thead>
+        <tbody id="newsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Dividends Tab -->
+  <div class="tab-content" id="content-dividends">
+    <div class="summary-grid" id="divSummary"></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Click any row to expand the full dividend deep-dive. Click share counts to edit.</p>
+    <div class="table-wrap">
+      <table id="divTable">
+        <thead><tr>
+          <th data-col="ticker" onclick="sortTable('divTable','ticker')">Ticker <span class="sort-arrow">▼</span></th>
+          <th data-col="price" onclick="sortTable('divTable','price')">Price <span class="sort-arrow">▼</span></th>
+          <th data-col="yield" onclick="sortTable('divTable','yield')">Yield <span class="sort-arrow">▼</span></th>
+          <th data-col="annualDiv" onclick="sortTable('divTable','annualDiv')">Annual Div <span class="sort-arrow">▼</span></th>
+          <th data-col="nextPayout" onclick="sortTable('divTable','nextPayout')">Next Payout <span class="sort-arrow">▼</span></th>
+          <th data-col="payDate" onclick="sortTable('divTable','payDate')">Pay Date <span class="sort-arrow">▼</span></th>
+          <th data-col="rating" onclick="sortTable('divTable','rating')">Rating <span class="sort-arrow">▼</span></th>
+          <th data-col="shares" onclick="sortTable('divTable','shares')">Shares <span class="sort-arrow">▼</span></th>
+          <th data-col="income" onclick="sortTable('divTable','income')">Income/Yr <span class="sort-arrow">▼</span></th>
+        </tr></thead>
+        <tbody id="divBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Growth Tab -->
+  <div class="tab-content" id="content-growth">
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Non-dividend-paying growth stocks. Click share counts to set holdings. Click rows to see latest news.</p>
+    <div class="table-wrap">
+      <table id="growthTable">
+        <thead><tr>
+          <th data-col="ticker" onclick="sortTable('growthTable','ticker')">Ticker <span class="sort-arrow">▼</span></th>
+          <th data-col="price" onclick="sortTable('growthTable','price')">Price <span class="sort-arrow">▼</span></th>
+          <th data-col="sector" onclick="sortTable('growthTable','sector')">Sector <span class="sort-arrow">▼</span></th>
+          <th data-col="shares" onclick="sortTable('growthTable','shares')">Shares <span class="sort-arrow">▼</span></th>
+          <th data-col="value" onclick="sortTable('growthTable','value')">Value <span class="sort-arrow">▼</span></th>
+          <th>Action</th>
+        </tr></thead>
+        <tbody id="growthBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- All Holdings Tab -->
+  <div class="tab-content" id="content-all">
+    <div class="table-wrap">
+      <table id="allTable">
+        <thead><tr>
+          <th data-col="ticker" onclick="sortTable('allTable','ticker')">Ticker <span class="sort-arrow">▼</span></th>
+          <th data-col="price" onclick="sortTable('allTable','price')">Price <span class="sort-arrow">▼</span></th>
+          <th data-col="sector" onclick="sortTable('allTable','sector')">Sector <span class="sort-arrow">▼</span></th>
+          <th data-col="dividend" onclick="sortTable('allTable','dividend')">Dividend <span class="sort-arrow">▼</span></th>
+          <th data-col="yield" onclick="sortTable('allTable','yield')">Yield <span class="sort-arrow">▼</span></th>
+          <th data-col="shares" onclick="sortTable('allTable','shares')">Shares <span class="sort-arrow">▼</span></th>
+          <th data-col="value" onclick="sortTable('allTable','value')">Value <span class="sort-arrow">▼</span></th>
+          <th data-col="income" onclick="sortTable('allTable','income')">Income/Yr <span class="sort-arrow">▼</span></th>
+          <th data-col="type" onclick="sortTable('allTable','type')">Type <span class="sort-arrow">▼</span></th>
+          <th>Action</th>
+        </tr></thead>
+        <tbody id="allBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">Portfolio Command Center · Click rows to expand details · Click share counts to edit · RSS at /feed.xml or /rss.xml</div>
+</div>
+
+<!-- Add Ticker Modal -->
+<div class="modal-overlay" id="addModal" style="display:none" onclick="closeAddModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Manage Tickers</h3>
+    <input type="text" id="newTickerInput" placeholder="Enter ticker symbol, e.g. NVDA" onkeydown="if(event.key==='Enter')addTicker()">
+    <button class="btn btn-primary" onclick="addTicker()" style="width:100%;justify-content:center;margin-bottom:16px">Add to Portfolio</button>
+    <div class="chip-list" id="chipList"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════
+const DEFAULT_TICKERS = ["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP","F","GOOG","AAPL","TSLA","TGT","KO","VICI","CMCSA","BAC","INTC","AMZN"];
+
+const PRICES = {NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57.00,MSFT:448.72,RTX:123.05,BP:29.60,SCHD:82.44,ABBV:204.30,AXP:285.60,F:10.49,GOOG:177.80,AAPL:232.56,TSLA:271.34,TGT:132.55,KO:70.68,VICI:33.40,CMCSA:39.74,BAC:44.44,INTC:31.65,AMZN:197.12};
+
+const DIV = {
+  T:{yield:5.05,annualDiv:1.11,frequency:"Quarterly",exDate:"2026-04-09",payDate:"2026-05-01",nextPayout:.2775,yearsPayingDiv:41,yearsRaisingDiv:0,payoutRatio:64.8,rating:"Stable",sector:"Telecom",fiveYrGrowth:-3.2},
+  IBM:{yield:2.82,annualDiv:6.68,frequency:"Quarterly",exDate:"2026-05-08",payDate:"2026-06-10",nextPayout:1.67,yearsPayingDiv:108,yearsRaisingDiv:29,payoutRatio:72.5,rating:"Strong",sector:"Technology",fiveYrGrowth:1.2},
+  PFE:{yield:6.51,annualDiv:1.68,frequency:"Quarterly",exDate:"2026-04-25",payDate:"2026-05-15",nextPayout:.42,yearsPayingDiv:84,yearsRaisingDiv:14,payoutRatio:95.2,rating:"Caution",sector:"Healthcare",fiveYrGrowth:2.5},
+  MSFT:{yield:.74,annualDiv:3.32,frequency:"Quarterly",exDate:"2026-05-14",payDate:"2026-06-11",nextPayout:.83,yearsPayingDiv:21,yearsRaisingDiv:21,payoutRatio:24.8,rating:"Excellent",sector:"Technology",fiveYrGrowth:10.1},
+  RTX:{yield:2.18,annualDiv:2.68,frequency:"Quarterly",exDate:"2026-05-16",payDate:"2026-06-04",nextPayout:.67,yearsPayingDiv:29,yearsRaisingDiv:5,payoutRatio:38.2,rating:"Good",sector:"Defense",fiveYrGrowth:6.8},
+  BP:{yield:5.88,annualDiv:1.74,frequency:"Quarterly",exDate:"2026-05-08",payDate:"2026-06-20",nextPayout:.435,yearsPayingDiv:33,yearsRaisingDiv:3,payoutRatio:60.1,rating:"Moderate",sector:"Energy",fiveYrGrowth:4.0},
+  SCHD:{yield:3.42,annualDiv:2.82,frequency:"Quarterly",exDate:"2026-06-23",payDate:"2026-06-30",nextPayout:.705,yearsPayingDiv:14,yearsRaisingDiv:12,payoutRatio:0,rating:"ETF - Strong",sector:"ETF",fiveYrGrowth:12.3},
+  ABBV:{yield:3.21,annualDiv:6.56,frequency:"Quarterly",exDate:"2026-04-14",payDate:"2026-05-15",nextPayout:1.64,yearsPayingDiv:11,yearsRaisingDiv:52,payoutRatio:48.2,rating:"Aristocrat",sector:"Healthcare",fiveYrGrowth:8.4},
+  AXP:{yield:.98,annualDiv:2.80,frequency:"Quarterly",exDate:"2026-04-03",payDate:"2026-05-09",nextPayout:.70,yearsPayingDiv:34,yearsRaisingDiv:5,payoutRatio:18.5,rating:"Good",sector:"Financial",fiveYrGrowth:9.7},
+  F:{yield:5.72,annualDiv:.60,frequency:"Quarterly",exDate:"2026-05-06",payDate:"2026-06-02",nextPayout:.15,yearsPayingDiv:8,yearsRaisingDiv:3,payoutRatio:48.9,rating:"Moderate",sector:"Automotive",fiveYrGrowth:0},
+  GOOG:{yield:.45,annualDiv:.80,frequency:"Quarterly",exDate:"2026-06-10",payDate:"2026-06-24",nextPayout:.20,yearsPayingDiv:2,yearsRaisingDiv:1,payoutRatio:5.2,rating:"New",sector:"Technology",fiveYrGrowth:0},
+  AAPL:{yield:.43,annualDiv:1.00,frequency:"Quarterly",exDate:"2026-05-09",payDate:"2026-05-15",nextPayout:.25,yearsPayingDiv:13,yearsRaisingDiv:13,payoutRatio:15.4,rating:"Strong",sector:"Technology",fiveYrGrowth:5.8},
+  TGT:{yield:3.38,annualDiv:4.48,frequency:"Quarterly",exDate:"2026-05-20",payDate:"2026-06-10",nextPayout:1.12,yearsPayingDiv:56,yearsRaisingDiv:56,payoutRatio:52.1,rating:"King",sector:"Retail",fiveYrGrowth:10.3},
+  KO:{yield:2.83,annualDiv:2.00,frequency:"Quarterly",exDate:"2026-06-13",payDate:"2026-07-01",nextPayout:.50,yearsPayingDiv:62,yearsRaisingDiv:62,payoutRatio:71.3,rating:"King",sector:"Consumer",fiveYrGrowth:3.1},
+  VICI:{yield:5.15,annualDiv:1.72,frequency:"Quarterly",exDate:"2026-06-05",payDate:"2026-07-02",nextPayout:.43,yearsPayingDiv:5,yearsRaisingDiv:5,payoutRatio:75.4,rating:"REIT - Good",sector:"REIT",fiveYrGrowth:8.0},
+  CMCSA:{yield:3.12,annualDiv:1.24,frequency:"Quarterly",exDate:"2026-04-02",payDate:"2026-04-23",nextPayout:.31,yearsPayingDiv:18,yearsRaisingDiv:17,payoutRatio:32.4,rating:"Strong",sector:"Media",fiveYrGrowth:7.9},
+  BAC:{yield:2.34,annualDiv:1.04,frequency:"Quarterly",exDate:"2026-06-04",payDate:"2026-06-26",nextPayout:.26,yearsPayingDiv:14,yearsRaisingDiv:10,payoutRatio:30.2,rating:"Good",sector:"Financial",fiveYrGrowth:12.6},
+  INTC:{yield:1.58,annualDiv:.50,frequency:"Quarterly",exDate:"2026-05-06",payDate:"2026-06-01",nextPayout:.125,yearsPayingDiv:32,yearsRaisingDiv:0,payoutRatio:115.0,rating:"Caution",sector:"Technology",fiveYrGrowth:-62.3},
+  AMZN:{yield:0,annualDiv:0,frequency:"N/A",exDate:"N/A",payDate:"N/A",nextPayout:0,yearsPayingDiv:0,yearsRaisingDiv:0,payoutRatio:0,rating:"None",sector:"Technology",fiveYrGrowth:0},
+  NET:{yield:0,annualDiv:0,frequency:"N/A",exDate:"N/A",payDate:"N/A",nextPayout:0,yearsPayingDiv:0,yearsRaisingDiv:0,payoutRatio:0,rating:"None",sector:"Technology",fiveYrGrowth:0},
+  LUV:{yield:1.46,annualDiv:.72,frequency:"Quarterly",exDate:"2026-05-27",payDate:"2026-06-17",nextPayout:.18,yearsPayingDiv:47,yearsRaisingDiv:0,payoutRatio:55.3,rating:"Moderate",sector:"Airlines",fiveYrGrowth:0},
+  RGR:{yield:1.65,annualDiv:.94,frequency:"Quarterly",exDate:"2026-05-13",payDate:"2026-05-28",nextPayout:.235,yearsPayingDiv:12,yearsRaisingDiv:0,payoutRatio:41.2,rating:"Variable",sector:"Firearms",fiveYrGrowth:-8.1},
+  TSLA:{yield:0,annualDiv:0,frequency:"N/A",exDate:"N/A",payDate:"N/A",nextPayout:0,yearsPayingDiv:0,yearsRaisingDiv:0,payoutRatio:0,rating:"None",sector:"Automotive",fiveYrGrowth:0},
+};
+
+const NEWS = {
+  NET:[
+    {title:"Cloudflare Reports Record Q1 Revenue Growth",date:"2026-04-08",time:"2:34 PM",source:"TechCrunch",summary:"Cloudflare announced first-quarter revenue of $632 million, a 32% increase year-over-year, driven by strong enterprise adoption of its Workers AI and R2 storage platforms. The company also raised full-year guidance above consensus estimates.",url:"https://techcrunch.com"},
+    {title:"Cloudflare Expands AI Gateway Features",date:"2026-04-06",time:"10:15 AM",source:"The Verge",summary:"Cloudflare launched a suite of new AI Gateway features enabling developers to manage, cache, and rate-limit their AI API calls. The tools support all major model providers and include real-time observability dashboards.",url:"https://theverge.com"},
+    {title:"NET Enters New Enterprise Security Partnerships",date:"2026-04-03",time:"8:45 AM",source:"Reuters",summary:"Cloudflare signed strategic partnerships with three major enterprise software vendors to embed its Zero Trust security stack directly into their platforms, expanding its reach into Fortune 500 IT environments.",url:"https://reuters.com"},
+  ],
+  IBM:[
+    {title:"IBM Quantum Division Hits Major Milestone",date:"2026-04-09",time:"11:20 AM",source:"WSJ",summary:"IBM's quantum computing division achieved a breakthrough with its 1,121-qubit Condor processor demonstrating error-corrected quantum advantage on a materials science problem, marking a significant step toward practical quantum computing.",url:"https://wsj.com"},
+    {title:"IBM Cloud Revenue Surges 18% YoY",date:"2026-04-05",time:"3:00 PM",source:"Bloomberg",summary:"IBM reported cloud revenue growth of 18% year-over-year for Q1, accelerating from the prior quarter. The growth was attributed to Red Hat OpenShift adoption and generative AI consulting engagements across financial services.",url:"https://bloomberg.com"},
+    {title:"IBM Acquires AI Startup for $2.3B",date:"2026-04-01",time:"9:30 AM",source:"CNBC",summary:"IBM announced the acquisition of AI orchestration startup FlowAI for $2.3 billion in cash, bolstering its Watsonx platform with advanced agentic AI workflow capabilities for enterprise customers.",url:"https://cnbc.com"},
+  ],
+  MSFT:[
+    {title:"Microsoft Copilot Reaches 500M Users",date:"2026-04-09",time:"1:45 PM",source:"Bloomberg",summary:"Microsoft disclosed that its Copilot AI assistant has surpassed 500 million monthly active users across Windows, Office, and Edge, making it the most widely deployed AI assistant in productivity software.",url:"https://bloomberg.com"},
+    {title:"Azure Revenue Beats Analyst Estimates",date:"2026-04-07",time:"4:15 PM",source:"WSJ",summary:"Microsoft Azure cloud revenue grew 34% in the latest quarter, topping analyst estimates of 30%. The beat was driven by surging AI compute demand and new GPU capacity coming online in six new data center regions.",url:"https://wsj.com"},
+    {title:"Microsoft Announces New Surface Lineup",date:"2026-04-04",time:"10:00 AM",source:"The Verge",summary:"Microsoft unveiled its next-generation Surface Pro and Surface Laptop featuring custom-designed AI accelerator chips co-developed with Qualcomm, promising 40+ hour battery life and local model inference.",url:"https://theverge.com"},
+  ],
+  AAPL:[
+    {title:"Apple Intelligence Rollout Expands to 30 Countries",date:"2026-04-08",time:"12:30 PM",source:"Reuters",summary:"Apple announced the expansion of Apple Intelligence features to 30 countries with support for 12 additional languages, significantly broadening the reach of its on-device AI capabilities across iPhone, iPad, and Mac.",url:"https://reuters.com"},
+    {title:"iPhone Sales Rebound in China Market",date:"2026-04-05",time:"2:00 PM",source:"Bloomberg",summary:"Apple saw a notable rebound in iPhone sales in China during Q1, with unit shipments rising 14% after several quarters of decline. Analysts attributed the recovery to aggressive pricing on the iPhone 17 and new AI features.",url:"https://bloomberg.com"},
+    {title:"Apple Vision Pro 2 Rumors Intensify",date:"2026-04-02",time:"9:15 AM",source:"MacRumors",summary:"Supply chain reports suggest Apple is preparing a second-generation Vision Pro with a slimmer design, improved passthrough cameras, and a significantly lower price point for a potential late-2026 launch.",url:"https://macrumors.com"},
+  ],
+  GOOG:[
+    {title:"Google Gemini 3 Launches With New Capabilities",date:"2026-04-09",time:"10:00 AM",source:"TechCrunch",summary:"Google unveiled Gemini 3, its most advanced AI model to date, featuring native multimodal reasoning, a 2-million-token context window, and new agentic capabilities for complex task completion across Google Workspace.",url:"https://techcrunch.com"},
+    {title:"Alphabet Ad Revenue Hits All-Time High",date:"2026-04-06",time:"3:30 PM",source:"WSJ",summary:"Alphabet reported record advertising revenue of $78.4 billion for Q1 2026, with YouTube and Google Search both posting double-digit growth. AI-powered ad targeting and creative tools were cited as key drivers.",url:"https://wsj.com"},
+    {title:"Waymo Expands to 15 New Cities",date:"2026-04-03",time:"11:00 AM",source:"Reuters",summary:"Waymo announced plans to launch its autonomous ride-hailing service in 15 additional U.S. cities by year-end, bringing its total coverage to 25 metropolitan areas and serving over 200,000 rides per week.",url:"https://reuters.com"},
+  ],
+  TSLA:[
+    {title:"Tesla Robotaxi Service Begins in Austin",date:"2026-04-08",time:"8:00 AM",source:"Bloomberg",summary:"Tesla launched its long-anticipated robotaxi service in Austin, Texas, marking the company's first commercial deployment of fully autonomous vehicles. The initial fleet consists of 500 Model 3 vehicles operating in a defined geo-fenced area.",url:"https://bloomberg.com"},
+    {title:"Model 2 Production Ramp Ahead of Schedule",date:"2026-04-06",time:"1:15 PM",source:"Electrek",summary:"Tesla reported that production of its affordable Model 2 is ramping faster than expected at Gigafactory Texas, with weekly output already exceeding 5,000 units. The $25,000 vehicle is seeing strong pre-order demand globally.",url:"https://electrek.co"},
+    {title:"Tesla Energy Division Revenue Doubles",date:"2026-04-02",time:"4:45 PM",source:"CNBC",summary:"Tesla Energy reported revenue of $4.2 billion in Q1, more than double the year-ago period. Megapack deployments for utility-scale storage and growing Powerwall installations drove the surge.",url:"https://cnbc.com"},
+  ],
+  AMZN:[
+    {title:"AWS Launches Next-Gen Custom Chips",date:"2026-04-09",time:"9:00 AM",source:"TechCrunch",summary:"Amazon Web Services unveiled its Graviton5 processors and Trainium3 AI chips, promising 40% better price-performance than previous generations. Major customers including Anthropic and Salesforce are already running workloads on the new silicon.",url:"https://techcrunch.com"},
+    {title:"Amazon Prime Surpasses 300M Subscribers",date:"2026-04-07",time:"11:30 AM",source:"Reuters",summary:"Amazon disclosed that Prime membership has exceeded 300 million globally, fueled by same-day delivery expansion, Thursday Night Football, and new AI-powered shopping features including conversational product search.",url:"https://reuters.com"},
+    {title:"Amazon Pharmacy Expands Same-Day Delivery",date:"2026-04-04",time:"2:30 PM",source:"WSJ",summary:"Amazon Pharmacy launched same-day prescription delivery in 20 additional metro areas, bringing its total coverage to 45 U.S. cities. The move increases pressure on traditional pharmacy chains and PBM incumbents.",url:"https://wsj.com"},
+  ],
+  T:[
+    {title:"AT&T Fiber Subscriber Count Reaches 25M",date:"2026-04-07",time:"10:45 AM",source:"CNBC",summary:"AT&T announced its fiber broadband subscriber base has reached 25 million, aided by continued network expansion into underserved markets and competitive bundling with its wireless plans.",url:"https://cnbc.com"},
+    {title:"AT&T 5G Network Covers 95% of US Population",date:"2026-04-04",time:"3:15 PM",source:"Reuters",summary:"AT&T reported that its 5G network now reaches 95% of the U.S. population, with mid-band spectrum deployments accelerating in suburban and rural areas following recent spectrum auction acquisitions.",url:"https://reuters.com"},
+  ],
+  PFE:[
+    {title:"Pfizer Oncology Drug Shows Positive Phase 3 Results",date:"2026-04-08",time:"7:30 AM",source:"Reuters",summary:"Pfizer reported positive Phase 3 trial results for its next-generation ADC cancer therapy, demonstrating significant improvement in progression-free survival for breast cancer patients. The company plans to file for FDA approval in Q3.",url:"https://reuters.com"},
+    {title:"Pfizer Raises Full-Year Revenue Guidance",date:"2026-04-03",time:"8:15 AM",source:"Bloomberg",summary:"Pfizer increased its full-year 2026 revenue guidance by $1.5 billion, reflecting stronger-than-expected demand for its RSV vaccine and continued growth in its oncology portfolio following the Seagen acquisition.",url:"https://bloomberg.com"},
+  ],
+  ABBV:[
+    {title:"AbbVie's New Immunology Drug Gets FDA Approval",date:"2026-04-09",time:"6:00 AM",source:"Reuters",summary:"The FDA approved AbbVie's next-generation immunology treatment for moderate-to-severe ulcerative colitis, adding another commercial asset to replace lost Humira revenue and expanding the company's immunology leadership.",url:"https://reuters.com"},
+    {title:"AbbVie Reports Strong Skyrizi/Rinvoq Growth",date:"2026-04-05",time:"12:00 PM",source:"Bloomberg",summary:"AbbVie reported combined Skyrizi and Rinvoq revenue of $5.8 billion in Q1, up 52% year-over-year, demonstrating these two drugs are successfully offsetting the Humira biosimilar impact ahead of management's timeline.",url:"https://bloomberg.com"},
+  ],
+  KO:[
+    {title:"Coca-Cola Launches New Zero Sugar Lineup",date:"2026-04-07",time:"9:00 AM",source:"Forbes",summary:"Coca-Cola introduced five new Zero Sugar flavors targeting health-conscious consumers in North America and Europe, backed by a $200 million marketing campaign featuring AI-generated personalized advertising.",url:"https://forbes.com"},
+    {title:"KO International Sales Growth Accelerates",date:"2026-04-03",time:"1:30 PM",source:"WSJ",summary:"Coca-Cola reported international organic revenue growth of 12% in Q1, outpacing expectations as emerging market demand strengthened in India, Southeast Asia, and Latin America despite continued currency headwinds.",url:"https://wsj.com"},
+  ],
+  BAC:[
+    {title:"Bank of America Digital Banking Hits 50M Users",date:"2026-04-08",time:"10:00 AM",source:"CNBC",summary:"Bank of America disclosed that its digital banking platform now serves 50 million active users, with its AI-powered virtual assistant Erica processing over 2 billion interactions since launch.",url:"https://cnbc.com"},
+    {title:"BAC Investment Banking Revenue Surges",date:"2026-04-04",time:"2:15 PM",source:"Bloomberg",summary:"Bank of America's investment banking division posted a 28% revenue increase in Q1, benefiting from a strong IPO pipeline and increased M&A advisory activity as deal markets continue their recovery.",url:"https://bloomberg.com"},
+  ],
+  F:[
+    {title:"Ford EV Sales Surge 45% in Q1 2026",date:"2026-04-07",time:"11:00 AM",source:"Reuters",summary:"Ford reported a 45% increase in electric vehicle sales for Q1 2026, led by strong demand for the updated F-150 Lightning and the new electric Explorer. The company said its EV unit losses narrowed significantly.",url:"https://reuters.com"},
+    {title:"Ford Pro Commercial Division Beats Estimates",date:"2026-04-03",time:"3:45 PM",source:"CNBC",summary:"Ford Pro, the company's commercial vehicle and fleet services division, reported Q1 earnings that beat analyst estimates by 15%, driven by strong Transit van sales and growing software subscription revenue.",url:"https://cnbc.com"},
+  ],
+  TGT:[
+    {title:"Target Same-Store Sales Return to Growth",date:"2026-04-06",time:"8:30 AM",source:"WSJ",summary:"Target reported positive same-store sales growth of 2.1% in Q1, marking the first increase in over a year. Digital sales grew 15% and the company credited refreshed private-label brands and improved inventory management.",url:"https://wsj.com"},
+    {title:"Target Expands Drive-Up Service Nationwide",date:"2026-04-02",time:"10:30 AM",source:"Reuters",summary:"Target completed the nationwide rollout of its expanded Drive-Up service, which now includes returns processing and Starbucks order pickup, making it one of the most comprehensive curbside offerings among major retailers.",url:"https://reuters.com"},
+  ],
+  INTC:[
+    {title:"Intel 18A Process Node On Track for H2 2026",date:"2026-04-08",time:"9:45 AM",source:"TechCrunch",summary:"Intel confirmed that its 18A process technology remains on schedule for production in the second half of 2026, with yield improvements exceeding internal targets. The node is critical to Intel's foundry strategy.",url:"https://techcrunch.com"},
+    {title:"Intel Foundry Wins Major Auto Chip Contract",date:"2026-04-04",time:"12:45 PM",source:"Bloomberg",summary:"Intel Foundry Services secured a multi-year, multi-billion-dollar contract to manufacture next-generation autonomous driving chips for a major European automaker, marking its largest foundry win to date.",url:"https://bloomberg.com"},
+  ],
+  RTX:[
+    {title:"RTX Wins $4.2B Defense Contract",date:"2026-04-07",time:"2:00 PM",source:"Reuters",summary:"RTX Corporation was awarded a $4.2 billion contract from the U.S. Department of Defense for production of next-generation air defense missile systems, reinforcing its position as a top defense contractor.",url:"https://reuters.com"},
+    {title:"Raytheon Missile Systems Backlog Grows 22%",date:"2026-04-03",time:"4:00 PM",source:"Defense News",summary:"RTX's Raytheon division reported a 22% increase in its total backlog to $62 billion, driven by international demand for Patriot missile batteries and new orders from NATO allies increasing defense budgets.",url:"https://defensenews.com"},
+  ],
+  LUV:[
+    {title:"Southwest Airlines Launches Premium Economy",date:"2026-04-06",time:"7:00 AM",source:"CNBC",summary:"Southwest Airlines officially launched its first-ever premium economy product, featuring extra legroom, priority boarding, and complimentary premium snacks. Analysts estimate the move could add $1.5 billion in annual revenue.",url:"https://cnbc.com"},
+    {title:"LUV Load Factor Hits Record for Q1",date:"2026-04-02",time:"11:15 AM",source:"Reuters",summary:"Southwest Airlines reported a record Q1 load factor of 87.3%, driven by strong spring break travel demand and the introduction of its new fare class structure that launched in February.",url:"https://reuters.com"},
+  ],
+  BP:[
+    {title:"BP Accelerates Renewable Energy Investments",date:"2026-04-08",time:"6:30 AM",source:"Bloomberg",summary:"BP announced a $5 billion increase in its renewable energy investment plan through 2030, focusing on offshore wind, hydrogen production, and EV charging infrastructure across Europe and North America.",url:"https://bloomberg.com"},
+    {title:"BP Refining Margins Improve in Q1",date:"2026-04-04",time:"1:00 PM",source:"Reuters",summary:"BP reported improved refining margins in Q1 as global fuel demand rose and maintenance-related shutdowns were lower than expected. The company's downstream segment benefited from strong diesel crack spreads.",url:"https://reuters.com"},
+  ],
+  AXP:[
+    {title:"American Express Card Spending Hits Record",date:"2026-04-07",time:"3:30 PM",source:"WSJ",summary:"American Express reported record card member spending of $442 billion in Q1, a 10% year-over-year increase. Travel and entertainment spending was particularly strong, growing 14% as premium cardholders increased travel frequency.",url:"https://wsj.com"},
+    {title:"AXP Premium Card Applications Surge",date:"2026-04-03",time:"10:00 AM",source:"Bloomberg",summary:"American Express saw a 22% surge in Platinum and Gold card applications during Q1, driven by enhanced benefits including airport lounge access, streaming credits, and a new AI-powered concierge service.",url:"https://bloomberg.com"},
+  ],
+  SCHD:[
+    {title:"SCHD Rebalances with New Top Holdings",date:"2026-04-05",time:"4:00 PM",source:"ETF.com",summary:"The Schwab U.S. Dividend Equity ETF completed its quarterly rebalance, adding positions in several financial and healthcare stocks while reducing exposure to consumer staples. The changes reflect shifting dividend quality metrics.",url:"https://etf.com"},
+    {title:"Schwab Dividend ETF Sees $3B Monthly Inflows",date:"2026-04-01",time:"12:00 PM",source:"Morningstar",summary:"SCHD attracted $3 billion in net inflows during March, making it the most popular dividend ETF for the sixth consecutive month. Investors continue to favor its quality-focused dividend screening methodology.",url:"https://morningstar.com"},
+  ],
+  VICI:[
+    {title:"VICI Properties Acquires Two Las Vegas Resorts",date:"2026-04-06",time:"9:00 AM",source:"Reuters",summary:"VICI Properties announced the acquisition of two additional Las Vegas Strip resort properties for $3.8 billion, expanding its premier gaming REIT portfolio and securing long-term triple-net lease agreements.",url:"https://reuters.com"},
+    {title:"VICI Raises Quarterly Dividend 6.4%",date:"2026-04-02",time:"8:00 AM",source:"Seeking Alpha",summary:"VICI Properties announced a 6.4% increase to its quarterly dividend, continuing its track record of annual dividend growth since its IPO. The REIT's AFFO payout ratio remains conservative at approximately 75%.",url:"https://seekingalpha.com"},
+  ],
+  CMCSA:[
+    {title:"Comcast Peacock Streaming Subscribers Top 45M",date:"2026-04-07",time:"1:00 PM",source:"Bloomberg",summary:"Comcast reported that Peacock streaming subscribers surpassed 45 million, with the platform approaching profitability for the first time. Exclusive live sports content and original programming drove subscriber growth.",url:"https://bloomberg.com"},
+    {title:"Comcast Broadband Losses Slow Significantly",date:"2026-04-03",time:"11:30 AM",source:"CNBC",summary:"Comcast reported that broadband subscriber losses slowed dramatically in Q1 to just 12,000, a major improvement from the 100,000+ quarterly losses seen last year, as fiber overbuilding pressures ease.",url:"https://cnbc.com"},
+  ],
+  RGR:[
+    {title:"Ruger Reports Strong Firearms Demand in Q1",date:"2026-04-05",time:"2:30 PM",source:"Reuters",summary:"Sturm Ruger reported higher-than-expected Q1 firearms demand, with NICS background checks suggesting continued consumer interest. New product launches in the pistol and rifle categories contributed to the strength.",url:"https://reuters.com"},
+    {title:"Sturm Ruger Launches New Product Line",date:"2026-04-01",time:"10:00 AM",source:"NSSF",summary:"Ruger introduced a new line of competition-grade pistols targeting the growing sport shooting market, featuring enhanced triggers, optics-ready slides, and modular grip systems.",url:"https://nssf.org"},
+  ],
+};
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let tickers, shares, sortStates = {};
+
+function loadState() {
+  try { tickers = JSON.parse(localStorage.getItem('pf_tickers')) || [...DEFAULT_TICKERS]; } catch { tickers = [...DEFAULT_TICKERS]; }
+  try { shares = JSON.parse(localStorage.getItem('pf_shares')) || {}; } catch { shares = {}; }
+}
+function saveState() {
+  try { localStorage.setItem('pf_tickers', JSON.stringify(tickers)); localStorage.setItem('pf_shares', JSON.stringify(shares)); } catch {}
+}
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+const $ = s => document.getElementById(s);
+const fmtMoney = n => '$' + n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+const isDividend = t => DIV[t] && DIV[t].yield > 0;
+
+function ratingColor(r) {
+  const m = {King:"#fcd34d",Aristocrat:"#fcd34d",Excellent:"#34d399",Strong:"#34d399","ETF - Strong":"#34d399",Good:"#4e8cff","REIT - Good":"#4e8cff",Moderate:"#fbbf24",Variable:"#fbbf24",Stable:"#4e8cff",Caution:"#f87171",New:"#a78bfa",None:"#5a6e8a"};
+  return m[r]||"#5a6e8a";
+}
+function ratingBadge(r) {
+  if (r==="King") return "👑 Dividend King";
+  if (r==="Aristocrat") return "🏆 Aristocrat";
+  return r;
+}
+function ratingBadgeClass(r) {
+  if (["King","Aristocrat"].includes(r)) return "badge-gold";
+  if (["Excellent","Strong","ETF - Strong"].includes(r)) return "badge-green";
+  if (["Good","REIT - Good","Stable"].includes(r)) return "badge-accent";
+  if (["Moderate","Variable"].includes(r)) return "badge-yellow";
+  if (r==="Caution") return "badge-red";
+  if (r==="New") return "badge-purple";
+  return "";
+}
+
+// ══════════════════════════════════════════════
+//  SORTING
+// ══════════════════════════════════════════════
+function sortTable(tableId, col) {
+  const key = tableId + '_' + col;
+  if (!sortStates[tableId]) sortStates[tableId] = { col, dir: 'desc' };
+  else if (sortStates[tableId].col === col) sortStates[tableId].dir = sortStates[tableId].dir === 'asc' ? 'desc' : 'asc';
+  else sortStates[tableId] = { col, dir: 'desc' };
+
+  // Update header visual
+  document.querySelectorAll(`#${tableId} thead th`).forEach(th => {
+    th.classList.remove('sorted');
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = '▼';
+  });
+  const activeHeader = document.querySelector(`#${tableId} thead th[data-col="${col}"]`);
+  if (activeHeader) {
+    activeHeader.classList.add('sorted');
+    const arrow = activeHeader.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = sortStates[tableId].dir === 'asc' ? '▲' : '▼';
+  }
+
+  renderAll();
+}
+
+function getSortedList(tableId, list, dataExtractor) {
+  const st = sortStates[tableId];
+  if (!st) return list;
+  const sorted = [...list].sort((a, b) => {
+    let va = dataExtractor(a, st.col), vb = dataExtractor(b, st.col);
+    if (typeof va === 'string') { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+    if (va < vb) return st.dir === 'asc' ? -1 : 1;
+    if (va > vb) return st.dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return sorted;
+}
+
+// ══════════════════════════════════════════════
+//  SHARES EDITING
+// ══════════════════════════════════════════════
+function startEditShares(ticker, el) {
+  event.stopPropagation();
+  const current = shares[ticker] || 0;
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'shares-input';
+  input.value = current || '';
+  input.min = '0';
+  input.step = 'any';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  const finish = () => {
+    const val = parseFloat(input.value) || 0;
+    shares[ticker] = val;
+    saveState();
+    renderAll();
+  };
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(); } });
+}
+
+// ══════════════════════════════════════════════
+//  EXPAND/COLLAPSE ROWS
+// ══════════════════════════════════════════════
+function toggleDetailRow(rowId) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  if (row.classList.contains('open')) {
+    row.classList.remove('open');
+  } else {
+    // close any other open in same table
+    row.closest('tbody').querySelectorAll('.detail-row.open').forEach(r => r.classList.remove('open'));
+    row.classList.add('open');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RENDER: NEWS
+// ══════════════════════════════════════════════
+function renderNews() {
+  const q = ($('newsSearch').value || '').toLowerCase();
+  let all = [];
+  tickers.forEach(t => {
+    (NEWS[t]||[]).forEach(n => all.push({...n, ticker: t}));
+  });
+  if (q) all = all.filter(n => n.title.toLowerCase().includes(q) || n.ticker.toLowerCase().includes(q) || n.source.toLowerCase().includes(q));
+
+  all = getSortedList('newsTable', all, (item, col) => {
+    if (col==='ticker') return item.ticker;
+    if (col==='title') return item.title;
+    if (col==='source') return item.source;
+    if (col==='date') return item.date;
+    return '';
+  });
+
+  $('newsCount').textContent = all.length;
+  let html = '';
+  all.forEach((n, i) => {
+    const rid = 'news_detail_' + i;
+    html += `<tr class="data-row" onclick="toggleDetailRow('${rid}')">
+      <td><span class="mono fw7 badge badge-accent" style="font-size:12px">${n.ticker}</span></td>
+      <td style="white-space:normal;max-width:480px">
+        <div style="font-weight:500">${n.title}</div>
+      </td>
+      <td class="muted" style="font-size:12px">${n.source}</td>
+      <td>
+        <div class="mono" style="font-size:12px">${n.date}</div>
+        <div class="muted" style="font-size:11px">${n.time || ''}</div>
+      </td>
+    </tr>
+    <tr class="detail-row" id="${rid}">
+      <td colspan="4">
+        <div class="detail-panel">
+          <div class="news-detail">
+            <p>${n.summary || 'No additional details available for this article.'}</p>
+            <a href="${n.url}" target="_blank" rel="noopener">Read full article at ${n.source} →</a>
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  $('newsBody').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER: DIVIDENDS
+// ══════════════════════════════════════════════
+function renderDividends() {
+  const divStocks = tickers.filter(isDividend);
+  $('divCount').textContent = divStocks.length;
+
+  const totalAnnual = divStocks.reduce((s,t) => s + (DIV[t].annualDiv * (shares[t]||0)), 0);
+  const avgYield = divStocks.reduce((s,t) => s + DIV[t].yield, 0) / (divStocks.length||1);
+
+  $('divSummary').innerHTML = [
+    {label:"Monthly Income",val:fmtMoney(totalAnnual/12),color:"var(--green)",icon:"📅"},
+    {label:"Annual Income",val:fmtMoney(totalAnnual),color:"var(--accent2)",icon:"📊"},
+    {label:"Dividend Stocks",val:divStocks.length,color:"var(--accent)",icon:"💰"},
+    {label:"Avg Yield",val:avgYield.toFixed(2)+"%",color:"var(--yellow)",icon:"📈"},
+  ].map(c => `<div class="summary-card"><div class="summary-card-label">${c.icon} ${c.label}</div><div class="summary-card-val" style="color:${c.color}">${c.val}</div></div>`).join('');
+
+  let sorted = getSortedList('divTable', divStocks, (t, col) => {
+    const d = DIV[t], s = shares[t]||0;
+    const m = {ticker:t,price:PRICES[t]||0,yield:d.yield,annualDiv:d.annualDiv,nextPayout:d.nextPayout,payDate:d.payDate,rating:d.rating,shares:s,income:d.annualDiv*s};
+    return m[col] ?? t;
+  });
+
+  let html = '';
+  sorted.forEach(t => {
+    const d = DIV[t], s = shares[t]||0, income = d.annualDiv * s;
+    const rid = 'div_detail_' + t;
+    const yieldColor = d.yield>=4?'green':d.yield>=2?'accent2':'';
+    const incomeColor = income>0?'green':'muted';
+    const sharesClass = s > 0 ? 'shares-display has-val' : 'shares-display';
+
+    html += `<tr class="data-row" onclick="toggleDetailRow('${rid}')">
+      <td class="mono fw7">${t}</td>
+      <td class="mono">${fmtMoney(PRICES[t]||0)}</td>
+      <td class="mono ${yieldColor}">${d.yield}%</td>
+      <td class="mono">$${d.annualDiv}</td>
+      <td class="mono green">$${d.nextPayout}</td>
+      <td><div class="mono" style="font-size:12px">${d.payDate}</div><div class="muted" style="font-size:11px">Ex: ${d.exDate}</div></td>
+      <td><span class="badge ${ratingBadgeClass(d.rating)}">${ratingBadge(d.rating)}</span></td>
+      <td><span class="${sharesClass}" onclick="startEditShares('${t}', this)">${s>0?s:'edit'}</span></td>
+      <td class="mono fw7 ${incomeColor}">${income>0?fmtMoney(income):'—'}</td>
+    </tr>
+    <tr class="detail-row" id="${rid}">
+      <td colspan="9">
+        <div class="detail-panel">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+            <div>
+              <span style="font-size:20px;font-weight:700;font-family:var(--mono)">${t}</span>
+              <span class="badge ${ratingBadgeClass(d.rating)}" style="margin-left:8px">${ratingBadge(d.rating)}</span>
+              <div class="muted" style="font-size:12px;margin-top:2px">${d.sector} · ${d.frequency} payments</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--green)">${d.yield}%</div>
+              <div class="muted" style="font-size:10px;text-transform:uppercase">Current Yield</div>
+            </div>
+          </div>
+          <div class="dd-grid">
+            ${[
+              ["Share Price", fmtMoney(PRICES[t]||0)],
+              ["Annual Dividend", "$"+d.annualDiv],
+              ["Next Payout/Share", "$"+d.nextPayout],
+              ["Payment Frequency", d.frequency],
+              ["Ex-Dividend Date", d.exDate],
+              ["Payment Date", d.payDate],
+              ["Payout Ratio", d.payoutRatio+"%"],
+              ["5-Year Div Growth", (d.fiveYrGrowth>0?"+":"")+d.fiveYrGrowth+"%"],
+              ["Years Paying Dividends", d.yearsPayingDiv+" yrs"],
+              ["Consecutive Years Raising", d.yearsRaisingDiv+" yrs"],
+              ["Dividend Rating", d.rating],
+              ["Sector", d.sector],
+              ["Shares Owned", s>0?s:"—"],
+              ["Quarterly Income", s>0?fmtMoney(d.nextPayout*s):"—"],
+              ["Annual Income", s>0?fmtMoney(d.annualDiv*s):"—"],
+              ["Monthly Income (est)", s>0?fmtMoney(d.annualDiv*s/12):"—"],
+              ["Position Value", s>0?fmtMoney((PRICES[t]||0)*s):"—"],
+              ["Yield on Cost", s>0?(((d.annualDiv*s)/((PRICES[t]||0)*s))*100).toFixed(2)+"%":"—"],
+            ].map(([l,v]) => {
+              let vc = '';
+              if (typeof v==='string' && v.startsWith('+')) vc='color:var(--green)';
+              else if (typeof v==='string' && v.startsWith('-') && v!=='—') vc='color:var(--red)';
+              return `<div class="dd-item"><span class="dd-label">${l}</span><span class="dd-val" style="${vc}">${v}</span></div>`;
+            }).join('')}
+          </div>
+          ${d.yearsRaisingDiv>=25?`<div class="dd-banner">👑 ${d.yearsRaisingDiv>=50?'Dividend King':'Dividend Aristocrat'} — ${d.yearsRaisingDiv} consecutive years of dividend increases. This is an elite track record placing it in the top tier of dividend stocks.</div>`:''}
+          ${d.payoutRatio>80&&d.payoutRatio>0?`<div style="margin-top:10px;background:var(--red-dim);border:1px solid #f8717130;border-radius:8px;padding:8px 14px;font-size:11px;color:var(--red)">⚠️ High payout ratio of ${d.payoutRatio}% — dividend sustainability may be at risk if earnings decline.</div>`:''}
+        </div>
+      </td>
+    </tr>`;
+  });
+  $('divBody').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER: GROWTH
+// ══════════════════════════════════════════════
+function renderGrowth() {
+  const growthStocks = tickers.filter(t => !isDividend(t));
+  $('growthCount').textContent = growthStocks.length;
+
+  let sorted = getSortedList('growthTable', growthStocks, (t, col) => {
+    const s = shares[t]||0;
+    const m = {ticker:t,price:PRICES[t]||0,sector:DIV[t]?.sector||'',shares:s,value:(PRICES[t]||0)*s};
+    return m[col] ?? t;
+  });
+
+  let html = '';
+  sorted.forEach(t => {
+    const s = shares[t]||0, val = (PRICES[t]||0)*s;
+    const rid = 'growth_detail_' + t;
+    const sharesClass = s > 0 ? 'shares-display has-val' : 'shares-display';
+    const news = NEWS[t] || [];
+
+    html += `<tr class="data-row" onclick="toggleDetailRow('${rid}')">
+      <td class="mono fw7">${t}</td>
+      <td class="mono">${fmtMoney(PRICES[t]||0)}</td>
+      <td class="muted" style="font-size:12px">${DIV[t]?.sector||'—'}</td>
+      <td><span class="${sharesClass}" onclick="startEditShares('${t}', this)">${s>0?s:'edit'}</span></td>
+      <td class="mono ${val>0?'accent2':'muted'}">${val>0?fmtMoney(val):'—'}</td>
+      <td><button class="remove-btn" onclick="event.stopPropagation();removeTicker('${t}')">✕ Remove</button></td>
+    </tr>
+    <tr class="detail-row" id="${rid}">
+      <td colspan="6">
+        <div class="detail-panel">
+          <div style="font-weight:700;margin-bottom:10px;font-size:14px">📰 Latest News for ${t}</div>
+          ${news.length ? news.map(n => `
+            <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+              <div style="font-weight:600;font-size:13px;margin-bottom:4px">${n.title}</div>
+              <div class="muted" style="font-size:11px;margin-bottom:6px">${n.source} · ${n.date} ${n.time||''}</div>
+              <div style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:6px">${n.summary||''}</div>
+              <a href="${n.url}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-size:12px;font-weight:600">Read full article →</a>
+            </div>
+          `).join('') : '<div class="muted" style="font-size:13px">No recent news available for this ticker.</div>'}
+        </div>
+      </td>
+    </tr>`;
+  });
+  $('growthBody').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER: ALL HOLDINGS
+// ══════════════════════════════════════════════
+function renderAll_tab() {
+  let sorted = getSortedList('allTable', [...tickers], (t, col) => {
+    const d = DIV[t], s = shares[t]||0, isD = isDividend(t);
+    const m = {ticker:t,price:PRICES[t]||0,sector:d?.sector||'',dividend:isD?d.annualDiv:0,yield:isD?d.yield:0,shares:s,value:(PRICES[t]||0)*s,income:isD?d.annualDiv*s:0,type:isD?'Dividend':'Growth'};
+    return m[col] ?? t;
+  });
+
+  let html = '';
+  sorted.forEach(t => {
+    const d = DIV[t], s = shares[t]||0, isD = isDividend(t);
+    const val = (PRICES[t]||0)*s, income = isD ? d.annualDiv*s : 0;
+    const sharesClass = s > 0 ? 'shares-display has-val' : 'shares-display';
+
+    html += `<tr class="data-row">
+      <td class="mono fw7">${t}</td>
+      <td class="mono">${fmtMoney(PRICES[t]||0)}</td>
+      <td class="muted" style="font-size:12px">${d?.sector||'—'}</td>
+      <td class="mono ${isD?'green':'muted'}">${isD?'$'+d.annualDiv:'—'}</td>
+      <td class="mono ${isD?'accent2':'muted'}">${isD?d.yield+'%':'—'}</td>
+      <td><span class="${sharesClass}" onclick="startEditShares('${t}', this)">${s>0?s:'edit'}</span></td>
+      <td class="mono">${val>0?fmtMoney(val):'—'}</td>
+      <td class="mono ${income>0?'green':'muted'}">${income>0?fmtMoney(income):'—'}</td>
+      <td><span class="badge ${isD?'badge-green':'badge-purple'}">${isD?'Dividend':'Growth'}</span></td>
+      <td><button class="remove-btn" onclick="removeTicker('${t}')">✕</button></td>
+    </tr>`;
+  });
+  $('allBody').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER: HEADER + RSS
+// ══════════════════════════════════════════════
+function renderHeader() {
+  const divCount = tickers.filter(isDividend).length;
+  $('headerSub').textContent = `${tickers.length} tickers · ${divCount} dividend payers · Updated ${new Date().toLocaleDateString()}`;
+
+  const totalVal = tickers.reduce((s,t) => s + (PRICES[t]||0)*(shares[t]||0), 0);
+  if (totalVal > 0) {
+    $('portfolioValueBox').style.display = '';
+    $('portfolioValue').textContent = fmtMoney(totalVal);
+  } else {
+    $('portfolioValueBox').style.display = 'none';
+  }
+}
+
+function renderRSS() {
+  const base = window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'/');
+  $('rssFeedUrl').textContent = base + 'feed.xml';
+  $('rssAltUrl').textContent = base + 'rss.xml';
+  $('rssContent').textContent = generateRSS();
+}
+
+function generateRSS() {
+  let items = '';
+  tickers.forEach(t => {
+    (NEWS[t]||[]).forEach(n => {
+      items += `    <item>
+      <title>[${t}] ${n.title}</title>
+      <link>${n.url}</link>
+      <description>${escapeXml(n.summary||n.title)}</description>
+      <pubDate>${new Date(n.date + 'T' + (n.time ? convertTime(n.time) : '12:00:00')).toUTCString()}</pubDate>
+      <category>${t}</category>
+      <source url="${n.url}">${n.source}</source>
+    </item>\n`;
+    });
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Portfolio Command Center — News Feed</title>
+    <link>${window.location.href}</link>
+    <description>Consolidated stock portfolio news for ${tickers.length} tickers</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="${window.location.origin + window.location.pathname.replace(/\/[^/]*$/,'/')+'feed.xml'}" rel="self" type="application/rss+xml"/>
+${items}  </channel>
+</rss>`;
+}
+
+function escapeXml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function convertTime(t) {
+  const [time, ampm] = t.split(' ');
+  let [h, m] = time.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+}
+
+// ══════════════════════════════════════════════
+//  MAIN RENDER
+// ══════════════════════════════════════════════
+function renderAll() {
+  renderHeader();
+  renderNews();
+  renderDividends();
+  renderGrowth();
+  renderAll_tab();
+  renderRSS();
+}
+
+// ══════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${id}"]`).classList.add('active');
+  $('content-' + id).classList.add('active');
+}
+
+function toggleRSS() {
+  const panel = $('rssPanel');
+  const btn = $('rssBtn');
+  if (panel.style.display === 'none') { panel.style.display = ''; btn.classList.add('active'); }
+  else { panel.style.display = 'none'; btn.classList.remove('active'); }
+}
+
+function copyRSS() {
+  navigator.clipboard.writeText(generateRSS()).then(() => {
+    const btn = $('copyRssBtn');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = 'Copy RSS XML', 2000);
+  });
+}
+
+function openAddModal() { $('addModal').style.display = ''; renderChips(); setTimeout(() => $('newTickerInput').focus(), 100); }
+function closeAddModal(e) { if (e.target === $('addModal')) $('addModal').style.display = 'none'; }
+
+function renderChips() {
+  $('chipList').innerHTML = tickers.map(t =>
+    `<span class="chip">${t}<span class="x" onclick="removeTicker('${t}')">×</span></span>`
+  ).join('');
+}
+
+function addTicker() {
+  const t = $('newTickerInput').value.trim().toUpperCase();
+  if (t && !tickers.includes(t)) {
+    tickers.push(t);
+    saveState();
+    renderAll();
+    renderChips();
+  }
+  $('newTickerInput').value = '';
+}
+
+function removeTicker(t) {
+  tickers = tickers.filter(x => x !== t);
+  delete shares[t];
+  saveState();
+  renderAll();
+  renderChips();
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+loadState();
+sortStates['newsTable'] = { col: 'date', dir: 'desc' };
+renderAll();
+</script>
+</body>
+</html>
