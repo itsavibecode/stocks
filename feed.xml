@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Portfolio Command Center — News Feed</title>
+    <link>https://yourusername.github.io/portfolio-dashboard/</link>
+    <description>Consolidated stock portfolio news feed</description>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 10 Apr 2026 05:38:56 GMT</lastBuildDate>
+    <atom:link href="https://yourusername.github.io/portfolio-dashboard/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>[NET] Cloudflare Reports Record Q1 Revenue Growth</title>
+      <link>https://techcrunch.com</link>
+      <description>Cloudflare announced first-quarter revenue of $632 million, a 32% increase year-over-year.</description>
+      <pubDate>Wed, 08 Apr 2026 12:00:00 GMT</pubDate>
+      <category>NET</category>
+      <source url="https://techcrunch.com">TechCrunch</source>
+    </item>
+    <item>
+      <title>[NET] Cloudflare Expands AI Gateway Features</title>
+      <link>https://theverge.com</link>
+      <description>Cloudflare launched new AI Gateway features for developers.</description>
+      <pubDate>Mon, 06 Apr 2026 12:00:00 GMT</pubDate>
+      <category>NET</category>
+      <source url="https://theverge.com">The Verge</source>
+    </item>
+    <item>
+      <title>[IBM] IBM Quantum Division Hits Major Milestone</title>
+      <link>https://wsj.com</link>
+      <description>IBM quantum computing division achieved breakthrough with 1,121-qubit Condor processor.</description>
+      <pubDate>Thu, 09 Apr 2026 12:00:00 GMT</pubDate>
+      <category>IBM</category>
+      <source url="https://wsj.com">WSJ</source>
+    </item>
+    <item>
+      <title>[IBM] IBM Cloud Revenue Surges 18% YoY</title>
+      <link>https://bloomberg.com</link>
+      <description>IBM reported cloud revenue growth of 18% year-over-year for Q1.</description>
+      <pubDate>Sun, 05 Apr 2026 12:00:00 GMT</pubDate>
+      <category>IBM</category>
+      <source url="https://bloomberg.com">Bloomberg</source>
+    </item>
+    <item>
+      <title>[MSFT] Microsoft Copilot Reaches 500M Users</title>
+      <link>https://bloomberg.com</link>
+      <description>Microsoft Copilot AI assistant surpassed 500 million monthly active users.</description>
+      <pubDate>Thu, 09 Apr 2026 12:00:00 GMT</pubDate>
+      <category>MSFT</category>
+      <source url="https://bloomberg.com">Bloomberg</source>
+    </item>
+    <item>
+      <title>[MSFT] Azure Revenue Beats Analyst Estimates</title>
+      <link>https://wsj.com</link>
+      <description>Microsoft Azure cloud revenue grew 34% in the latest quarter.</description>
+      <pubDate>Tue, 07 Apr 2026 12:00:00 GMT</pubDate>
+      <category>MSFT</category>
+      <source url="https://wsj.com">WSJ</source>
+    </item>
+    <item>
+      <title>[AAPL] Apple Intelligence Rollout Expands to 30 Countries</title>
+      <link>https://reuters.com</link>
+      <description>Apple expanded Apple Intelligence features to 30 countries with 12 additional languages.</description>
+      <pubDate>Wed, 08 Apr 2026 12:00:00 GMT</pubDate>
+      <category>AAPL</category>
+      <source url="https://reuters.com">Reuters</source>
+    </item>
+    <item>
+      <title>[GOOG] Google Gemini 3 Launches With New Capabilities</title>
+      <link>https://techcrunch.com</link>
+      <description>Google unveiled Gemini 3 with native multimodal reasoning and 2M-token context.</description>
+      <pubDate>Thu, 09 Apr 2026 12:00:00 GMT</pubDate>
+      <category>GOOG</category>
+      <source url="https://techcrunch.com">TechCrunch</source>
+    </item>
+    <item>
+      <title>[TSLA] Tesla Robotaxi Service Begins in Austin</title>
+      <link>https://bloomberg.com</link>
+      <description>Tesla launched robotaxi service in Austin with 500 Model 3 vehicles.</description>
+      <pubDate>Wed, 08 Apr 2026 12:00:00 GMT</pubDate>
+      <category>TSLA</category>
+      <source url="https://bloomberg.com">Bloomberg</source>
+    </item>
+    <item>
+      <title>[AMZN] AWS Launches Next-Gen Custom Chips</title>
+      <link>https://techcrunch.com</link>
+      <description>AWS unveiled Graviton5 and Trainium3 chips with 40% better price-performance.</description>
+      <pubDate>Thu, 09 Apr 2026 12:00:00 GMT</pubDate>
+      <category>AMZN</category>
+      <source url="https://techcrunch.com">TechCrunch</source>
+    </item>
+  </channel>
+</rss>
