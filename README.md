@@ -2,17 +2,22 @@
 
 A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
 
-**Current Version: v0.4.2**
+**Current Version: v0.4.3**
 
 ---
 
 ## Changelog
 
+### v0.4.3 — 2026-04-16
+- **News wraps inside expanded rows** — previously, long headlines, summaries, and URLs inside expanded news rows (on the News tab) and inside the Dividend deep-dive panels could push the row's content horizontally, causing side-scroll within the table. Fixed with proper CSS: expanded rows now use `white-space:normal`, `word-break:break-word`, and `overflow-wrap:anywhere` on all child text nodes so the content flows downward and wraps cleanly to the full row width.
+- **Long URLs break gracefully** — article links with long URLs now break at any character boundary instead of extending the table width.
+- **Expanded panel constrained to row width** — the detail panel (`.xp`) is now `box-sizing:border-box` with `width:100%` and `max-width:100%` so nested content cannot overflow.
+
 ### v0.4.2 — 2026-04-16
-- **Live stock prices from Finnhub** — the hardcoded stale prices were making Portfolio Value look off. Prices now fetch from Finnhub's `/quote` endpoint on page load, cache for 10 minutes, auto-refresh every 10 minutes, and update when a new ticker is added. Falls back to built-in prices if the API is unreachable.
-- **Live price status indicator** under the Portfolio Value label — shows "● Prices live — [timestamp]" after a successful fetch.
-- **Portfolio Value verified** — formula is strictly `Σ(price × shares)`; Annual Income is displayed separately. The apparent mismatch in v0.4.1 was caused by stale hardcoded prices, not the formula.
-- **Broker dropdown** — clicking a broker cell now opens a dropdown listing every broker already used elsewhere in your portfolio, plus a "+ New broker..." option that swaps to a text input. Makes it trivial to apply the same broker to multiple stocks without retyping.
+- Live stock prices from Finnhub `/quote` endpoint — portfolio value now uses live prices instead of stale hardcoded ones
+- Portfolio value formula verified: `Σ(price × shares)` — no income mixed in
+- Broker dropdown — clicking broker cell shows list of previously-used brokers + "New broker..." option
+- Live price status indicator under Portfolio Value label
 
 ### v0.4.1 — 2026-04-16
 - Next Total Payout column on Dividends table (`next_pay_per_share × shares`)
@@ -59,15 +64,15 @@ A self-contained stock portfolio dashboard with live news, live prices, dividend
 ### Files to upload to repo root:
 
 ```
-v0.4.2.html         ← Main app
-index.html          ← Redirects root URL to v0.4.2.html
+v0.4.3.html         ← Main app
+index.html          ← Redirects root URL to v0.4.3.html
 feed.xml            ← RSS feed
 rss.xml             ← RSS feed alias
 generate-feed.js    ← Regenerate RSS on news updates
 README.md           ← This file
 ```
 
-Keep older versions (`v0.4.1.html`, `v0.4.0.html`, etc.) around for history if you like.
+Keep older versions around for history if you like.
 
 ### Enable GitHub Pages:
 1. Settings → Pages
@@ -97,10 +102,10 @@ Config already embedded. Required Firebase Console setup:
 3. **Authentication → Settings → Authorized domains** → add `itsavibecode.github.io`
 
 ### Finnhub (Live News + Live Prices)
-API key already embedded. Free tier = 60 calls/min. The app staggers requests (4/sec) and caches for 10 min.
+API key already embedded. Free tier = 60 calls/min. The app staggers requests and caches for 10 min.
 
 - **News**: `/company-news` endpoint per ticker
-- **Prices**: `/quote` endpoint per ticker (returns current price, change, % change, day high/low, open, prev close)
+- **Prices**: `/quote` endpoint per ticker
 
 ---
 
@@ -109,27 +114,29 @@ API key already embedded. Free tier = 60 calls/min. The app staggers requests (4
 | Feature | Details |
 |---------|---------|
 | Live Prices | Finnhub `/quote` on page load + every 10 min. Portfolio Value updates automatically. |
-| News Feed | Live via Finnhub API, cached 10 min, auto-refresh. Searchable, sortable. |
-| Dividends | Yield, annual div, next pay/share, Next Total Payout, pay date, rating, shares, broker, income/yr. |
+| News Feed | Live via Finnhub API, cached 10 min, auto-refresh. Searchable, sortable. Expands downward with wrapped text. |
+| Dividends | Yield, annual div, next pay/share, Next Total Payout, pay date, rating, shares, broker, income/yr. Deep-dive with news that wraps cleanly. |
 | Growth Stocks | Separate view with share tracking, broker dropdown, and news. |
 | Payout Log | Timeline of upcoming/past dividend payments with 90-day and annual projections. |
 | All Holdings | Master table with dividend/growth badges. |
-| Broker Dropdown | Click a broker cell — dropdown lists all brokers already used, with option to type a new one. |
+| Broker Dropdown | Click broker cell — dropdown lists all brokers already used + "New broker..." option. |
 | Sortable Tables | Click any column header to sort asc/desc. |
 | Share Tracking | Click "edit" on any stock to set share count. Calculates value, next total payout, and income. |
 | Auto-Save | Every change saves to localStorage + cloud if signed in. |
 | Cloud Sync | Firebase Google Auth + Firestore. Sign in once, access everywhere. |
 | RSS Feed | Auto-discovery `<link>` tag + static feed.xml/rss.xml files. |
 | Mobile | Card-based layout below 640px. Tap to expand. |
-| Desktop | Full sortable tables with expand/collapse detail rows. |
+| Desktop | Full sortable tables with expand/collapse detail rows that wrap text. |
 | Version Tracking | Version shown in header + footer. Changelog in this README. |
 
 ---
 
-## Portfolio Value Math
+## Text Wrapping Behavior (v0.4.3)
 
-Portfolio Value = Σ (live_price[ticker] × shares_owned[ticker]) for every ticker in the list.
+When you expand a row (News tab or Dividend row), the detail panel now:
+- Wraps all text to the row's full width (no horizontal overflow)
+- Breaks long URLs at any character so article links never push the layout
+- Constrains itself with `max-width:100%` and `box-sizing:border-box`
+- Uses `overflow-wrap:anywhere` so even pathological long words wrap cleanly
 
-Annual Income = Σ (annual_dividend[ticker] × shares_owned[ticker]) only for dividend-paying tickers.
-
-The two numbers are calculated independently and never mixed. Any apparent discrepancy is due to price staleness, which v0.4.2 fixes with live Finnhub prices.
+The main row data (ticker, price, yield, etc.) remains `nowrap` so columns stay aligned, but anything inside the expanded detail panel flows naturally downward.
