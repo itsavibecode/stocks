@@ -1,19 +1,24 @@
 # Portfolio Command Center
 
-A self-contained stock portfolio dashboard with live news, dividend tracking, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
+A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
 
-**Current Version: v0.4.1**
+**Current Version: v0.4.2**
 
 ---
 
 ## Changelog
 
+### v0.4.2 — 2026-04-16
+- **Live stock prices from Finnhub** — the hardcoded stale prices were making Portfolio Value look off. Prices now fetch from Finnhub's `/quote` endpoint on page load, cache for 10 minutes, auto-refresh every 10 minutes, and update when a new ticker is added. Falls back to built-in prices if the API is unreachable.
+- **Live price status indicator** under the Portfolio Value label — shows "● Prices live — [timestamp]" after a successful fetch.
+- **Portfolio Value verified** — formula is strictly `Σ(price × shares)`; Annual Income is displayed separately. The apparent mismatch in v0.4.1 was caused by stale hardcoded prices, not the formula.
+- **Broker dropdown** — clicking a broker cell now opens a dropdown listing every broker already used elsewhere in your portfolio, plus a "+ New broker..." option that swaps to a text input. Makes it trivial to apply the same broker to multiple stocks without retyping.
+
 ### v0.4.1 — 2026-04-16
-- **Next Total Payout column** on Dividends table — calculates `next_payout_per_share × shares_owned` so you see the estimated dollar amount of your upcoming dividend check per stock at a glance. Sortable like every other column.
-- **Next Total Payout in deep-dive** — added alongside per-share next pay in the expanded detail panel.
-- **Next Total Payout in mobile card view** — shows in the summary portion of each card when shares are set.
-- **Firebase config populated** — live Firestore cloud sync is active. Sign in with Google to sync across devices.
-- **Finnhub API key populated** — live news pulls on page load and every 10 minutes from the Finnhub API.
+- Next Total Payout column on Dividends table (`next_pay_per_share × shares`)
+- Next Total Payout in deep-dive panel and mobile card
+- Firebase config populated (stockfolio-96c95)
+- Finnhub API key populated for live news
 
 ### v0.4.0 — 2026-04-15
 - Firebase Google Auth + Firestore cloud sync
@@ -54,15 +59,15 @@ A self-contained stock portfolio dashboard with live news, dividend tracking, cl
 ### Files to upload to repo root:
 
 ```
-v0.4.1.html         ← Main app
-index.html          ← Redirects root URL to v0.4.1.html
+v0.4.2.html         ← Main app
+index.html          ← Redirects root URL to v0.4.2.html
 feed.xml            ← RSS feed
 rss.xml             ← RSS feed alias
 generate-feed.js    ← Regenerate RSS on news updates
 README.md           ← This file
 ```
 
-Keep older versions (`v0.4.0.html`, `v0.3.0.html`, etc.) if you want to preserve a history of what shipped.
+Keep older versions (`v0.4.1.html`, `v0.4.0.html`, etc.) around for history if you like.
 
 ### Enable GitHub Pages:
 1. Settings → Pages
@@ -75,10 +80,9 @@ Keep older versions (`v0.4.0.html`, `v0.3.0.html`, etc.) if you want to preserve
 ## Active Configuration
 
 ### Firebase (stockfolio-96c95)
-The Firebase config is already embedded in `v0.4.1.html`. Cloud sync works out of the box once you publish the Firestore rules below and confirm your GitHub Pages domain is authorized.
+Config already embedded. Required Firebase Console setup:
 
-**Required Firebase Console setup:**
-1. Firestore Database → Rules tab → paste and publish:
+1. **Firestore Database → Rules tab** → paste and publish:
    ```
    rules_version = '2';
    service cloud.firestore {
@@ -89,11 +93,14 @@ The Firebase config is already embedded in `v0.4.1.html`. Cloud sync works out o
      }
    }
    ```
-2. Authentication → Sign-in method → Google → Enabled
-3. Authentication → Settings → Authorized domains → add `itsavibecode.github.io`
+2. **Authentication → Sign-in method → Google** → Enabled
+3. **Authentication → Settings → Authorized domains** → add `itsavibecode.github.io`
 
-### Finnhub Live News
-API key is already embedded. News auto-fetches on page load if cache is older than 10 minutes. Free tier allows 60 calls/minute — the app staggers requests to stay well under.
+### Finnhub (Live News + Live Prices)
+API key already embedded. Free tier = 60 calls/min. The app staggers requests (4/sec) and caches for 10 min.
+
+- **News**: `/company-news` endpoint per ticker
+- **Prices**: `/quote` endpoint per ticker (returns current price, change, % change, day high/low, open, prev close)
 
 ---
 
@@ -101,29 +108,28 @@ API key is already embedded. News auto-fetches on page load if cache is older th
 
 | Feature | Details |
 |---------|---------|
-| News Feed | Live via Finnhub API, cached 10 min, auto-refresh. Searchable, sortable. Click rows to expand article + link. |
-| Dividends | Yield, annual div, next pay/share, **Next Total Payout**, pay date, rating, shares, broker, income/yr. Deep-dive with 18 data points + news. |
-| Growth Stocks | Separate view with share tracking, broker, and news in expand panel. |
+| Live Prices | Finnhub `/quote` on page load + every 10 min. Portfolio Value updates automatically. |
+| News Feed | Live via Finnhub API, cached 10 min, auto-refresh. Searchable, sortable. |
+| Dividends | Yield, annual div, next pay/share, Next Total Payout, pay date, rating, shares, broker, income/yr. |
+| Growth Stocks | Separate view with share tracking, broker dropdown, and news. |
 | Payout Log | Timeline of upcoming/past dividend payments with 90-day and annual projections. |
-| All Holdings | Master table of everything with dividend/growth badges. |
-| Broker Column | Set broker per stock (Fidelity, Schwab, etc.) — shows on all views. |
+| All Holdings | Master table with dividend/growth badges. |
+| Broker Dropdown | Click a broker cell — dropdown lists all brokers already used, with option to type a new one. |
 | Sortable Tables | Click any column header to sort asc/desc. |
 | Share Tracking | Click "edit" on any stock to set share count. Calculates value, next total payout, and income. |
-| Auto-Save | Every change saves to localStorage instantly + cloud if signed in. |
+| Auto-Save | Every change saves to localStorage + cloud if signed in. |
 | Cloud Sync | Firebase Google Auth + Firestore. Sign in once, access everywhere. |
 | RSS Feed | Auto-discovery `<link>` tag + static feed.xml/rss.xml files. |
-| Mobile | Card-based layout below 640px. Tap to expand. Scrollable tabs. |
+| Mobile | Card-based layout below 640px. Tap to expand. |
 | Desktop | Full sortable tables with expand/collapse detail rows. |
-| Version Tracking | Version shown in header. Changelog in this README. |
+| Version Tracking | Version shown in header + footer. Changelog in this README. |
 
 ---
 
-## New in v0.4.1: Next Total Payout
+## Portfolio Value Math
 
-The Dividends tab now has a column between "Next Pay" (per share) and "Pay Date". It shows the estimated total dollar amount you'll receive on the next payment date based on your share count.
+Portfolio Value = Σ (live_price[ticker] × shares_owned[ticker]) for every ticker in the list.
 
-- If you own **100 shares of KO** at a next payout of **$0.50/share**, the column shows **$50.00** on the pay date of **2026-07-01**.
-- Updates instantly when you edit shares.
-- Sortable — click the header to sort by upcoming payout size.
-- Shown in green when shares are set, dash when not.
-- Also visible in the deep-dive panel and mobile card.
+Annual Income = Σ (annual_dividend[ticker] × shares_owned[ticker]) only for dividend-paying tickers.
+
+The two numbers are calculated independently and never mixed. Any apparent discrepancy is due to price staleness, which v0.4.2 fixes with live Finnhub prices.
