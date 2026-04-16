@@ -223,11 +223,11 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.4.1</div>
+        <div class="logo-ver">v0.4.2</div>
       </div>
     </div>
     <div class="header-actions">
-      <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value</div><div class="stat-val" id="pvV"></div></div>
+      <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value <span id="priceStatus" style="font-size:8px;text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="stat-val" id="pvV"></div></div>
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
       <button class="btn btn-primary" onclick="openMod()">+ Add</button>
       <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()">&#128225; RSS</button>
@@ -334,7 +334,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
     <div class="mc" id="mA"></div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.4.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.4.2 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -350,7 +350,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.4.1";
+var VERSION = "0.4.2";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -458,7 +458,20 @@ function loadFromCloud() {
 // DATA
 // ═════════════════════════════════════════════════
 var DT=["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP","F","GOOG","AAPL","TSLA","TGT","KO","VICI","CMCSA","BAC","INTC","AMZN"];
-var PR={NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57,MSFT:448.72,RTX:123.05,BP:29.60,SCHD:82.44,ABBV:204.30,AXP:285.60,F:10.49,GOOG:177.80,AAPL:232.56,TSLA:271.34,TGT:132.55,KO:70.68,VICI:33.40,CMCSA:39.74,BAC:44.44,INTC:31.65,AMZN:197.12};
+// Fallback prices — these are stale. Live prices from Finnhub override these on page load.
+var FALLBACK_PR={NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57,MSFT:448.72,RTX:123.05,BP:29.60,SCHD:82.44,ABBV:204.30,AXP:285.60,F:10.49,GOOG:177.80,AAPL:232.56,TSLA:271.34,TGT:132.55,KO:70.68,VICI:33.40,CMCSA:39.74,BAC:44.44,INTC:31.65,AMZN:197.12};
+var livePrices = {};
+// PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
+var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
+var pricesLastFetched = 0;
+var PRICE_CACHE_MS = 10 * 60 * 1000; // 10 min
+// Load cached prices
+try {
+  var cp = localStorage.getItem('pf_prices');
+  var cpt = parseInt(localStorage.getItem('pf_prices_ts')||'0');
+  if (cp) livePrices = JSON.parse(cp);
+  pricesLastFetched = cpt;
+} catch(e){}
 
 var DV={
 T:{y:5.05,a:1.11,f:"Quarterly",ex:"2026-04-09",pd:"2026-05-01",np:.2775,yp:41,yr:0,pr:64.8,rt:"Stable",sc:"Telecom",g5:-3.2,h:[{d:"2026-02-01",a:.2775},{d:"2025-11-01",a:.2775},{d:"2025-08-01",a:.2775}]},
@@ -543,6 +556,43 @@ function fetchAllNews() {
   next();
 }
 
+// ═════════════════════════════════════════════════
+// LIVE PRICES — Finnhub /quote endpoint
+// ═════════════════════════════════════════════════
+function fetchPriceForTicker(ticker) {
+  if (!FINNHUB_KEY) return Promise.resolve(null);
+  return fetch('https://finnhub.io/api/v1/quote?symbol='+ticker+'&token='+FINNHUB_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      // Finnhub quote returns: c = current price, d = change, dp = % change, h = high, l = low, o = open, pc = prev close
+      if (data && typeof data.c === 'number' && data.c > 0) return data.c;
+      return null;
+    }).catch(function(){return null});
+}
+
+function fetchAllPrices() {
+  if (!FINNHUB_KEY) return;
+  var st = document.getElementById('priceStatus');
+  if (st) st.innerHTML = '<span class="sync-spinner" style="width:10px;height:10px;border-width:1.5px"></span> Fetching prices...';
+  var queue = tks.slice();
+  var idx = 0;
+  function next() {
+    if (idx >= queue.length) {
+      pricesLastFetched = Date.now();
+      try { localStorage.setItem('pf_prices', JSON.stringify(livePrices)); localStorage.setItem('pf_prices_ts', ''+pricesLastFetched); } catch(e){}
+      if (st) st.innerHTML = '<span class="news-live">&#9679; Prices live &mdash; ' + new Date().toLocaleTimeString() + '</span>';
+      render();
+      return;
+    }
+    var tk = queue[idx++];
+    fetchPriceForTicker(tk).then(function(price){
+      if (price) livePrices[tk] = price;
+      setTimeout(next, 250); // stagger
+    });
+  }
+  next();
+}
+
 // Load cached news
 try {
   var cn = localStorage.getItem('pf_news');
@@ -597,7 +647,41 @@ function rb(r){return r==='King'?'\ud83d\udc51 King':r==='Aristocrat'?'\ud83c\ud
 function sCl(t){var s=sh[t]||0;return'<span class="sd'+(s?' hv':'')+'" onclick="eS(\''+t+'\',this)">'+(s||'edit')+'</span>'}
 function bCl(t){var b=bk[t]||'';return'<span class="bd'+(b?' hv':'')+'" onclick="eB(\''+t+'\',this)">'+(b||'set')+'</span>'}
 function eS(t,el){event.stopPropagation();var v=sh[t]||0;var i=document.createElement('input');i.type='number';i.className='si';i.value=v||'';el.replaceWith(i);i.focus();i.select();var dn=function(){sh[t]=parseFloat(i.value)||0;save();render()};i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}}}
-function eB(t,el){event.stopPropagation();var v=bk[t]||'';var i=document.createElement('input');i.type='text';i.className='bi';i.value=v;i.placeholder='Broker';el.replaceWith(i);i.focus();i.select();var dn=function(){bk[t]=i.value.trim();save();render()};i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}}}
+function getBrokerList(){var set={};Object.keys(bk).forEach(function(k){if(bk[k])set[bk[k]]=1});return Object.keys(set).sort()}
+function eB(t,el){
+  event.stopPropagation();
+  var cur=bk[t]||'';
+  var list=getBrokerList();
+  if(list.length===0){ eBText(t,el,cur); return; }
+  var sel=document.createElement('select');
+  sel.className='bi';
+  sel.style.width='110px';
+  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'"'+(b===cur?' selected':'')+'>'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
+  el.replaceWith(sel);
+  sel.focus();
+  var done=function(){
+    var val=sel.value;
+    if(val==='__NEW__'){
+      // Swap to a text input for typing a new broker
+      var wrap=document.createElement('span');
+      sel.replaceWith(wrap);
+      eBText(t,wrap,'');
+      return;
+    }
+    bk[t]=val;save();render();
+  };
+  sel.onchange=done;
+  sel.onblur=function(){setTimeout(done,100)}; // small delay so onchange fires first
+}
+function eBText(t,el,cur){
+  var i=document.createElement('input');
+  i.type='text';i.className='bi';i.value=cur;i.placeholder='Broker name';
+  el.replaceWith(i);
+  i.focus();i.select();
+  var dn=function(){bk[t]=i.value.trim();save();render()};
+  i.onblur=dn;
+  i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}else if(e.key==='Escape'){render()}};
+}
 function tog(id){var r=document.getElementById(id);if(!r)return;if(r.classList.contains('open'))r.classList.remove('open');else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open')});r.classList.add('open')}}
 function togM(el){el.classList.toggle('open')}
 function ds(tid,col){if(!ss[tid])ss[tid]={c:col,d:'desc'};else if(ss[tid].c===col)ss[tid].d=ss[tid].d==='asc'?'desc':'asc';else ss[tid]={c:col,d:'desc'};document.querySelectorAll('#'+tid+' thead th').forEach(function(th){th.classList.remove('sorted');var a=th.querySelector('.sa');if(a)a.innerHTML='&#9660;'});var h=document.querySelector('#'+tid+' thead th[data-col="'+col+'"]');if(h){h.classList.add('sorted');var a=h.querySelector('.sa');if(a)a.innerHTML=ss[tid].d==='asc'?'&#9650;':'&#9660;'}render()}
@@ -686,7 +770,7 @@ function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.st
 function cpRSS(){navigator.clipboard.writeText(gRSS()).then(function(){var b=G('cpB');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy XML'},2e3)})}
 function openMod(){G('mod').style.display='';rCh();setTimeout(function(){G('mIn').focus()},100)}
 function rCh(){G('cps').innerHTML=tks.map(function(t){return'<span class="ch">'+t+'<span class="x" onclick="rmT(\''+t+'\')">&#215;</span></span>'}).join('')}
-function addT(){var t=G('mIn').value.trim().toUpperCase();if(t&&tks.indexOf(t)<0){tks.push(t);save();render();rCh();if(FINNHUB_KEY)fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}})}G('mIn').value=''}
+function addT(){var t=G('mIn').value.trim().toUpperCase();if(t&&tks.indexOf(t)<0){tks.push(t);save();render();rCh();if(FINNHUB_KEY){fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}})}}G('mIn').value=''}
 function rmT(t){tks=tks.filter(function(x){return x!==t});delete sh[t];delete bk[t];save();render();rCh()}
 
 // INIT
@@ -701,8 +785,17 @@ if (FINNHUB_KEY && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
   G('newsStatus').innerHTML = '<span class="news-stale">&#9679; Fallback data &mdash; add Finnhub API key for live news</span>';
 }
 
-// Auto-refresh news every 10 minutes
-setInterval(function(){ if(FINNHUB_KEY) fetchAllNews(); }, NEWS_CACHE_MS);
+// Fetch live prices on load if API key is set and cache is stale
+if (FINNHUB_KEY && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
+  fetchAllPrices();
+} else if (FINNHUB_KEY && pricesLastFetched > 0) {
+  var ps = G('priceStatus'); if (ps) ps.innerHTML = '<span class="news-live">&#9679; Prices cached &mdash; ' + new Date(pricesLastFetched).toLocaleTimeString() + '</span>';
+}
+
+// Auto-refresh news and prices every 10 minutes
+setInterval(function(){
+  if (FINNHUB_KEY) { fetchAllNews(); fetchAllPrices(); }
+}, NEWS_CACHE_MS);
 </script>
 </body>
 </html>
