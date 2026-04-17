@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center</title>
+<title>Portfolio Command Center v0.5.1</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -195,6 +196,37 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   .mkd{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
   .mk.open .mkd{display:block}
 }
+
+/* THEME + TEXT SIZE */
+body.light{--bg:#f0f2f5;--card:#fff;--card2:#f5f7fa;--card3:#eaecf0;--border:#d1d5db;--border2:#bfc5ce;--text:#1a1a2e;--text2:#374151;--muted:#6b7280;--accent:#2563eb;--accent2:#0891b2;--accent-dim:#2563eb25;--green:#059669;--green-dim:#05966920;--red:#dc2626;--red-dim:#dc262620;--yellow:#d97706;--yellow-dim:#d9770620;--purple:#7c3aed;--purple-dim:#7c3aed20;--gold:#b45309;--orange:#ea580c}
+body.text-lg{font-size:15px}
+body.text-lg table{font-size:13px}
+body.text-lg thead th{font-size:10.5px}
+body.text-lg .tab{font-size:13px}
+body.text-lg .sc .scv{font-size:22px}
+body.text-xl{font-size:17px}
+body.text-xl table{font-size:14.5px}
+body.text-xl thead th{font-size:11.5px}
+body.text-xl .tab{font-size:14px}
+body.text-xl .sc .scv{font-size:24px}
+
+/* RECENT NEWS HIGHLIGHT */
+.news-recent{background:var(--accent-dim)!important;border-left:3px solid var(--accent)}
+
+/* TAX TOOLTIP */
+.tax-tag{display:inline-flex;align-items:center;gap:3px;background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;cursor:help;position:relative}
+.tax-tag .tax-tip{display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--card3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:10px;font-weight:400;white-space:nowrap;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.tax-tag:hover .tax-tip{display:block}
+
+/* PAYOUT LOG REDESIGN */
+.pl-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;transition:background .1s}
+.pl-card:hover{background:var(--card2)}
+.pl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pl-tk{font-family:var(--mono);font-weight:700;font-size:12px;min-width:44px}
+.pl-date{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:80px}
+.pl-amt{font-family:var(--mono);font-size:11px}
+.pl-total{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--green)}
+.pl-badge{margin-left:auto}
 </style>
 </head>
 <body>
@@ -224,7 +256,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.0</div>
+        <div class="logo-ver">v0.5.1</div>
       </div>
     </div>
     <div class="header-actions">
@@ -360,8 +392,29 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127912; Appearance</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Theme</div>
+            <select class="mi" id="sTheme" onchange="setTheme(this.value)" style="width:120px;margin:0;padding:6px 8px;font-size:12px">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Text Size</div>
+            <select class="mi" id="sTextSize" onchange="setTextSize(this.value)" style="width:120px;margin:0;padding:6px 8px;font-size:12px">
+              <option value="normal">Normal</option>
+              <option value="lg">Large</option>
+              <option value="xl">Extra Large</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; News Notifications</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast notification with sound when new articles are fetched.</p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Toast notification with sound when new articles arrive. Enabled by default.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
             <input type="checkbox" id="sNotifEnabled" onchange="savePref()"> Enable news notifications
@@ -390,7 +443,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -417,7 +470,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.0";
+var VERSION = "0.5.1";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -947,7 +1000,8 @@ function render(){
   if(q)all=all.filter(function(n){return n.t.toLowerCase().indexOf(q)>=0||n.tk.toLowerCase().indexOf(q)>=0||n.s.toLowerCase().indexOf(q)>=0});
   all=srt('tN',all,function(i,c){return{ticker:i.tk,title:i.t,source:i.s,date:i.d}[c]||''});
   G('cN').textContent=all.length;
-  var h='';all.forEach(function(n,i){var rid='n'+i;h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var oneHourAgo=new Date(Date.now()-36e5).toISOString().slice(0,16);
+  var h='';all.forEach(function(n,i){var rid='n'+i;var isRecent=(n.d+'T'+(n.tm?n.tm.replace(/ /g,''):'00:00'))>oneHourAgo.replace('T','T');var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+taxHTML(n.tk)+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -994,7 +1048,7 @@ function render(){
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
-  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="le"><div class="ld" style="background:'+(e.up?'var(--accent)':'var(--green)')+'"></div><span class="mono fw7" style="min-width:40px;font-size:11px">'+e.tk+'</span><span class="mono muted" style="font-size:10px;min-width:70px">'+e.d+'</span><span class="mono" style="font-size:10px">$'+e.a+'/sh</span>'+(e.s>0?'<span class="mono muted" style="font-size:10px">'+e.s+' sh</span><span class="mono fw7 green" style="font-size:11px">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px;margin-left:auto">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</div>'});
+  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="pl-card"><div class="pl-dot" style="background:'+(e.up?'var(--accent)':'var(--green)')+'"></div><span class="pl-tk">'+e.tk+'</span><span class="pl-date">'+e.d+'</span><span class="pl-amt">$'+e.a+'/sh</span>'+(e.s>0?'<span class="muted" style="font-size:10px">&times; '+e.s+'</span><span class="pl-total">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares set</span>')+'<span class="pl-badge"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:9px">'+(e.up?'UPCOMING':'PAID')+'</span></span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px;margin-left:4px">'+bk[e.tk]+'</span>':'')+'</div>'});
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
   // ALL (now with expandable lots)
@@ -1058,6 +1112,90 @@ function render(){
 
 function gRSS(){var it='';tks.forEach(function(t){getNews(t).forEach(function(n){it+='    <item>\n      <title>['+t+'] '+xm(n.t)+'</title>\n      <link>'+n.u+'</link>\n      <description>'+xm(n.sm||n.t)+'</description>\n      <pubDate>'+new Date(n.d+'T12:00:00Z').toUTCString()+'</pubDate>\n      <category>'+t+'</category>\n    </item>\n'})});return'<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>Portfolio Command Center News</title>\n    <link>'+location.href+'</link>\n    <lastBuildDate>'+new Date().toUTCString()+'</lastBuildDate>\n'+it+'  </channel>\n</rss>'}
 function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+// ═════════════════════════════════════════════════
+// THEME + TEXT SIZE
+// ═════════════════════════════════════════════════
+function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t}
+function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s}
+function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl')}
+
+// ═════════════════════════════════════════════════
+// TAX FORMS — stocks with special tax considerations
+// ═════════════════════════════════════════════════
+var TAX_INFO={
+  SCHD:{form:"1099-DIV",note:"Qualified & non-qualified dividends reported"},
+  VICI:{form:"1099-DIV",note:"REIT dividends — may include return of capital (Box 3)"},
+  BP:{form:"1099-DIV",note:"Foreign tax paid — claim credit on Form 1116"},
+  T:{form:"1099-DIV",note:"Qualified dividends — standard 1099-DIV"},
+  F:{form:"1099-DIV",note:"Qualified dividends"},
+  ABBV:{form:"1099-DIV",note:"Qualified dividends"},
+  KO:{form:"1099-DIV",note:"Qualified dividends"},
+  TGT:{form:"1099-DIV",note:"Qualified dividends"},
+  INTC:{form:"1099-DIV",note:"May include return of capital if fund distributions"},
+  BAC:{form:"1099-DIV + 1099-INT",note:"Dividends + potential interest income"},
+  AXP:{form:"1099-DIV",note:"Qualified dividends"},
+  IBM:{form:"1099-DIV",note:"Qualified dividends"},
+  MSFT:{form:"1099-DIV",note:"Qualified dividends"},
+  AAPL:{form:"1099-DIV",note:"Qualified dividends"},
+  GOOG:{form:"1099-DIV",note:"Qualified dividends (new — started 2024)"},
+  PFE:{form:"1099-DIV",note:"Qualified dividends"},
+  RTX:{form:"1099-DIV",note:"Qualified dividends — check for spin-off cost basis"},
+  LUV:{form:"1099-DIV",note:"Qualified dividends"},
+  RGR:{form:"1099-DIV",note:"Variable dividends — special div may be non-qualified"},
+  CMCSA:{form:"1099-DIV",note:"Qualified dividends"},
+  TSLA:{form:"1099-B",note:"No dividends — capital gains only on sale"},
+  NET:{form:"1099-B",note:"No dividends — capital gains only on sale"},
+  AMZN:{form:"1099-B",note:"No dividends — capital gains only on sale"}
+};
+function taxHTML(t){
+  var info=TAX_INFO[t];if(!info)return'';
+  var isSpecial=info.form.indexOf('1116')>=0||info.note.indexOf('return of capital')>=0||info.note.indexOf('spin-off')>=0||info.note.indexOf('1099-B')>=0;
+  if(!isSpecial)return'';
+  return' <span class="tax-tag">\u26a0 '+info.form+'<span class="tax-tip">'+info.note+'</span></span>';
+}
+
+// ═════════════════════════════════════════════════
+// FETCH STOCK PROFILE — for newly added tickers
+// ═════════════════════════════════════════════════
+function fetchProfile(ticker){
+  if(!FINNHUB_KEY)return;
+  // Fetch basic profile for sector
+  fetch('https://finnhub.io/api/v1/stock/profile2?symbol='+ticker+'&token='+FINNHUB_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data&&data.finnhubIndustry){
+        if(!DV[ticker])DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'None',sc:data.finnhubIndustry,g5:0,h:[]};
+        else DV[ticker].sc=data.finnhubIndustry;
+      }
+    }).catch(function(){});
+  // Fetch dividend info
+  fetch('https://finnhub.io/api/v1/stock/metric?symbol='+ticker+'&metric=all&token='+FINNHUB_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!data||!data.metric)return;
+      var m=data.metric;
+      var divYield=m.dividendYieldIndicatedAnnual||m.dividendYield5Y||0;
+      var divPerShare=m.dividendsPerShareAnnual||0;
+      if(divPerShare>0||divYield>0){
+        if(!DV[ticker])DV[ticker]={y:0,a:0,f:'Quarterly',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'Unknown',sc:'',g5:0,h:[]};
+        DV[ticker].y=divYield;
+        DV[ticker].a=divPerShare;
+        DV[ticker].np=divPerShare/4;
+        DV[ticker].pr=m.payoutRatioAnnual||0;
+        DV[ticker].rt=divYield>=4?'High Yield':divYield>=2?'Moderate':'Low Yield';
+        if(!DV[ticker].f||DV[ticker].f==='N/A')DV[ticker].f='Quarterly';
+      }
+      // Save DV updates
+      try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      render();
+    }).catch(function(){});
+}
+function getDVCustom(){var custom={};tks.forEach(function(t){if(DV[t]&&!BUILTIN_TICKERS[t])custom[t]=DV[t]});return custom}
+var BUILTIN_TICKERS={};
+(function(){var dt=["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP","F","GOOG","AAPL","TSLA","TGT","KO","VICI","CMCSA","BAC","INTC","AMZN"];dt.forEach(function(t){BUILTIN_TICKERS[t]=1})})();
+// Load custom DV data
+try{var cdv=JSON.parse(localStorage.getItem('pf_dv_custom'));if(cdv){Object.keys(cdv).forEach(function(t){DV[t]=cdv[t]})}}catch(e){}
+
 
 function sTab(id){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active')});document.querySelector('.tab[data-tab="'+id+'"]').classList.add('active');G('content-'+id).classList.add('active')}
 function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.style.display='';b.classList.add('active')}else{p.style.display='none';b.classList.remove('active')}}
@@ -1108,6 +1246,7 @@ function addT(){
     computeFromLots();
     save();render();rCh();
     if(FINNHUB_KEY){
+      fetchProfile(t);
       fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});
       fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}});
     }
@@ -1215,7 +1354,8 @@ getBrokerList=function(){
 // PREFERENCES (persisted per user)
 // ═════════════════════════════════════════════════
 function loadPrefs(){
-  try{var p=JSON.parse(localStorage.getItem('pf_prefs'));return p||{}}catch(e){return{}}
+  try{var p=JSON.parse(localStorage.getItem('pf_prefs'));if(p){if(p.notifEnabled===undefined)p.notifEnabled=true;if(p.soundMuted===undefined)p.soundMuted=false;if(!p.soundChoice)p.soundChoice='chime';return p}}catch(e){}
+  return{notifEnabled:true,soundMuted:false,soundChoice:'chime',theme:'dark',textSize:'normal',accounts:[]};
 }
 function savePrefs(p){
   try{localStorage.setItem('pf_prefs',JSON.stringify(p))}catch(e){}
@@ -1229,13 +1369,17 @@ function savePref(){
   prefs.notifEnabled=G('sNotifEnabled').checked;
   prefs.soundMuted=G('sSoundMuted').checked;
   prefs.soundChoice=G('sSoundChoice').value;
+  prefs.theme=G('sTheme').value;
+  prefs.textSize=G('sTextSize').value;
   savePrefs(prefs);
 }
 function loadPrefUI(){
   var prefs=loadPrefs();
-  var ne=G('sNotifEnabled');if(ne)ne.checked=!!prefs.notifEnabled;
+  var ne=G('sNotifEnabled');if(ne)ne.checked=prefs.notifEnabled!==false;
   var sm=G('sSoundMuted');if(sm)sm.checked=!!prefs.soundMuted;
   var sc=G('sSoundChoice');if(sc)sc.value=prefs.soundChoice||'chime';
+  var th=G('sTheme');if(th)th.value=prefs.theme||'dark';
+  var ts=G('sTextSize');if(ts)ts.value=prefs.textSize||'normal';
 }
 
 // ═════════════════════════════════════════════════
@@ -1277,33 +1421,37 @@ function showToast(msg,type){
 // Patch fetchAllNews to trigger notification
 var _origFetchAllNews=fetchAllNews;
 var prevNewsCount=0;
+var prevNewsByTicker={};
 fetchAllNews=function(){
-  // Count news before
-  var before=0;tks.forEach(function(t){before+=(liveNews[t]||[]).length});
-  prevNewsCount=before;
+  prevNewsByTicker={};tks.forEach(function(t){prevNewsByTicker[t]=(liveNews[t]||[]).length});
+  prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});
   _origFetchAllNews();
 };
-// Patch the news status update to check for new articles
-var _origNewsStatus=null;
 (function(){
-  var origInterval=setInterval;
-  // We'll check after news loads via a watcher
   setInterval(function(){
-    var after=0;tks.forEach(function(t){after+=(liveNews[t]||[]).length});
+    var after=0;var newTickers=[];
+    tks.forEach(function(t){
+      var cnt=(liveNews[t]||[]).length;
+      after+=cnt;
+      if(cnt>(prevNewsByTicker[t]||0))newTickers.push(t);
+    });
     if(after>prevNewsCount&&prevNewsCount>0){
       var prefs=loadPrefs();
-      if(prefs.notifEnabled){
+      if(prefs.notifEnabled!==false){
         var diff=after-prevNewsCount;
-        showToast(diff+' new article'+(diff!==1?'s':'')+' loaded');
+        var msg=diff+' new article'+(diff!==1?'s':'')+': '+newTickers.join(', ');
+        showToast(msg);
         playNotifSound();
       }
       prevNewsCount=after;
+      tks.forEach(function(t){prevNewsByTicker[t]=(liveNews[t]||[]).length});
     }
   },2000);
 })();
 
 // INIT
 load();
+loadThemePrefs();
 ss['tN']={c:'date',d:'desc'};
 render();
 loadPrefUI();
