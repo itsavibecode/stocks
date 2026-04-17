@@ -1,32 +1,36 @@
 # Portfolio Command Center
 
-**Current Version: v0.5.2**
+**Current Version: v0.5.3**
 
 ---
 
 ## Changelog
 
+### v0.5.3 — 2026-04-17
+- **News highlighting fixed** — rewrote time comparison logic. Was comparing "2:34 PM" strings to ISO format (broken). Now properly parses AM/PM times to epoch milliseconds. Articles from the past hour get accent-colored background with left border on the first cell.
+- **Tax labels moved to Dividends only** — removed from News tab. Now shows ⚠ tag next to ticker in Dividends table rows and in the deep-dive panel. Tax Form and Tax Note fields added to the deep-dive data grid.
+- **SLV, GLD, and commodity ETFs** — added hardcoded detection for commodity/precious metal ETFs (SLV, GLD, IAU, PPLT, USO, UNG, DBA, DBC, PDBC). These bypass Finnhub (which returns no data for trusts) and get classified immediately with proper sector ("Precious Metals", "Energy Commodities", etc.) and tax warnings (K-1 / collectible 28% rate).
+- **Tax info expanded** — SLV and GLD now show "1099-B / K-1" with collectible tax rate warning. USO shows K-1 partnership warning.
+- **Shares formatted in deep-dive** — the Shares field in the dividend deep-dive grid now uses `fmSh()` for clean display.
+
 ### v0.5.2 — 2026-04-17
-- **Fractional shares display fixed** — added `fmSh()` helper that rounds fractional shares to 2-4 decimal places instead of showing raw floating point like `169.95544999999998`. Applied everywhere: table cells, lot grids, payout log, accounts view, lot summaries.
-- **Auto-fix missing stock data** — `recheckMissingData()` runs on every page load. Scans all tickers for missing sector or dividend data, re-fetches from Finnhub automatically. Stocks incorrectly placed under Growth (like ABT, COST, MCD, O, HSY, CVX, HD) will get their correct sector and dividend classification.
-- **fetchProfile chained** — sector (profile2) and dividend (metric) API calls now run sequentially instead of parallel. Eliminates race condition where render fires before sector data arrives, causing stocks to show "—" for sector.
-- **Payout Log compact redesign** — replaced fat padded cards with tight border-indicator rows. Colored left border (blue=upcoming, green=paid), inline ticker/date/amount/shares/total. 3x more entries visible on screen. Share counts properly rounded.
-- **Shares formatted everywhere** — lot grid, payout log, accounts view, table summary all use `fmSh()` for clean display of fractional shares.
+- Fractional shares display fixed (fmSh helper)
+- Auto-fix missing stock data on page load
+- fetchProfile chained (sector then dividends)
+- Payout Log compact redesign
 
 ### v0.5.1 — 2026-04-17
-- New stock classification via Finnhub, favicon, title with version
-- Payout Log card layout, text size setting, theme switching
-- Tax labels with hover tooltips, notifications enabled by default
-- Recent news highlighting (past hour)
+- Stock auto-classification via Finnhub, favicon, title with version
+- Payout Log card layout, text size, theme switching
+- Tax labels, notifications enabled by default, recent news highlight
 
 ### v0.5.0 — 2026-04-17
 - "Broker" → "Account", Accounts tab, Settings tab
 - Smart add ticker, lot timestamps, notification sounds
-- Account management, All tab expandable
 
 ### v0.4.x — 2026-04-15 to 2026-04-17
 - Firebase + Finnhub, multi-lot holdings, panels stay open
-- Search on all tabs, add ticker fix, news wrapping, live prices
+- Search, add ticker fix, news wrapping, live prices
 
 ### v0.1.0–v0.3.0 — 2026-04-14
 - Initial build through payout log + mobile cards
@@ -36,12 +40,14 @@
 ## Deploy
 
 ```
-v0.5.2.html    ← Main app
-index.html     ← Redirects to v0.5.2.html
+v0.5.3.html    ← Main app
+index.html     ← Redirects to v0.5.3.html
 feed.xml       ← RSS feed
 rss.xml        ← RSS alias
 README.md      ← This file
 ```
+
+**IMPORTANT:** After deploying, do a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) to clear the browser cache. The payout log redesign and other visual changes won't appear if the old version is cached.
 
 Settings → Pages → Deploy from branch → main / root
 
@@ -67,33 +73,45 @@ Config embedded. Console setup:
 
 ---
 
-## Auto-Fix for Misclassified Stocks
+## Commodity ETFs
 
-On every page load, `recheckMissingData()` checks all tickers for missing sector data. If found, it re-fetches from Finnhub's `/stock/profile2` (sector) and `/stock/metric` (dividend yield, annual dividend, payout ratio) APIs. Results are cached in `pf_dv_custom` in localStorage.
+These tickers are handled specially since Finnhub doesn't return profile/metric data for trust-structured ETFs:
 
-**If stocks are still misclassified after a page load:**
-1. Open browser console
-2. Run: `localStorage.removeItem('pf_dv_custom')`
-3. Refresh — the app will re-fetch all non-builtin stock data from Finnhub
-
-**Manual trigger:** You can also force a recheck by running `recheckMissingData()` in the console.
+| Ticker | Sector | Tax Form | Note |
+|--------|--------|----------|------|
+| SLV | Precious Metals | 1099-B / K-1 | Collectible 28% max rate |
+| GLD | Precious Metals | 1099-B / K-1 | Collectible 28% max rate |
+| IAU | Precious Metals | 1099-B | Collectible 28% max rate |
+| PPLT | Precious Metals | 1099-B / K-1 | Collectible rate, may issue K-1 |
+| USO | Energy Commodities | K-1 | Partnership, issues K-1 not 1099 |
 
 ---
 
-## Fractional Shares
+## Tax Labels
 
-The app now properly handles fractional shares (common with M1 Finance, Robinhood, etc.):
-- Shares ≥ 100: shown to 2 decimals (e.g., `169.96`)
-- Shares ≥ 10: shown to 3 decimals (e.g., `43.271`)
-- Shares < 10: shown to 4 decimals (e.g., `2.3912`)
-- Whole shares: shown as integers (e.g., `100`)
+Tax tags appear **only on the Dividends tab** — both in the table row (next to ticker) and inside the expanded deep-dive panel as "Tax Form" and "Tax Note" fields.
+
+Stocks with non-standard tax situations show a ⚠ warning tag:
+- **REITs** (VICI) — return of capital in Box 3
+- **Foreign** (BP) — claim foreign tax credit Form 1116
+- **Commodity ETFs** (SLV, GLD) — collectible rate, K-1
+- **Spin-offs** (RTX) — check cost basis adjustments
+- **Growth-only** (TSLA, NET, AMZN) — 1099-B capital gains only
+
+Hover the tag for details.
 
 ---
 
 ## Troubleshooting
 
-**Stocks showing under wrong tab (Growth vs Dividend):** Wait 10-15 seconds after page load for the auto-fix to run. If still wrong, clear custom data: `localStorage.removeItem('pf_dv_custom')` then refresh.
+**Payout log still looks old:** Hard refresh (Ctrl+Shift+R). The browser may be caching the previous version's HTML.
 
-**Payout log shows old floating-point numbers:** Hard refresh (Ctrl+Shift+R) to clear cached version.
+**Stocks still under wrong tab:** Run in console:
+```javascript
+localStorage.removeItem('pf_dv_custom');
+```
+Then hard refresh. Auto-fix will re-fetch from Finnhub.
 
-**Sector showing "—":** Finnhub may not have data for very small or new tickers. The sector will show "—" until data is available.
+**SLV/GLD showing "—" for sector:** These are now hardcoded. If still showing "—", hard refresh to load v0.5.3.
+
+**News not highlighting:** The highlight only applies to articles published within the last 60 minutes of the current time. If no articles are that recent, no highlighting will appear — this is expected.
