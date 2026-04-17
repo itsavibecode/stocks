@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.1</title>
+<title>Portfolio Command Center v0.5.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -219,14 +219,16 @@ body.text-xl .sc .scv{font-size:24px}
 .tax-tag:hover .tax-tip{display:block}
 
 /* PAYOUT LOG REDESIGN */
-.pl-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;transition:background .1s}
+.pl-card{background:var(--card);border-left:3px solid var(--border);border-radius:0 6px 6px 0;padding:6px 12px;margin-bottom:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:background .1s;font-size:12px}
 .pl-card:hover{background:var(--card2)}
-.pl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.pl-tk{font-family:var(--mono);font-weight:700;font-size:12px;min-width:44px}
-.pl-date{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:80px}
-.pl-amt{font-family:var(--mono);font-size:11px}
+.pl-card.pl-upcoming{border-left-color:var(--accent)}
+.pl-card.pl-paid{border-left-color:var(--green)}
+.pl-tk{font-family:var(--mono);font-weight:700;font-size:12px;min-width:42px}
+.pl-date{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:74px}
+.pl-amt{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.pl-sh{font-family:var(--mono);font-size:10px;color:var(--muted)}
 .pl-total{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--green)}
-.pl-badge{margin-left:auto}
+.pl-badge{margin-left:auto;display:flex;gap:4px;align-items:center;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -256,7 +258,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.1</div>
+        <div class="logo-ver">v0.5.2</div>
       </div>
     </div>
     <div class="header-actions">
@@ -443,7 +445,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.2 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -470,7 +472,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.1";
+var VERSION = "0.5.2";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -838,10 +840,28 @@ function save(){saveLocal();saveToCloud();clearTimeout(svTO);var t=document.getE
 // HELPERS
 var G=function(id){return document.getElementById(id)};
 var fm=function(n){return'$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})};
+var fmSh=function(n){if(!n)return'0';if(n===Math.floor(n))return''+n;return n.toFixed(n>=100?2:n>=10?3:4)};
 var isDiv=function(t){return DV[t]&&DV[t].y>0};
+
+// ═════════════════════════════════════════════════
+// AUTO-FIX: recheck stocks with missing sector or dividend data
+// ═════════════════════════════════════════════════
+function recheckMissingData(){
+  if(!FINNHUB_KEY)return;
+  var queue=tks.filter(function(t){return!DV[t]||!DV[t].sc||DV[t].sc===''||DV[t].sc==='\u2014'});
+  if(!queue.length)return;
+  var idx=0;
+  function next(){
+    if(idx>=queue.length){render();return}
+    var t=queue[idx++];
+    fetchProfile(t);
+    setTimeout(next,300);
+  }
+  next();
+}
 function rc(r){return{King:'badge-gold',Aristocrat:'badge-gold',Excellent:'badge-green',Strong:'badge-green','ETF - Strong':'badge-green',Good:'badge-accent','REIT - Good':'badge-accent',Stable:'badge-accent',Moderate:'badge-yellow',Variable:'badge-yellow',Caution:'badge-red',New:'badge-purple'}[r]||''}
 function rb(r){return r==='King'?'\ud83d\udc51 King':r==='Aristocrat'?'\ud83c\udfc6 Aristocrat':r}
-function sCl(t){var s=sh[t]||0;var n=getLots(t).length;var label=s?(n>1?s+' ('+n+' lots)':s):'edit';return'<span class="sd'+(s?' hv':'')+'" onclick="eS(\''+t+'\',this)">'+label+'</span>'}
+function sCl(t){var s=sh[t]||0;var n=getLots(t).length;var label=s?(n>1?fmSh(s)+' ('+n+' lots)':fmSh(s)):'edit';return'<span class="sd'+(s?' hv':'')+'" onclick="eS(\''+t+'\',this)">'+label+'</span>'}
 function bCl(t){var b=bk[t]||'';return'<span class="bd'+(b?' hv':'')+'" onclick="eB(\''+t+'\',this)">'+(b||'set')+'</span>'}
 // Inline edit: edits first lot's shares (quick edit from table row)
 function eS(t,el){event.stopPropagation();var lt=getLots(t);var v=lt[0].s||0;var i=document.createElement('input');i.type='number';i.className='si';i.value=v||'';el.replaceWith(i);i.focus();i.select();var dn=function(){setLot(t,0,parseFloat(i.value)||0,undefined);save();render()};i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}}}
@@ -877,7 +897,7 @@ function lotsHTML(t){
     var val=(PR[t]||0)*lot.s;
     var addedStr=lot.added?new Date(lot.added).toLocaleDateString():'\u2014';
     h+='<div class="mono muted" style="font-size:10px">'+(i+1)+'</div>';
-    h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s||'edit')+'</span>';
+    h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s?fmSh(lot.s):'edit')+'</span>';
     h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.b||'set')+'</span>';
     h+='<div class="muted" style="font-size:10px">'+addedStr+'</div>';
     h+=(lt.length>1?'<button class="rb" onclick="event.stopPropagation();removeLot(\''+t+'\','+i+')" style="font-size:9px">&#10005;</button>':'<div></div>');
@@ -886,7 +906,7 @@ function lotsHTML(t){
   var totalS=sh[t]||0;
   if(totalS>0&&lt.length>1){
     h+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;gap:16px;flex-wrap:wrap">';
-    h+='<span class="muted">Total:</span> <span class="mono fw7">'+totalS+' shares</span>';
+    h+='<span class="muted">Total:</span> <span class="mono fw7">'+fmSh(totalS)+' shares</span>';
     h+='<span class="mono accent2">'+fm((PR[t]||0)*totalS)+'</span>';
     h+='</div>';
   }
@@ -1048,7 +1068,7 @@ function render(){
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
-  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="pl-card"><div class="pl-dot" style="background:'+(e.up?'var(--accent)':'var(--green)')+'"></div><span class="pl-tk">'+e.tk+'</span><span class="pl-date">'+e.d+'</span><span class="pl-amt">$'+e.a+'/sh</span>'+(e.s>0?'<span class="muted" style="font-size:10px">&times; '+e.s+'</span><span class="pl-total">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares set</span>')+'<span class="pl-badge"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:9px">'+(e.up?'UPCOMING':'PAID')+'</span></span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px;margin-left:4px">'+bk[e.tk]+'</span>':'')+'</div>'});
+  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="pl-card '+(e.up?'pl-upcoming':'pl-paid')+'"><span class="pl-tk">'+e.tk+'</span><span class="pl-date">'+e.d+'</span><span class="pl-amt">$'+e.a+'/sh</span>'+(e.s>0?'<span class="pl-sh">&times;'+fmSh(e.s)+'</span><span class="pl-total">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="pl-badge"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</span></div>'});
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
   // ALL (now with expandable lots)
@@ -1086,7 +1106,7 @@ function render(){
     h+='<div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase">Value</div><div class="muted" style="font-size:9px;text-transform:uppercase">Added</div>';
     grp.stocks.forEach(function(s){
       h+='<span class="mono fw7">'+s.ticker+'</span>';
-      h+='<span class="mono">'+s.lot.s+'</span>';
+      h+='<span class="mono">'+fmSh(s.lot.s)+'</span>';
       h+='<span class="mono accent2">'+fm(s.val)+'</span>';
       h+='<span class="muted" style="font-size:10px">'+(s.added?new Date(s.added).toLocaleDateString():'—')+'</span>';
     });
@@ -1159,36 +1179,39 @@ function taxHTML(t){
 // ═════════════════════════════════════════════════
 function fetchProfile(ticker){
   if(!FINNHUB_KEY)return;
-  // Fetch basic profile for sector
+  if(!DV[ticker])DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'None',sc:'',g5:0,h:[]};
+  // Fetch profile first (sector), then metrics (dividends), then render once
   fetch('https://finnhub.io/api/v1/stock/profile2?symbol='+ticker+'&token='+FINNHUB_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
-      if(data&&data.finnhubIndustry){
-        if(!DV[ticker])DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'None',sc:data.finnhubIndustry,g5:0,h:[]};
-        else DV[ticker].sc=data.finnhubIndustry;
-      }
-    }).catch(function(){});
-  // Fetch dividend info
-  fetch('https://finnhub.io/api/v1/stock/metric?symbol='+ticker+'&metric=all&token='+FINNHUB_KEY)
+      if(data&&data.finnhubIndustry)DV[ticker].sc=data.finnhubIndustry;
+      if(data&&data.name)DV[ticker].name=data.name;
+      // Now fetch metrics
+      return fetch('https://finnhub.io/api/v1/stock/metric?symbol='+ticker+'&metric=all&token='+FINNHUB_KEY);
+    })
     .then(function(r){return r.json()})
     .then(function(data){
-      if(!data||!data.metric)return;
-      var m=data.metric;
-      var divYield=m.dividendYieldIndicatedAnnual||m.dividendYield5Y||0;
-      var divPerShare=m.dividendsPerShareAnnual||0;
-      if(divPerShare>0||divYield>0){
-        if(!DV[ticker])DV[ticker]={y:0,a:0,f:'Quarterly',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'Unknown',sc:'',g5:0,h:[]};
-        DV[ticker].y=divYield;
-        DV[ticker].a=divPerShare;
-        DV[ticker].np=divPerShare/4;
-        DV[ticker].pr=m.payoutRatioAnnual||0;
-        DV[ticker].rt=divYield>=4?'High Yield':divYield>=2?'Moderate':'Low Yield';
-        if(!DV[ticker].f||DV[ticker].f==='N/A')DV[ticker].f='Quarterly';
+      if(data&&data.metric){
+        var m=data.metric;
+        var divYield=m.dividendYieldIndicatedAnnual||m.dividendYield5Y||0;
+        var divPerShare=m.dividendsPerShareAnnual||0;
+        if(divPerShare>0||divYield>0){
+          DV[ticker].y=Math.round(divYield*100)/100;
+          DV[ticker].a=Math.round(divPerShare*100)/100;
+          DV[ticker].np=Math.round(divPerShare/4*10000)/10000;
+          DV[ticker].pr=Math.round((m.payoutRatioAnnual||0)*10)/10;
+          DV[ticker].rt=divYield>=4?'High Yield':divYield>=2?'Moderate':'Low Yield';
+          if(!DV[ticker].f||DV[ticker].f==='N/A')DV[ticker].f='Quarterly';
+        }
       }
-      // Save DV updates
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
-    }).catch(function(){});
+    })
+    .catch(function(e){
+      console.log('fetchProfile error for '+ticker+':',e);
+      try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      render();
+    });
 }
 function getDVCustom(){var custom={};tks.forEach(function(t){if(DV[t]&&!BUILTIN_TICKERS[t])custom[t]=DV[t]});return custom}
 var BUILTIN_TICKERS={};
@@ -1458,6 +1481,9 @@ loadPrefUI();
 
 // Set baseline news count for notifications
 prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});
+
+// Auto-fix stocks with missing sector/dividend data
+recheckMissingData();
 
 // Fetch live news on load if API key is set and cache is stale
 if (FINNHUB_KEY && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
