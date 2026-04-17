@@ -1,93 +1,70 @@
 # Portfolio Command Center
 
-A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
+A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, multi-lot holdings, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
 
-**Current Version: v0.4.3**
+**Current Version: v0.4.6**
 
 ---
 
 ## Changelog
 
+### v0.4.6 — 2026-04-17
+- **Add Ticker fixed** — the "+ Add" modal was breaking after selecting "+ New broker..." because the `<select>` element was permanently replaced with a text input, so reopening the modal crashed silently. Fixed with a wrapper div that fully rebuilds the broker dropdown each time the modal opens. Fields reset after each add so you can immediately add another stock.
+- **Duplicate ticker feedback** — trying to add a ticker that already exists now flashes the input border red.
+- **Search on Dividends tab** — new search bar filters by ticker, broker, rating, or sector. Type "King" to find Dividend Kings, "Schwab" to find stocks at that broker.
+- **Search on Growth tab** — filters by ticker, sector, or broker.
+- **Payout Log unaffected** — the payout log and annual total use the full unfiltered dividend list, so searching on the Dividends tab doesn't break the payout timeline or income calculations.
+
+### v0.4.5 — 2026-04-17
+- Panels stay open during edits (desktop + mobile)
+
+### v0.4.4 — 2026-04-17
+- Multi-lot holdings with "+ Add Lot" in detail panels (desktop + mobile)
+- Broker + shares fields on "+ Add" modal
+- Lots data model with backward-compatible migration
+
 ### v0.4.3 — 2026-04-16
-- **News wraps inside expanded rows** — previously, long headlines, summaries, and URLs inside expanded news rows (on the News tab) and inside the Dividend deep-dive panels could push the row's content horizontally, causing side-scroll within the table. Fixed with proper CSS: expanded rows now use `white-space:normal`, `word-break:break-word`, and `overflow-wrap:anywhere` on all child text nodes so the content flows downward and wraps cleanly to the full row width.
-- **Long URLs break gracefully** — article links with long URLs now break at any character boundary instead of extending the table width.
-- **Expanded panel constrained to row width** — the detail panel (`.xp`) is now `box-sizing:border-box` with `width:100%` and `max-width:100%` so nested content cannot overflow.
+- News wraps inside expanded rows
 
 ### v0.4.2 — 2026-04-16
-- Live stock prices from Finnhub `/quote` endpoint — portfolio value now uses live prices instead of stale hardcoded ones
-- Portfolio value formula verified: `Σ(price × shares)` — no income mixed in
-- Broker dropdown — clicking broker cell shows list of previously-used brokers + "New broker..." option
-- Live price status indicator under Portfolio Value label
+- Live prices from Finnhub, broker dropdown
 
 ### v0.4.1 — 2026-04-16
-- Next Total Payout column on Dividends table (`next_pay_per_share × shares`)
-- Next Total Payout in deep-dive panel and mobile card
-- Firebase config populated (stockfolio-96c95)
-- Finnhub API key populated for live news
+- Next Total Payout column, Firebase + Finnhub keys populated
 
 ### v0.4.0 — 2026-04-15
-- Firebase Google Auth + Firestore cloud sync
-- Live news via Finnhub API with 10-minute auto-refresh
-- News refresh button and live/fallback status indicator
-- Version number displayed in header bar and footer
-- Versioned filenames (v0.4.0.html instead of index.html)
-- Broker column verified across all views
-- Mobile + desktop verified with card layout below 640px
+- Firebase Google Auth + Firestore, live Finnhub news, versioned filenames
 
 ### v0.3.0 — 2026-04-14
-- Dividend payout log with upcoming/past timeline
-- Portfolio value separated from annual income
-- News in deep-dive slide-down panels
-- Broker column on all tables
-- Auto-save on every modification with toast notification
-- Mobile card layout at 640px breakpoint
+- Payout log, portfolio value fix, broker column, auto-save, mobile cards
 
 ### v0.2.0 — 2026-04-14
-- Converted from React/JSX to pure HTML for GitHub Pages
-- Sortable table headers
-- Time published under dates
-- Deep-dive as slide-down panels (replaced card grid)
-- Share tracking for growth stocks
-- News slide-down with article summaries and source links
-- RSS feed files (feed.xml, rss.xml)
+- Pure HTML, sortable tables, deep-dive panels, RSS files
 
 ### v0.1.0 — 2026-04-14
-- Initial React JSX build (not compatible with GitHub Pages)
-- Core portfolio with 23 tickers
-- Dividend vs growth separation
-- Basic news feed and RSS
+- Initial build
 
 ---
 
-## Deploy to GitHub Pages
-
-### Files to upload to repo root:
+## Deploy
 
 ```
-v0.4.3.html         ← Main app
-index.html          ← Redirects root URL to v0.4.3.html
-feed.xml            ← RSS feed
-rss.xml             ← RSS feed alias
-generate-feed.js    ← Regenerate RSS on news updates
-README.md           ← This file
+v0.4.6.html    ← Main app
+index.html     ← Redirects to v0.4.6.html
+feed.xml       ← RSS feed
+rss.xml        ← RSS alias
+README.md      ← This file
 ```
 
-Keep older versions around for history if you like.
-
-### Enable GitHub Pages:
-1. Settings → Pages
-2. Source: Deploy from branch
-3. Branch: main, folder: / (root)
-4. Save — live at `https://itsavibecode.github.io/<repo-name>/`
+Settings → Pages → Deploy from branch → main / root
 
 ---
 
-## Active Configuration
+## Firebase (stockfolio-96c95)
 
-### Firebase (stockfolio-96c95)
-Config already embedded. Required Firebase Console setup:
+Config embedded. Console setup needed:
 
-1. **Firestore Database → Rules tab** → paste and publish:
+1. **Firestore Rules** → publish:
    ```
    rules_version = '2';
    service cloud.firestore {
@@ -98,14 +75,8 @@ Config already embedded. Required Firebase Console setup:
      }
    }
    ```
-2. **Authentication → Sign-in method → Google** → Enabled
-3. **Authentication → Settings → Authorized domains** → add `itsavibecode.github.io`
-
-### Finnhub (Live News + Live Prices)
-API key already embedded. Free tier = 60 calls/min. The app staggers requests and caches for 10 min.
-
-- **News**: `/company-news` endpoint per ticker
-- **Prices**: `/quote` endpoint per ticker
+2. **Auth → Google** → Enabled
+3. **Auth → Authorized domains** → `itsavibecode.github.io`
 
 ---
 
@@ -113,30 +84,27 @@ API key already embedded. Free tier = 60 calls/min. The app staggers requests an
 
 | Feature | Details |
 |---------|---------|
-| Live Prices | Finnhub `/quote` on page load + every 10 min. Portfolio Value updates automatically. |
-| News Feed | Live via Finnhub API, cached 10 min, auto-refresh. Searchable, sortable. Expands downward with wrapped text. |
-| Dividends | Yield, annual div, next pay/share, Next Total Payout, pay date, rating, shares, broker, income/yr. Deep-dive with news that wraps cleanly. |
-| Growth Stocks | Separate view with share tracking, broker dropdown, and news. |
-| Payout Log | Timeline of upcoming/past dividend payments with 90-day and annual projections. |
-| All Holdings | Master table with dividend/growth badges. |
-| Broker Dropdown | Click broker cell — dropdown lists all brokers already used + "New broker..." option. |
-| Sortable Tables | Click any column header to sort asc/desc. |
-| Share Tracking | Click "edit" on any stock to set share count. Calculates value, next total payout, and income. |
-| Auto-Save | Every change saves to localStorage + cloud if signed in. |
-| Cloud Sync | Firebase Google Auth + Firestore. Sign in once, access everywhere. |
-| RSS Feed | Auto-discovery `<link>` tag + static feed.xml/rss.xml files. |
-| Mobile | Card-based layout below 640px. Tap to expand. |
-| Desktop | Full sortable tables with expand/collapse detail rows that wrap text. |
-| Version Tracking | Version shown in header + footer. Changelog in this README. |
+| Multi-Lot Holdings | Multiple lots per stock with independent shares + broker |
+| Search (all tabs) | News, Dividends, Growth tabs each have a search bar |
+| Add Ticker | Modal with optional shares + broker dropdown, resets between adds |
+| Live Prices | Finnhub `/quote`, cached 10 min, auto-refresh |
+| News Feed | Live Finnhub, searchable, sortable, wraps cleanly |
+| Dividends | Deep-dive with lots, next total payout, news |
+| Growth Stocks | Lots, broker dropdown, news |
+| Payout Log | Upcoming/past timeline, 90-day projection |
+| Broker Dropdown | Reuse existing brokers or type new |
+| Sortable Tables | Click any column header |
+| Auto-Save | localStorage + Firestore cloud sync |
+| Panels Stay Open | Editing lots doesn't collapse the panel |
+| RSS Feed | Auto-discovery + static feed files |
+| Mobile | Card layout below 640px |
 
 ---
 
-## Text Wrapping Behavior (v0.4.3)
+## Troubleshooting
 
-When you expand a row (News tab or Dividend row), the detail panel now:
-- Wraps all text to the row's full width (no horizontal overflow)
-- Breaks long URLs at any character so article links never push the layout
-- Constrains itself with `max-width:100%` and `box-sizing:border-box`
-- Uses `overflow-wrap:anywhere` so even pathological long words wrap cleanly
-
-The main row data (ticker, price, yield, etc.) remains `nowrap` so columns stay aligned, but anything inside the expanded detail panel flows naturally downward.
+If lots don't appear after upgrading, run in browser console:
+```javascript
+localStorage.removeItem('pf_lots');
+```
+Then refresh.
