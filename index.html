@@ -351,9 +351,20 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3>Manage Tickers</h3>
+    <h3>Add Ticker</h3>
     <input class="mi" type="text" id="mIn" placeholder="Ticker e.g. NVDA" onkeydown="if(event.key==='Enter')addT()">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Shares (optional)</div>
+        <input class="mi" type="number" id="mShares" placeholder="0" min="0" step="any" style="margin-bottom:0">
+      </div>
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Broker (optional)</div>
+        <select class="mi" id="mBroker" style="margin-bottom:0;padding:8px 10px"></select>
+      </div>
+    </div>
     <button class="btn btn-primary" onclick="addT()" style="width:100%;justify-content:center;margin-bottom:12px">Add to Portfolio</button>
+    <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">Current Tickers</div>
     <div class="cl" id="cps"></div>
   </div>
 </div>
@@ -694,7 +705,13 @@ function removeLot(t,idx){
 function load(){
   try{tks=JSON.parse(localStorage.getItem('pf_t'))||DT.slice()}catch(e){tks=DT.slice()}
   // Try loading lots first (new format)
-  try{var lt=JSON.parse(localStorage.getItem('pf_lots'));if(lt&&typeof lt==='object'){lots=lt;computeFromLots();return}}catch(e){}
+  try{
+    var raw=localStorage.getItem('pf_lots');
+    if(raw){
+      var lt=JSON.parse(raw);
+      if(lt&&typeof lt==='object'&&Object.keys(lt).length>0){lots=lt;computeFromLots();return}
+    }
+  }catch(e){}
   // Migrate from old sh/bk format
   var oldSh={},oldBk={};
   try{oldSh=JSON.parse(localStorage.getItem('pf_s'))||{}}catch(e){}
@@ -707,6 +724,8 @@ function load(){
     if(!lots[t]&&oldBk[t])lots[t]=[{s:0,b:oldBk[t]}];
   });
   computeFromLots();
+  // Save in new format immediately so next load uses lots
+  try{localStorage.setItem('pf_lots',JSON.stringify(lots))}catch(e){}
 }
 function saveLocal(){
   try{
@@ -896,9 +915,45 @@ function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 function sTab(id){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active')});document.querySelector('.tab[data-tab="'+id+'"]').classList.add('active');G('content-'+id).classList.add('active')}
 function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.style.display='';b.classList.add('active')}else{p.style.display='none';b.classList.remove('active')}}
 function cpRSS(){navigator.clipboard.writeText(gRSS()).then(function(){var b=G('cpB');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy XML'},2e3)})}
-function openMod(){G('mod').style.display='';rCh();setTimeout(function(){G('mIn').focus()},100)}
+function openMod(){
+  G('mod').style.display='';
+  // Populate broker dropdown
+  var sel=G('mBroker');
+  var list=getBrokerList();
+  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'">'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
+  sel.onchange=function(){
+    if(sel.value==='__NEW__'){
+      var inp=document.createElement('input');
+      inp.type='text';inp.className='mi';inp.id='mBrokerText';inp.placeholder='Broker name';inp.style.marginBottom='0';
+      sel.replaceWith(inp);inp.focus();
+    }
+  };
+  G('mShares').value='';
+  rCh();
+  setTimeout(function(){G('mIn').focus()},100);
+}
 function rCh(){G('cps').innerHTML=tks.map(function(t){return'<span class="ch">'+t+'<span class="x" onclick="rmT(\''+t+'\')">&#215;</span></span>'}).join('')}
-function addT(){var t=G('mIn').value.trim().toUpperCase();if(t&&tks.indexOf(t)<0){tks.push(t);save();render();rCh();if(FINNHUB_KEY){fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}})}}G('mIn').value=''}
+function addT(){
+  var t=G('mIn').value.trim().toUpperCase();
+  if(!t)return;
+  var sharesVal=parseFloat(G('mShares').value)||0;
+  var brokerEl=G('mBroker')||G('mBrokerText');
+  var brokerVal=brokerEl?brokerEl.value.trim():'';
+  if(brokerVal==='__NEW__')brokerVal='';
+  if(tks.indexOf(t)<0){
+    tks.push(t);
+    if(sharesVal||brokerVal){
+      lots[t]=[{s:sharesVal,b:brokerVal}];
+      computeFromLots();
+    }
+    save();render();rCh();
+    if(FINNHUB_KEY){
+      fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});
+      fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}});
+    }
+  }
+  G('mIn').value='';G('mShares').value='';
+}
 function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];computeFromLots();save();render();rCh()}
 
 // INIT
@@ -927,4 +982,4 @@ setInterval(function(){
 </script>
 
 </body>
-</html>l
+</html>
