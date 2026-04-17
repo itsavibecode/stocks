@@ -2,52 +2,57 @@
 
 A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, multi-lot holdings, account management, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
 
-**Current Version: v0.5.0**
+**Current Version: v0.5.1**
 
 ---
 
 ## Changelog
 
+### v0.5.1 — 2026-04-17
+- **New stock classification fixed** — adding a new ticker now fetches sector and dividend data from Finnhub `/stock/profile2` and `/stock/metric`. Dividend-paying stocks are classified correctly instead of defaulting to Growth. Custom data persists in localStorage.
+- **Favicon** — inline SVG 📊 emoji favicon, no external file needed.
+- **Title includes version** — browser tab shows "Portfolio Command Center v0.5.1".
+- **Payout Log redesigned** — card-based layout with colored dot indicator, ticker, date, per-share amount, × shares, total payout, and status badge. Much cleaner and more readable.
+- **News notifications show tickers** — toast now says "3 new articles: AAPL, MSFT, GOOG" instead of just a count.
+- **Text size setting** — Normal / Large / Extra Large in Settings → Appearance. Scales all fonts.
+- **Theme switching** — Dark / Light mode in Settings → Appearance. Full CSS variable swap.
+- **Tax labels** — ⚠ tags next to tickers with special tax forms. REITs show return-of-capital warning, foreign stocks show Form 1116, growth-only stocks show 1099-B. Hover for tooltip with form name and note.
+- **Sound notifications enabled by default** — new users start with notifications on.
+- **Recent news highlighting** — articles from the past hour get accent-colored background in the News tab.
+- **Expand/collapse confirmed** — clicking an already-open panel closes it (was already working, now documented).
+
 ### v0.5.0 — 2026-04-17
-- **"Broker" renamed to "Account"** throughout the entire UI — table headers, search bars, lot grids, add modal, deep-dive panels, mobile cards. Internal variable names unchanged for backward compat.
-- **Accounts tab** — new tab showing all stocks grouped by account (e.g. Schwab, Ally, Fidelity). Each account card shows stock count, total value, annual income, and a grid of holdings with ticker, shares, value, and date added. Searchable by account name or ticker.
-- **All Holdings tab now expandable** — click any row to expand and see lots + news, same as Dividends and Growth tabs. Edit lots directly from the All tab.
-- **Smart Add Ticker** — adding a ticker that already exists at a *different* account automatically creates a new lot at that account. If the same ticker + same account already exists, shows a warning toast. If the ticker exists but no account/shares are specified, prompts you to add them to create a lot.
-- **Lot timestamps** — every lot now records when it was added (`added` field). Visible in the Holdings by Lot grid as an "Added" column, and in the Accounts view per stock.
-- **Settings tab** with three panels:
-  - **Manage Accounts** — view all accounts, rename any account (updates all lots globally), add a new account, delete an account (clears label from lots but keeps shares).
-  - **News Notifications** — enable/disable toast notifications when new articles arrive, mute/unmute sound, choose from 4 embedded sounds (Chime, Ding, Pop, Bell) with a Test button to preview.
-  - **Data** — reset all local data.
-- **Notification sounds** — 4 synthesized sounds using Web Audio API (no external files). Plays automatically when new news articles are fetched. Sound choice, mute state, and notification toggle saved to preferences (persists in localStorage and syncs to Firestore).
-- **Enhanced toast notifications** — now supports success (green), warning (yellow), and error (red) types with descriptive messages for add/rename/delete actions.
-- **Cloud sync updated** — preferences (notification settings, account list) sync to Firestore alongside portfolio data.
+- "Broker" renamed to "Account" everywhere
+- Accounts tab, Settings tab, smart add ticker, lot timestamps
+- Notification sounds (4 embedded Web Audio), account management
+- All Holdings tab expandable with lots
 
 ### v0.4.6 — 2026-04-17
-- Add Ticker fixed (broker select crash), search on Dividends + Growth tabs
+- Add Ticker fixed, search on Dividends + Growth tabs
 
 ### v0.4.5 — 2026-04-17
 - Panels stay open during edits
 
 ### v0.4.4 — 2026-04-17
-- Multi-lot holdings, broker dropdown on Add modal
+- Multi-lot holdings
 
 ### v0.4.3 — 2026-04-16
-- News wraps inside expanded rows
+- News text wrapping
 
 ### v0.4.2 — 2026-04-16
-- Live prices from Finnhub, broker dropdown
+- Live prices, account dropdown
 
 ### v0.4.1 — 2026-04-16
-- Next Total Payout column, Firebase + Finnhub keys
+- Next Total Payout, Firebase + Finnhub keys
 
 ### v0.4.0 — 2026-04-15
-- Firebase Google Auth + Firestore, live Finnhub news
+- Firebase, Finnhub news, versioned files
 
 ### v0.3.0 — 2026-04-14
-- Payout log, portfolio value fix, auto-save, mobile cards
+- Payout log, mobile cards
 
 ### v0.2.0 — 2026-04-14
-- Pure HTML, sortable tables, deep-dive panels, RSS
+- Pure HTML, sortable tables, RSS
 
 ### v0.1.0 — 2026-04-14
 - Initial build
@@ -57,8 +62,8 @@ A self-contained stock portfolio dashboard with live news, live prices, dividend
 ## Deploy
 
 ```
-v0.5.0.html    ← Main app
-index.html     ← Redirects to v0.5.0.html
+v0.5.1.html    ← Main app
+index.html     ← Redirects to v0.5.1.html
 feed.xml       ← RSS feed
 rss.xml        ← RSS alias
 README.md      ← This file
@@ -88,25 +93,30 @@ Config embedded. Console setup:
 
 ---
 
-## Data Model
+## New in v0.5.1
 
-### Lots
-```
-lots["AAPL"] = [
-  { s: 100, b: "Schwab", added: "2026-04-17T14:30:00.000Z" },
-  { s: 200, b: "Ally",   added: "2026-04-17T15:00:00.000Z" }
-]
-```
+### Theme + Text Size
+Settings → Appearance panel. Dark/Light mode and Normal/Large/Extra Large text. Preferences save to localStorage and sync to Firestore.
 
-### Preferences
-```
-prefs = {
-  notifEnabled: true,
-  soundMuted: false,
-  soundChoice: "chime",   // chime | ding | pop | bell
-  accounts: ["Schwab", "Ally", "Fidelity"]
-}
-```
+### Tax Labels
+Stocks with special tax considerations show a ⚠ tag:
+- **VICI** — REIT, may include return of capital (Box 3)
+- **BP** — Foreign tax paid, claim credit on Form 1116
+- **TSLA, NET, AMZN** — No dividends, 1099-B capital gains only
+- **RTX** — Check for spin-off cost basis adjustments
+- **RGR** — Variable dividends, special div may be non-qualified
+
+Hover/tap the tag to see the form name and note. Tags only appear on stocks with non-standard tax situations.
+
+### Stock Classification
+New tickers auto-fetch from Finnhub:
+- `/stock/profile2` → sector/industry
+- `/stock/metric` → dividend yield, annual dividend, payout ratio
+
+If the stock pays dividends, it's classified as Dividend with yield and payout info. Otherwise Growth. Data cached in localStorage as `pf_dv_custom`.
+
+### Recent News
+Articles published in the past hour get a highlighted accent-colored background in the News tab so they stand out from older articles.
 
 ---
 
@@ -114,31 +124,34 @@ prefs = {
 
 | Feature | Details |
 |---------|---------|
-| Accounts Tab | Stocks grouped by account with totals, searchable |
-| Account Management | Rename, add, delete accounts in Settings |
-| Smart Add | Existing ticker at new account → auto-creates lot; same account → warns |
-| Lot Timestamps | "Added" date on every lot |
-| Notification Sounds | 4 embedded Web Audio sounds, configurable in Settings |
-| Multi-Lot Holdings | Multiple lots per stock with independent shares + account |
-| Search (all tabs) | News, Dividends, Growth, Accounts |
-| All Tab Expandable | Click rows to expand lots + news |
-| Live Prices | Finnhub, cached 10 min |
-| News Feed | Live Finnhub, searchable, sortable |
-| Dividends | Deep-dive with lots, next total payout, news |
-| Payout Log | Upcoming/past timeline |
-| Sortable Tables | Click any column header |
+| Theme Switching | Dark / Light mode in Settings |
+| Text Size | Normal / Large / Extra Large |
+| Tax Labels | ⚠ tags with hover tooltips for special tax forms |
+| Stock Auto-Classification | Finnhub fetches sector + dividend data for new tickers |
+| Recent News Highlight | Past-hour articles get accent background |
+| Accounts Tab | Stocks grouped by account |
+| Account Management | Rename, add, delete in Settings |
+| Smart Add | Existing ticker at new account → new lot |
+| Lot Timestamps | "Added" date per lot |
+| Notification Sounds | 4 embedded sounds, enabled by default |
+| Multi-Lot Holdings | Multiple lots per stock |
+| Search | News, Dividends, Growth, Accounts tabs |
+| All Tab Expandable | Lots + news in detail panel |
+| Live Prices | Finnhub, 10 min cache |
+| Payout Log | Card-based layout, monthly grouping |
+| Sortable Tables | All column headers |
 | Auto-Save | localStorage + Firestore |
-| Panels Stay Open | Editing doesn't collapse panels |
-| RSS Feed | Auto-discovery + static feed files |
+| Panels Stay Open | Edits don't collapse panels |
+| RSS Feed | Auto-discovery + static files |
 | Mobile | Card layout below 640px |
-| Settings | Accounts, notifications, data management |
+| Favicon | Inline SVG 📊 |
 
 ---
 
 ## Troubleshooting
 
-**Lots not appearing:** Run `localStorage.removeItem('pf_lots')` in console, refresh.
+**New stock shows as Growth when it pays dividends:** Finnhub may not return data for very new or obscure tickers. The profile fetch runs on add — if it fails, the stock defaults to Growth. Try removing and re-adding the ticker.
 
-**Notification sound not playing:** Click anywhere on the page first (browsers require user interaction before playing audio). Check Settings → News Notifications → not muted.
+**Theme not applying:** Check Settings → Appearance. The theme preference saves in `pf_prefs` in localStorage. Clear prefs with the Data → Reset button if stuck.
 
-**Account rename not updating everywhere:** The rename function updates all lots globally. If cloud sync is enabled, sign out and back in to force a fresh sync.
+**Tax tag not showing:** Tax tags only appear for stocks with non-standard situations (REITs, foreign, capital-gains-only). Standard qualified dividend stocks don't show a tag.
