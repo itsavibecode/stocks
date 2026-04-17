@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.2</title>
+<title>Portfolio Command Center v0.5.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -211,7 +211,8 @@ body.text-xl .tab{font-size:14px}
 body.text-xl .sc .scv{font-size:24px}
 
 /* RECENT NEWS HIGHLIGHT */
-.news-recent{background:var(--accent-dim)!important;border-left:3px solid var(--accent)}
+.news-recent td{background:var(--accent-dim)!important}
+.news-recent td:first-child{border-left:3px solid var(--accent)}
 
 /* TAX TOOLTIP */
 .tax-tag{display:inline-flex;align-items:center;gap:3px;background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;cursor:help;position:relative}
@@ -258,7 +259,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.2</div>
+        <div class="logo-ver">v0.5.3</div>
       </div>
     </div>
     <div class="header-actions">
@@ -445,7 +446,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.2 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.3 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -472,7 +473,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.2";
+var VERSION = "0.5.3";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1020,8 +1021,17 @@ function render(){
   if(q)all=all.filter(function(n){return n.t.toLowerCase().indexOf(q)>=0||n.tk.toLowerCase().indexOf(q)>=0||n.s.toLowerCase().indexOf(q)>=0});
   all=srt('tN',all,function(i,c){return{ticker:i.tk,title:i.t,source:i.s,date:i.d}[c]||''});
   G('cN').textContent=all.length;
-  var oneHourAgo=new Date(Date.now()-36e5).toISOString().slice(0,16);
-  var h='';all.forEach(function(n,i){var rid='n'+i;var isRecent=(n.d+'T'+(n.tm?n.tm.replace(/ /g,''):'00:00'))>oneHourAgo.replace('T','T');var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+taxHTML(n.tk)+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var nowMs=Date.now();var oneHrMs=36e5;
+  function parseNewsTime(d,tm){
+    // d = "2026-04-17", tm = "2:34 PM" or "14:34"
+    if(!tm)return new Date(d+'T00:00:00').getTime();
+    var parts=tm.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if(!parts)return new Date(d+'T00:00:00').getTime();
+    var h=parseInt(parts[1]),m=parseInt(parts[2]),ampm=parts[3];
+    if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
+    return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
+  }
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -1036,11 +1046,14 @@ function render(){
   G('dS').innerHTML=[{l:"Monthly",v:fm(tA/12),c:"var(--green)"},{l:"Annual",v:fm(tA),c:"var(--accent2)"},{l:"Stocks",v:dvs.length,c:"var(--accent)"},{l:"Avg Yield",v:aY.toFixed(2)+"%",c:"var(--yellow)"}].map(function(c){return'<div class="sc"><div class="scl">'+c.l+'</div><div class="scv" style="color:'+c.c+'">'+c.v+'</div></div>'}).join('');
   var dS=srt('tD',dvs,function(t,col){var d=DV[t],s=sh[t]||0;return{ticker:t,price:PR[t]||0,yield:d.y,annualDiv:d.a,nextPayout:d.np,nextTotal:d.np*s,payDate:d.pd,rating:d.rt,shares:s,broker:bk[t]||'',income:d.a*s}[col]||t});
   h='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nextTot=d.np*s,rid='d_'+t;
-    h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+'</div></td><td><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
+    h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+taxHTML(t)+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+'</div></td><td><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
     h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span><div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span>'+taxHTML(t)+'<div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
     h+='<div class="dg">';
-    [["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s||"\u2014"],["Account",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]].forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
+    var taxInfo=TAX_INFO[t];
+    var ddItems=[["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s?fmSh(s):"\u2014"],["Account",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]];
+    if(taxInfo)ddItems.push(["Tax Form",taxInfo.form],["Tax Note",taxInfo.note]);
+    ddItems.forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
     h+='</div>';
     if(d.yr>=25)h+='<div class="db" style="background:#fcd34d10;border:1px solid #fcd34d20;color:var(--gold)">\ud83d\udc51 '+(d.yr>=50?'Dividend King':'Aristocrat')+' \u2014 '+d.yr+' yrs of increases</div>';
     if(d.pr>80&&d.pr>0)h+='<div class="db" style="background:var(--red-dim);border:1px solid #f8717125;color:var(--red)">\u26a0 High payout ('+d.pr+'%)</div>';
@@ -1165,12 +1178,16 @@ var TAX_INFO={
   CMCSA:{form:"1099-DIV",note:"Qualified dividends"},
   TSLA:{form:"1099-B",note:"No dividends — capital gains only on sale"},
   NET:{form:"1099-B",note:"No dividends — capital gains only on sale"},
-  AMZN:{form:"1099-B",note:"No dividends — capital gains only on sale"}
+  AMZN:{form:"1099-B",note:"No dividends — capital gains only on sale"},
+  SLV:{form:"1099-B / K-1",note:"Commodity ETF (trust) — may issue K-1 instead of 1099. Taxed as collectible at 28% max rate"},
+  GLD:{form:"1099-B / K-1",note:"Gold ETF (trust) — taxed as collectible at 28% max rate. No dividends"},
+  IAU:{form:"1099-B",note:"Gold ETF — taxed as collectible at 28% max rate"},
+  PPLT:{form:"1099-B / K-1",note:"Platinum ETF — collectible tax rate, may issue K-1"},
+  USO:{form:"K-1",note:"Oil commodity ETF — partnership structure, issues K-1 not 1099"}
 };
 function taxHTML(t){
-  var info=TAX_INFO[t];if(!info)return'';
-  var isSpecial=info.form.indexOf('1116')>=0||info.note.indexOf('return of capital')>=0||info.note.indexOf('spin-off')>=0||info.note.indexOf('1099-B')>=0;
-  if(!isSpecial)return'';
+  var info=TAX_INFO[t];
+  if(!info)return'';
   return' <span class="tax-tag">\u26a0 '+info.form+'<span class="tax-tip">'+info.note+'</span></span>';
 }
 
@@ -1179,6 +1196,13 @@ function taxHTML(t){
 // ═════════════════════════════════════════════════
 function fetchProfile(ticker){
   if(!FINNHUB_KEY)return;
+  // Known commodity/specialty ETFs that Finnhub won't classify
+  var COMMODITY_ETFS={SLV:'Precious Metals',GLD:'Precious Metals',IAU:'Precious Metals',PPLT:'Precious Metals',USO:'Energy Commodities',UNG:'Energy Commodities',DBA:'Agriculture',DBC:'Commodities',PDBC:'Commodities'};
+  if(COMMODITY_ETFS[ticker]){
+    DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'ETF',sc:COMMODITY_ETFS[ticker],g5:0,h:[]};
+    try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+    render();return;
+  }
   if(!DV[ticker])DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'None',sc:'',g5:0,h:[]};
   // Fetch profile first (sector), then metrics (dividends), then render once
   fetch('https://finnhub.io/api/v1/stock/profile2?symbol='+ticker+'&token='+FINNHUB_KEY)
