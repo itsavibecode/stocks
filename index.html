@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.3</title>
+<title>Portfolio Command Center v0.5.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -220,16 +220,15 @@ body.text-xl .sc .scv{font-size:24px}
 .tax-tag:hover .tax-tip{display:block}
 
 /* PAYOUT LOG REDESIGN */
-.pl-card{background:var(--card);border-left:3px solid var(--border);border-radius:0 6px 6px 0;padding:6px 12px;margin-bottom:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:background .1s;font-size:12px}
+.pl-card{background:var(--card);border-left:3px solid var(--border);border-radius:0 4px 4px 0;padding:5px 10px;margin-bottom:1px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px}
 .pl-card:hover{background:var(--card2)}
 .pl-card.pl-upcoming{border-left-color:var(--accent)}
 .pl-card.pl-paid{border-left-color:var(--green)}
-.pl-tk{font-family:var(--mono);font-weight:700;font-size:12px;min-width:42px}
-.pl-date{font-family:var(--mono);font-size:11px;color:var(--muted);min-width:74px}
-.pl-amt{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.pl-tk{font-family:var(--mono);font-weight:700;font-size:12px;min-width:40px}
+.pl-date{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.pl-amt{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
 .pl-sh{font-family:var(--mono);font-size:10px;color:var(--muted)}
-.pl-total{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--green)}
-.pl-badge{margin-left:auto;display:flex;gap:4px;align-items:center;flex-shrink:0}
+.pl-total{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--green)}
 </style>
 </head>
 <body>
@@ -259,7 +258,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.3</div>
+        <div class="logo-ver">v0.5.4</div>
       </div>
     </div>
     <div class="header-actions">
@@ -267,6 +266,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
       <button class="btn btn-primary" onclick="openMod()">+ Add</button>
       <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()">&#128225; RSS</button>
+      <span id="apiErrorBadge" style="display:none;cursor:pointer" onclick="showApiErrors()"><span class="badge badge-red" style="font-size:9px">&#9888; API <span id="apiErrCount">0</span></span></span>
     </div>
   </div>
 </header>
@@ -446,7 +446,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.3 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.4 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -473,7 +473,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.3";
+var VERSION = "0.5.4";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -659,7 +659,7 @@ function fetchNewsForTicker(ticker) {
           u: n.url||'#'
         };
       });
-    }).catch(function(){return[]});
+    }).catch(function(e){logApiError('news',ticker,e.message||'Failed');return[]});
 }
 
 function fetchAllNews() {
@@ -699,7 +699,7 @@ function fetchPriceForTicker(ticker) {
       // Finnhub quote returns: c = current price, d = change, dp = % change, h = high, l = low, o = open, pc = prev close
       if (data && typeof data.c === 'number' && data.c > 0) return data.c;
       return null;
-    }).catch(function(){return null});
+    }).catch(function(e){logApiError('quote',ticker,e.message||'Failed');return null});
 }
 
 function fetchAllPrices() {
@@ -1050,16 +1050,14 @@ function render(){
     h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">';
     h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span>'+taxHTML(t)+'<div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
     h+='<div class="dg">';
-    var taxInfo=TAX_INFO[t];
     var ddItems=[["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s?fmSh(s):"\u2014"],["Account",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]];
-    if(taxInfo)ddItems.push(["Tax Form",taxInfo.form],["Tax Note",taxInfo.note]);
     ddItems.forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
     h+='</div>';
     if(d.yr>=25)h+='<div class="db" style="background:#fcd34d10;border:1px solid #fcd34d20;color:var(--gold)">\ud83d\udc51 '+(d.yr>=50?'Dividend King':'Aristocrat')+' \u2014 '+d.yr+' yrs of increases</div>';
     if(d.pr>80&&d.pr>0)h+='<div class="db" style="background:var(--red-dim);border:1px solid #f8717125;color:var(--red)">\u26a0 High payout ('+d.pr+'%)</div>';
-    h+=lotsHTML(t)+nwH(t)+'</div></td></tr>'});
+    h+=taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bD').innerHTML=h;
-  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+lotsHTML(t)+nwH(t)+'</div></div>'});
+  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mD').innerHTML=mc;
 
   // GROWTH
@@ -1081,7 +1079,7 @@ function render(){
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
-  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="pl-card '+(e.up?'pl-upcoming':'pl-paid')+'"><span class="pl-tk">'+e.tk+'</span><span class="pl-date">'+e.d+'</span><span class="pl-amt">$'+e.a+'/sh</span>'+(e.s>0?'<span class="pl-sh">&times;'+fmSh(e.s)+'</span><span class="pl-total">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="pl-badge"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</span></div>'});
+  h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="pl-card '+(e.up?'pl-upcoming':'pl-paid')+'"><span class="pl-tk">'+e.tk+'</span><span class="pl-date">'+e.d+'</span><span class="pl-amt">$'+e.a+'/sh</span>'+(e.s>0?'<span class="pl-sh">\u00d7'+fmSh(e.s)+'</span><span class="pl-total">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</div>'});
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
   // ALL (now with expandable lots)
@@ -1156,39 +1154,28 @@ function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.c
 // TAX FORMS — stocks with special tax considerations
 // ═════════════════════════════════════════════════
 var TAX_INFO={
-  SCHD:{form:"1099-DIV",note:"Qualified & non-qualified dividends reported"},
-  VICI:{form:"1099-DIV",note:"REIT dividends — may include return of capital (Box 3)"},
-  BP:{form:"1099-DIV",note:"Foreign tax paid — claim credit on Form 1116"},
-  T:{form:"1099-DIV",note:"Qualified dividends — standard 1099-DIV"},
-  F:{form:"1099-DIV",note:"Qualified dividends"},
-  ABBV:{form:"1099-DIV",note:"Qualified dividends"},
-  KO:{form:"1099-DIV",note:"Qualified dividends"},
-  TGT:{form:"1099-DIV",note:"Qualified dividends"},
-  INTC:{form:"1099-DIV",note:"May include return of capital if fund distributions"},
-  BAC:{form:"1099-DIV + 1099-INT",note:"Dividends + potential interest income"},
-  AXP:{form:"1099-DIV",note:"Qualified dividends"},
-  IBM:{form:"1099-DIV",note:"Qualified dividends"},
-  MSFT:{form:"1099-DIV",note:"Qualified dividends"},
-  AAPL:{form:"1099-DIV",note:"Qualified dividends"},
-  GOOG:{form:"1099-DIV",note:"Qualified dividends (new — started 2024)"},
-  PFE:{form:"1099-DIV",note:"Qualified dividends"},
-  RTX:{form:"1099-DIV",note:"Qualified dividends — check for spin-off cost basis"},
-  LUV:{form:"1099-DIV",note:"Qualified dividends"},
-  RGR:{form:"1099-DIV",note:"Variable dividends — special div may be non-qualified"},
-  CMCSA:{form:"1099-DIV",note:"Qualified dividends"},
-  TSLA:{form:"1099-B",note:"No dividends — capital gains only on sale"},
-  NET:{form:"1099-B",note:"No dividends — capital gains only on sale"},
-  AMZN:{form:"1099-B",note:"No dividends — capital gains only on sale"},
-  SLV:{form:"1099-B / K-1",note:"Commodity ETF (trust) — may issue K-1 instead of 1099. Taxed as collectible at 28% max rate"},
-  GLD:{form:"1099-B / K-1",note:"Gold ETF (trust) — taxed as collectible at 28% max rate. No dividends"},
-  IAU:{form:"1099-B",note:"Gold ETF — taxed as collectible at 28% max rate"},
-  PPLT:{form:"1099-B / K-1",note:"Platinum ETF — collectible tax rate, may issue K-1"},
-  USO:{form:"K-1",note:"Oil commodity ETF — partnership structure, issues K-1 not 1099"}
+  VICI:{form:"1099-DIV",note:"REIT — may include return of capital (Box 3). Non-qualified ordinary income portion.",tag:"REIT"},
+  BP:{form:"1099-DIV + Form 1116",note:"Foreign tax withheld — claim foreign tax credit on Form 1116.",tag:"Foreign Tax"},
+  INTC:{form:"1099-DIV",note:"May include return of capital if distributions exceed earnings.",tag:"Caution"},
+  BAC:{form:"1099-DIV + 1099-INT",note:"Dividends plus potential interest income reported separately.",tag:"Multiple Forms"},
+  RTX:{form:"1099-DIV",note:"Check cost basis — Raytheon/UTX spin-off may require adjustments.",tag:"Spin-off Basis"},
+  RGR:{form:"1099-DIV",note:"Variable special dividends may be classified as non-qualified.",tag:"Non-Qualified"},
+  SCHD:{form:"1099-DIV",note:"ETF — mix of qualified and non-qualified dividends. Check Box 1a vs 1b.",tag:"ETF Mix"},
+  SLV:{form:"1099-B / K-1",note:"Commodity trust — may issue K-1. Taxed as collectible at 28% max rate.",tag:"K-1 / 28%"},
+  GLD:{form:"1099-B / K-1",note:"Gold trust — taxed as collectible at 28% max rate. No dividends.",tag:"K-1 / 28%"},
+  IAU:{form:"1099-B",note:"Gold ETF — taxed as collectible at 28% max capital gains rate.",tag:"28% Rate"},
+  PPLT:{form:"1099-B / K-1",note:"Platinum trust — collectible tax rate, may issue K-1.",tag:"K-1 / 28%"},
+  USO:{form:"K-1",note:"Oil commodity partnership — issues K-1 not 1099. Complex tax filing.",tag:"K-1"}
 };
 function taxHTML(t){
   var info=TAX_INFO[t];
   if(!info)return'';
-  return' <span class="tax-tag">\u26a0 '+info.form+'<span class="tax-tip">'+info.note+'</span></span>';
+  return' <span class="tax-tag">\u26a0 '+info.tag+'<span class="tax-tip">'+info.form+': '+info.note+'</span></span>';
+}
+function taxPanelHTML(t){
+  var info=TAX_INFO[t];
+  if(!info)return'';
+  return'<div style="margin-top:10px;background:#f59e0b15;border:1px solid #f59e0b30;border-radius:8px;padding:10px 14px"><div style="font-weight:700;font-size:11px;color:var(--yellow);margin-bottom:6px">\u26a0\ufe0f Tax Information</div><div style="display:flex;flex-direction:column;gap:4px;font-size:11px"><div style="display:flex;justify-content:space-between"><span class="muted">Tax Form</span><span class="mono fw7" style="color:var(--yellow)">'+info.form+'</span></div><div style="display:flex;justify-content:space-between"><span class="muted">Classification</span><span class="fw7" style="color:var(--yellow)">'+info.tag+'</span></div><div style="color:var(--text2);font-size:10.5px;margin-top:2px">'+info.note+'</div></div></div>';
 }
 
 // ═════════════════════════════════════════════════
@@ -1232,7 +1219,7 @@ function fetchProfile(ticker){
       render();
     })
     .catch(function(e){
-      console.log('fetchProfile error for '+ticker+':',e);
+      logApiError('profile+metric',ticker,e.message||'Request failed');
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
     });
@@ -1463,6 +1450,23 @@ function showToast(msg,type){
   t.classList.add('show');
   clearTimeout(svTO);
   svTO=setTimeout(function(){t.classList.remove('show');t.style.background='';t.style.color=''},2500);
+}
+
+// ═════════════════════════════════════════════════
+// API ERROR LOG
+// ═════════════════════════════════════════════════
+var apiErrors=[];
+function logApiError(endpoint,ticker,msg){
+  var ts=new Date().toLocaleTimeString();
+  apiErrors.push({ts:ts,ep:endpoint,tk:ticker,msg:msg});
+  if(apiErrors.length>50)apiErrors.shift();
+  var badge=G('apiErrorBadge'),cnt=G('apiErrCount');
+  if(badge&&cnt){badge.style.display='';cnt.textContent=apiErrors.length}
+}
+function showApiErrors(){
+  if(!apiErrors.length){showToast('No API errors');return}
+  var msg=apiErrors.slice(-10).map(function(e){return e.ts+' ['+e.tk+'] '+e.ep+': '+e.msg}).join('\n');
+  alert('Recent API Errors (last '+Math.min(apiErrors.length,10)+' of '+apiErrors.length+'):\n\n'+msg);
 }
 
 // Patch fetchAllNews to trigger notification
