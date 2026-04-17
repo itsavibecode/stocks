@@ -1,69 +1,43 @@
 # Portfolio Command Center
 
-A self-contained stock portfolio dashboard with live news, live prices, dividend tracking, multi-lot holdings, account management, cloud sync, and RSS feeds. Runs on GitHub Pages — zero build steps.
-
-**Current Version: v0.5.1**
+**Current Version: v0.5.2**
 
 ---
 
 ## Changelog
 
+### v0.5.2 — 2026-04-17
+- **Fractional shares display fixed** — added `fmSh()` helper that rounds fractional shares to 2-4 decimal places instead of showing raw floating point like `169.95544999999998`. Applied everywhere: table cells, lot grids, payout log, accounts view, lot summaries.
+- **Auto-fix missing stock data** — `recheckMissingData()` runs on every page load. Scans all tickers for missing sector or dividend data, re-fetches from Finnhub automatically. Stocks incorrectly placed under Growth (like ABT, COST, MCD, O, HSY, CVX, HD) will get their correct sector and dividend classification.
+- **fetchProfile chained** — sector (profile2) and dividend (metric) API calls now run sequentially instead of parallel. Eliminates race condition where render fires before sector data arrives, causing stocks to show "—" for sector.
+- **Payout Log compact redesign** — replaced fat padded cards with tight border-indicator rows. Colored left border (blue=upcoming, green=paid), inline ticker/date/amount/shares/total. 3x more entries visible on screen. Share counts properly rounded.
+- **Shares formatted everywhere** — lot grid, payout log, accounts view, table summary all use `fmSh()` for clean display of fractional shares.
+
 ### v0.5.1 — 2026-04-17
-- **New stock classification fixed** — adding a new ticker now fetches sector and dividend data from Finnhub `/stock/profile2` and `/stock/metric`. Dividend-paying stocks are classified correctly instead of defaulting to Growth. Custom data persists in localStorage.
-- **Favicon** — inline SVG 📊 emoji favicon, no external file needed.
-- **Title includes version** — browser tab shows "Portfolio Command Center v0.5.1".
-- **Payout Log redesigned** — card-based layout with colored dot indicator, ticker, date, per-share amount, × shares, total payout, and status badge. Much cleaner and more readable.
-- **News notifications show tickers** — toast now says "3 new articles: AAPL, MSFT, GOOG" instead of just a count.
-- **Text size setting** — Normal / Large / Extra Large in Settings → Appearance. Scales all fonts.
-- **Theme switching** — Dark / Light mode in Settings → Appearance. Full CSS variable swap.
-- **Tax labels** — ⚠ tags next to tickers with special tax forms. REITs show return-of-capital warning, foreign stocks show Form 1116, growth-only stocks show 1099-B. Hover for tooltip with form name and note.
-- **Sound notifications enabled by default** — new users start with notifications on.
-- **Recent news highlighting** — articles from the past hour get accent-colored background in the News tab.
-- **Expand/collapse confirmed** — clicking an already-open panel closes it (was already working, now documented).
+- New stock classification via Finnhub, favicon, title with version
+- Payout Log card layout, text size setting, theme switching
+- Tax labels with hover tooltips, notifications enabled by default
+- Recent news highlighting (past hour)
 
 ### v0.5.0 — 2026-04-17
-- "Broker" renamed to "Account" everywhere
-- Accounts tab, Settings tab, smart add ticker, lot timestamps
-- Notification sounds (4 embedded Web Audio), account management
-- All Holdings tab expandable with lots
+- "Broker" → "Account", Accounts tab, Settings tab
+- Smart add ticker, lot timestamps, notification sounds
+- Account management, All tab expandable
 
-### v0.4.6 — 2026-04-17
-- Add Ticker fixed, search on Dividends + Growth tabs
+### v0.4.x — 2026-04-15 to 2026-04-17
+- Firebase + Finnhub, multi-lot holdings, panels stay open
+- Search on all tabs, add ticker fix, news wrapping, live prices
 
-### v0.4.5 — 2026-04-17
-- Panels stay open during edits
-
-### v0.4.4 — 2026-04-17
-- Multi-lot holdings
-
-### v0.4.3 — 2026-04-16
-- News text wrapping
-
-### v0.4.2 — 2026-04-16
-- Live prices, account dropdown
-
-### v0.4.1 — 2026-04-16
-- Next Total Payout, Firebase + Finnhub keys
-
-### v0.4.0 — 2026-04-15
-- Firebase, Finnhub news, versioned files
-
-### v0.3.0 — 2026-04-14
-- Payout log, mobile cards
-
-### v0.2.0 — 2026-04-14
-- Pure HTML, sortable tables, RSS
-
-### v0.1.0 — 2026-04-14
-- Initial build
+### v0.1.0–v0.3.0 — 2026-04-14
+- Initial build through payout log + mobile cards
 
 ---
 
 ## Deploy
 
 ```
-v0.5.1.html    ← Main app
-index.html     ← Redirects to v0.5.1.html
+v0.5.2.html    ← Main app
+index.html     ← Redirects to v0.5.2.html
 feed.xml       ← RSS feed
 rss.xml        ← RSS alias
 README.md      ← This file
@@ -93,65 +67,33 @@ Config embedded. Console setup:
 
 ---
 
-## New in v0.5.1
+## Auto-Fix for Misclassified Stocks
 
-### Theme + Text Size
-Settings → Appearance panel. Dark/Light mode and Normal/Large/Extra Large text. Preferences save to localStorage and sync to Firestore.
+On every page load, `recheckMissingData()` checks all tickers for missing sector data. If found, it re-fetches from Finnhub's `/stock/profile2` (sector) and `/stock/metric` (dividend yield, annual dividend, payout ratio) APIs. Results are cached in `pf_dv_custom` in localStorage.
 
-### Tax Labels
-Stocks with special tax considerations show a ⚠ tag:
-- **VICI** — REIT, may include return of capital (Box 3)
-- **BP** — Foreign tax paid, claim credit on Form 1116
-- **TSLA, NET, AMZN** — No dividends, 1099-B capital gains only
-- **RTX** — Check for spin-off cost basis adjustments
-- **RGR** — Variable dividends, special div may be non-qualified
+**If stocks are still misclassified after a page load:**
+1. Open browser console
+2. Run: `localStorage.removeItem('pf_dv_custom')`
+3. Refresh — the app will re-fetch all non-builtin stock data from Finnhub
 
-Hover/tap the tag to see the form name and note. Tags only appear on stocks with non-standard tax situations.
-
-### Stock Classification
-New tickers auto-fetch from Finnhub:
-- `/stock/profile2` → sector/industry
-- `/stock/metric` → dividend yield, annual dividend, payout ratio
-
-If the stock pays dividends, it's classified as Dividend with yield and payout info. Otherwise Growth. Data cached in localStorage as `pf_dv_custom`.
-
-### Recent News
-Articles published in the past hour get a highlighted accent-colored background in the News tab so they stand out from older articles.
+**Manual trigger:** You can also force a recheck by running `recheckMissingData()` in the console.
 
 ---
 
-## Features
+## Fractional Shares
 
-| Feature | Details |
-|---------|---------|
-| Theme Switching | Dark / Light mode in Settings |
-| Text Size | Normal / Large / Extra Large |
-| Tax Labels | ⚠ tags with hover tooltips for special tax forms |
-| Stock Auto-Classification | Finnhub fetches sector + dividend data for new tickers |
-| Recent News Highlight | Past-hour articles get accent background |
-| Accounts Tab | Stocks grouped by account |
-| Account Management | Rename, add, delete in Settings |
-| Smart Add | Existing ticker at new account → new lot |
-| Lot Timestamps | "Added" date per lot |
-| Notification Sounds | 4 embedded sounds, enabled by default |
-| Multi-Lot Holdings | Multiple lots per stock |
-| Search | News, Dividends, Growth, Accounts tabs |
-| All Tab Expandable | Lots + news in detail panel |
-| Live Prices | Finnhub, 10 min cache |
-| Payout Log | Card-based layout, monthly grouping |
-| Sortable Tables | All column headers |
-| Auto-Save | localStorage + Firestore |
-| Panels Stay Open | Edits don't collapse panels |
-| RSS Feed | Auto-discovery + static files |
-| Mobile | Card layout below 640px |
-| Favicon | Inline SVG 📊 |
+The app now properly handles fractional shares (common with M1 Finance, Robinhood, etc.):
+- Shares ≥ 100: shown to 2 decimals (e.g., `169.96`)
+- Shares ≥ 10: shown to 3 decimals (e.g., `43.271`)
+- Shares < 10: shown to 4 decimals (e.g., `2.3912`)
+- Whole shares: shown as integers (e.g., `100`)
 
 ---
 
 ## Troubleshooting
 
-**New stock shows as Growth when it pays dividends:** Finnhub may not return data for very new or obscure tickers. The profile fetch runs on add — if it fails, the stock defaults to Growth. Try removing and re-adding the ticker.
+**Stocks showing under wrong tab (Growth vs Dividend):** Wait 10-15 seconds after page load for the auto-fix to run. If still wrong, clear custom data: `localStorage.removeItem('pf_dv_custom')` then refresh.
 
-**Theme not applying:** Check Settings → Appearance. The theme preference saves in `pf_prefs` in localStorage. Clear prefs with the Data → Reset button if stuck.
+**Payout log shows old floating-point numbers:** Hard refresh (Ctrl+Shift+R) to clear cached version.
 
-**Tax tag not showing:** Tax tags only appear for stocks with non-standard situations (REITs, foreign, capital-gains-only). Standard qualified dividend stocks don't show a tag.
+**Sector showing "—":** Finnhub may not have data for very small or new tickers. The sector will show "—" until data is available.
