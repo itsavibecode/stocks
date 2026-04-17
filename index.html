@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -10,11 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
 <!-- Firebase SDKs -->
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
@@ -200,14 +196,12 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   .mk.open .mkd{display:block}
 }
 </style>
-
 </head>
 <body>
 
 <div class="save-toast" id="svt">&#10003; Saved</div>
 
 <!-- Auth Bar -->
-
 <div class="auth-bar">
   <div class="container auth-inner">
     <div class="auth-status" id="authStatus">
@@ -230,7 +224,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.4.4</div>
+        <div class="logo-ver">v0.4.6</div>
       </div>
     </div>
     <div class="header-actions">
@@ -264,7 +258,6 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   </div>
 
   <!-- NEWS -->
-
   <div class="tab-content active" id="content-news">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
       <input class="search-bar" type="text" placeholder="Search news..." id="nQ" oninput="render()">
@@ -281,10 +274,9 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   </div>
 
   <!-- DIVIDENDS -->
-
   <div class="tab-content" id="content-div">
     <div class="sg" id="dS"></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Tap rows to expand &middot; Tap shares/broker to edit</p>
+    <input class="search-bar" type="text" placeholder="Search dividends by ticker, broker, or rating..." id="divQ" oninput="render()" style="margin-bottom:8px">
     <div class="table-wrap dt"><table id="tD"><thead><tr>
       <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="price" onclick="ds('tD','price')">Price <span class="sa">&#9660;</span></th>
@@ -302,9 +294,8 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   </div>
 
   <!-- GROWTH -->
-
   <div class="tab-content" id="content-growth">
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Growth stocks &mdash; tap rows for news, tap shares/broker to edit</p>
+    <input class="search-bar" type="text" placeholder="Search growth stocks by ticker, sector, or broker..." id="growthQ" oninput="render()" style="margin-bottom:8px">
     <div class="table-wrap dt"><table id="tG"><thead><tr>
       <th data-col="ticker" onclick="ds('tG','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="price" onclick="ds('tG','price')">Price <span class="sa">&#9660;</span></th>
@@ -318,7 +309,6 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   </div>
 
   <!-- PAYOUT LOG -->
-
   <div class="tab-content" id="content-paylog">
     <div class="sg" style="max-width:500px">
       <div class="sc"><div class="scl">&#128197; Next 90 Days</div><div class="scv green" id="p90">$0</div></div>
@@ -328,7 +318,6 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   </div>
 
   <!-- ALL -->
-
   <div class="tab-content" id="content-all">
     <div class="table-wrap dt"><table id="tA"><thead><tr>
       <th data-col="ticker" onclick="ds('tA','ticker')">Ticker <span class="sa">&#9660;</span></th>
@@ -346,7 +335,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
     <div class="mc" id="mA"></div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.4.4 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.4.6 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -360,7 +349,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       </div>
       <div style="flex:1">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Broker (optional)</div>
-        <select class="mi" id="mBroker" style="margin-bottom:0;padding:8px 10px"></select>
+        <div id="mBrokerWrap"></div>
       </div>
     </div>
     <button class="btn btn-primary" onclick="addT()" style="width:100%;justify-content:center;margin-bottom:12px">Add to Portfolio</button>
@@ -373,7 +362,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.4.4";
+var VERSION = "0.4.6";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -829,8 +818,57 @@ function eBText(t,el,cur){
   i.onblur=dn;
   i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}else if(e.key==='Escape'){render()}};
 }
-function tog(id){var r=document.getElementById(id);if(!r)return;if(r.classList.contains('open'))r.classList.remove('open');else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open')});r.classList.add('open')}}
-function togM(el){el.classList.toggle('open')}
+// ═════════════════════════════════════════════════
+// PANEL STATE — tracks which panels are open so render() can restore them
+// ═════════════════════════════════════════════════
+var openDesktopPanel = null; // ID of open .xr row e.g. "d_AAPL" or "g_NET"
+var openMobileTicker = null; // ticker string for open mobile card
+var openMobileTab = null;    // which tab the mobile card is in: 'div','growth','all'
+
+function tog(id){
+  var r=document.getElementById(id);if(!r)return;
+  if(r.classList.contains('open')){r.classList.remove('open');openDesktopPanel=null}
+  else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open')});r.classList.add('open');openDesktopPanel=id}
+}
+function togM(el){
+  var wasOpen=el.classList.contains('open');
+  el.classList.toggle('open');
+  if(wasOpen){openMobileTicker=null;openMobileTab=null}
+  else{
+    // Find which ticker this card belongs to by reading the .mkt text
+    var tkEl=el.querySelector('.mkt');
+    if(tkEl)openMobileTicker=tkEl.textContent.trim();
+    // Figure out which tab we're in
+    var parent=el.closest('.mc');
+    if(parent){
+      if(parent.id==='mD')openMobileTab='div';
+      else if(parent.id==='mG')openMobileTab='growth';
+      else if(parent.id==='mA')openMobileTab='all';
+      else if(parent.id==='mN')openMobileTab='news';
+    }
+  }
+}
+function restoreOpenPanels(){
+  // Restore desktop expand row
+  if(openDesktopPanel){
+    var r=document.getElementById(openDesktopPanel);
+    if(r)r.classList.add('open');
+  }
+  // Restore mobile card
+  if(openMobileTicker&&openMobileTab){
+    var containerId={div:'mD',growth:'mG',all:'mA',news:'mN'}[openMobileTab];
+    if(containerId){
+      var container=document.getElementById(containerId);
+      if(container){
+        var cards=container.querySelectorAll('.mk');
+        cards.forEach(function(card){
+          var tkEl=card.querySelector('.mkt');
+          if(tkEl&&tkEl.textContent.trim()===openMobileTicker)card.classList.add('open');
+        });
+      }
+    }
+  }
+}
 function ds(tid,col){if(!ss[tid])ss[tid]={c:col,d:'desc'};else if(ss[tid].c===col)ss[tid].d=ss[tid].d==='asc'?'desc':'asc';else ss[tid]={c:col,d:'desc'};document.querySelectorAll('#'+tid+' thead th').forEach(function(th){th.classList.remove('sorted');var a=th.querySelector('.sa');if(a)a.innerHTML='&#9660;'});var h=document.querySelector('#'+tid+' thead th[data-col="'+col+'"]');if(h){h.classList.add('sorted');var a=h.querySelector('.sa');if(a)a.innerHTML=ss[tid].d==='asc'?'&#9650;':'&#9660;'}render()}
 function srt(tid,list,fn){var st=ss[tid];if(!st)return list;return list.slice().sort(function(a,b){var va=fn(a,st.c),vb=fn(b,st.c);if(typeof va==='string'){va=va.toLowerCase();vb=vb.toLowerCase()}return va<vb?(st.d==='asc'?-1:1):va>vb?(st.d==='asc'?1:-1):0})}
 
@@ -859,7 +897,10 @@ function render(){
   G('mN').innerHTML=mc;
 
   // DIVIDENDS
-  var dvs=tks.filter(isDiv);G('cD').textContent=dvs.length;
+  var dq=(G('divQ').value||'').toLowerCase();
+  var dvs=tks.filter(isDiv);
+  if(dq)dvs=dvs.filter(function(t){var d=DV[t];return t.toLowerCase().indexOf(dq)>=0||(d.rt||'').toLowerCase().indexOf(dq)>=0||(d.sc||'').toLowerCase().indexOf(dq)>=0||(bk[t]||'').toLowerCase().indexOf(dq)>=0});
+  G('cD').textContent=dvs.length;
   var tA=dvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0);
   var aY=dvs.reduce(function(s,t){return s+DV[t].y},0)/(dvs.length||1);
   G('dS').innerHTML=[{l:"Monthly",v:fm(tA/12),c:"var(--green)"},{l:"Annual",v:fm(tA),c:"var(--accent2)"},{l:"Stocks",v:dvs.length,c:"var(--accent)"},{l:"Avg Yield",v:aY.toFixed(2)+"%",c:"var(--yellow)"}].map(function(c){return'<div class="sc"><div class="scl">'+c.l+'</div><div class="scv" style="color:'+c.c+'">'+c.v+'</div></div>'}).join('');
@@ -879,20 +920,24 @@ function render(){
   G('mD').innerHTML=mc;
 
   // GROWTH
-  var gs=tks.filter(function(t){return!isDiv(t)});G('cG').textContent=gs.length;
+  var gq=(G('growthQ').value||'').toLowerCase();
+  var gs=tks.filter(function(t){return!isDiv(t)});
+  if(gq)gs=gs.filter(function(t){return t.toLowerCase().indexOf(gq)>=0||(DV[t]?(DV[t].sc||''):'').toLowerCase().indexOf(gq)>=0||(bk[t]||'').toLowerCase().indexOf(gq)>=0});
+  G('cG').textContent=gs.length;
   var gS=srt('tG',gs,function(t,col){var s=sh[t]||0;return{ticker:t,price:PR[t]||0,sector:DV[t]?DV[t].sc:'',shares:s,broker:bk[t]||'',value:(PR[t]||0)*s}[col]||t});
   h='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s,rid='g_'+t;h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono '+(val>0?'accent2':'muted')+'">'+(val>0?fm(val):'\u2014')+'</td><td><button class="rb" onclick="event.stopPropagation();rmT(\''+t+'\')">&#10005;</button></td></tr><tr class="xr" id="'+rid+'"><td colspan="7"><div class="xp"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px"><div><span style="font-size:15px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge badge-purple">Growth</span><div class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'')+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent2)">'+fm(PR[t]||0)+'</div>'+(s>0?'<div class="muted" style="font-size:9.5px">'+s+' sh \u00b7 '+fm(val)+'</div>':'')+'</div></div>'+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bG').innerHTML=h;
   mc='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge badge-purple">Growth</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Broker</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v accent2">'+fm(val)+'</span></div>':'')+'<div class="mkd">'+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mG').innerHTML=mc;
 
-  // PAYOUT LOG
+  // PAYOUT LOG (uses all dividend tickers, not filtered)
+  var allDvs=tks.filter(isDiv);
   var today=new Date().toISOString().slice(0,10);var entries=[];
-  dvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})})});
+  allDvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})})});
   entries.sort(function(a,b){return b.d.localeCompare(a.d)});
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
-  G('pAn').textContent=fm(dvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
+  G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
   h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="le"><div class="ld" style="background:'+(e.up?'var(--accent)':'var(--green)')+'"></div><span class="mono fw7" style="min-width:40px;font-size:11px">'+e.tk+'</span><span class="mono muted" style="font-size:10px;min-width:70px">'+e.d+'</span><span class="mono" style="font-size:10px">$'+e.a+'/sh</span>'+(e.s>0?'<span class="mono muted" style="font-size:10px">'+e.s+' sh</span><span class="mono fw7 green" style="font-size:11px">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px;margin-left:auto">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</div>'});
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
@@ -907,6 +952,9 @@ function render(){
   var base=location.origin+location.pathname.replace(/\/[^/]*$/,'/');
   G('ru1').textContent=base+'feed.xml';G('ru2').textContent=base+'rss.xml';
   G('rPre').textContent=gRSS();
+
+  // Restore any open panels after DOM rebuild
+  restoreOpenPanels();
 }
 
 function gRSS(){var it='';tks.forEach(function(t){getNews(t).forEach(function(n){it+='    <item>\n      <title>['+t+'] '+xm(n.t)+'</title>\n      <link>'+n.u+'</link>\n      <description>'+xm(n.sm||n.t)+'</description>\n      <pubDate>'+new Date(n.d+'T12:00:00Z').toUTCString()+'</pubDate>\n      <category>'+t+'</category>\n    </item>\n'})});return'<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>Portfolio Command Center News</title>\n    <link>'+location.href+'</link>\n    <lastBuildDate>'+new Date().toUTCString()+'</lastBuildDate>\n'+it+'  </channel>\n</rss>'}
@@ -917,29 +965,41 @@ function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.st
 function cpRSS(){navigator.clipboard.writeText(gRSS()).then(function(){var b=G('cpB');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy XML'},2e3)})}
 function openMod(){
   G('mod').style.display='';
-  // Populate broker dropdown
-  var sel=G('mBroker');
+  G('mIn').value='';
+  G('mShares').value='';
+  rebuildBrokerSelect();
+  rCh();
+  setTimeout(function(){G('mIn').focus()},100);
+}
+function rebuildBrokerSelect(){
+  var wrap=G('mBrokerWrap');
   var list=getBrokerList();
+  var sel=document.createElement('select');
+  sel.className='mi';sel.id='mBrokerSel';sel.style.marginBottom='0';sel.style.padding='8px 10px';
   sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'">'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
   sel.onchange=function(){
     if(sel.value==='__NEW__'){
+      wrap.innerHTML='';
       var inp=document.createElement('input');
-      inp.type='text';inp.className='mi';inp.id='mBrokerText';inp.placeholder='Broker name';inp.style.marginBottom='0';
-      sel.replaceWith(inp);inp.focus();
+      inp.type='text';inp.className='mi';inp.id='mBrokerInp';inp.placeholder='Type broker name';inp.style.marginBottom='0';
+      wrap.appendChild(inp);
+      inp.focus();
     }
   };
-  G('mShares').value='';
-  rCh();
-  setTimeout(function(){G('mIn').focus()},100);
+  wrap.innerHTML='';
+  wrap.appendChild(sel);
 }
 function rCh(){G('cps').innerHTML=tks.map(function(t){return'<span class="ch">'+t+'<span class="x" onclick="rmT(\''+t+'\')">&#215;</span></span>'}).join('')}
 function addT(){
   var t=G('mIn').value.trim().toUpperCase();
   if(!t)return;
   var sharesVal=parseFloat(G('mShares').value)||0;
-  var brokerEl=G('mBroker')||G('mBrokerText');
-  var brokerVal=brokerEl?brokerEl.value.trim():'';
-  if(brokerVal==='__NEW__')brokerVal='';
+  // Read broker from either select or text input
+  var brokerVal='';
+  var selEl=G('mBrokerSel');
+  var inpEl=G('mBrokerInp');
+  if(inpEl){brokerVal=inpEl.value.trim()}
+  else if(selEl){brokerVal=selEl.value;if(brokerVal==='__NEW__')brokerVal=''}
   if(tks.indexOf(t)<0){
     tks.push(t);
     if(sharesVal||brokerVal){
@@ -951,8 +1011,15 @@ function addT(){
       fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});
       fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}});
     }
+    // Reset fields for next add
+    G('mIn').value='';G('mShares').value='';
+    rebuildBrokerSelect();
+    G('mIn').focus();
+  } else {
+    // Ticker already exists — flash the input
+    var inp=G('mIn');inp.style.borderColor='var(--red)';
+    setTimeout(function(){inp.style.borderColor=''},1000);
   }
-  G('mIn').value='';G('mShares').value='';
 }
 function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];computeFromLots();save();render();rCh()}
 
@@ -980,6 +1047,5 @@ setInterval(function(){
   if (FINNHUB_KEY) { fetchAllNews(); fetchAllPrices(); }
 }, NEWS_CACHE_MS);
 </script>
-
 </body>
 </html>
