@@ -224,7 +224,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.4.6</div>
+        <div class="logo-ver">v0.5.0</div>
       </div>
     </div>
     <div class="header-actions">
@@ -253,8 +253,10 @@ tbody td:last-child{border-radius:0 6px 6px 0}
     <button class="tab active" data-tab="news" onclick="sTab('news')">&#128240; News <span class="tab-count" id="cN">0</span></button>
     <button class="tab" data-tab="div" onclick="sTab('div')">&#128176; Dividends <span class="tab-count" id="cD">0</span></button>
     <button class="tab" data-tab="growth" onclick="sTab('growth')">&#128200; Growth <span class="tab-count" id="cG">0</span></button>
+    <button class="tab" data-tab="accounts" onclick="sTab('accounts')">&#127974; Accounts</button>
     <button class="tab" data-tab="paylog" onclick="sTab('paylog')">&#128203; Payout Log</button>
     <button class="tab" data-tab="all" onclick="sTab('all')">&#128451; All</button>
+    <button class="tab" data-tab="settings" onclick="sTab('settings')">&#9881; Settings</button>
   </div>
 
   <!-- NEWS -->
@@ -276,7 +278,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
   <!-- DIVIDENDS -->
   <div class="tab-content" id="content-div">
     <div class="sg" id="dS"></div>
-    <input class="search-bar" type="text" placeholder="Search dividends by ticker, broker, or rating..." id="divQ" oninput="render()" style="margin-bottom:8px">
+    <input class="search-bar" type="text" placeholder="Search dividends by ticker, account, or rating..." id="divQ" oninput="render()" style="margin-bottom:8px">
     <div class="table-wrap dt"><table id="tD"><thead><tr>
       <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="price" onclick="ds('tD','price')">Price <span class="sa">&#9660;</span></th>
@@ -295,7 +297,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 
   <!-- GROWTH -->
   <div class="tab-content" id="content-growth">
-    <input class="search-bar" type="text" placeholder="Search growth stocks by ticker, sector, or broker..." id="growthQ" oninput="render()" style="margin-bottom:8px">
+    <input class="search-bar" type="text" placeholder="Search growth stocks by ticker, sector, or account..." id="growthQ" oninput="render()" style="margin-bottom:8px">
     <div class="table-wrap dt"><table id="tG"><thead><tr>
       <th data-col="ticker" onclick="ds('tG','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="price" onclick="ds('tG','price')">Price <span class="sa">&#9660;</span></th>
@@ -326,7 +328,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
       <th data-col="dividend" onclick="ds('tA','dividend')">Div <span class="sa">&#9660;</span></th>
       <th data-col="yield" onclick="ds('tA','yield')">Yield <span class="sa">&#9660;</span></th>
       <th data-col="shares" onclick="ds('tA','shares')">Shares <span class="sa">&#9660;</span></th>
-      <th data-col="broker" onclick="ds('tA','broker')">Broker <span class="sa">&#9660;</span></th>
+      <th data-col="broker" onclick="ds('tA','broker')">Account <span class="sa">&#9660;</span></th>
       <th data-col="value" onclick="ds('tA','value')">Value <span class="sa">&#9660;</span></th>
       <th data-col="income" onclick="ds('tA','income')">Income <span class="sa">&#9660;</span></th>
       <th data-col="type" onclick="ds('tA','type')">Type <span class="sa">&#9660;</span></th>
@@ -335,7 +337,60 @@ tbody td:last-child{border-radius:0 6px 6px 0}
     <div class="mc" id="mA"></div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.4.6 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <!-- ACCOUNTS -->
+  <div class="tab-content" id="content-accounts">
+    <input class="search-bar" type="text" placeholder="Search by account name..." id="acctQ" oninput="render()" style="margin-bottom:10px">
+    <div id="acctBody"></div>
+    <div class="mc" id="mAcct"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="tab-content" id="content-settings">
+    <div style="max-width:600px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">&#9881; Settings</h3>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
+        <div id="settingsAcctList"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input class="mi" type="text" id="newAcctName" placeholder="New account name" style="margin-bottom:0;flex:1">
+          <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; News Notifications</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast notification with sound when new articles are fetched.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="sNotifEnabled" onchange="savePref()"> Enable news notifications
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
+            <input type="checkbox" id="sSoundMuted" onchange="savePref()"> Mute sound
+          </label>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:4px">
+            <span style="color:var(--muted)">Sound:</span>
+            <select id="sSoundChoice" class="mi" onchange="savePref();previewSound()" style="width:160px;margin-bottom:0;padding:6px 8px;font-size:12px">
+              <option value="chime">Chime</option>
+              <option value="ding">Ding</option>
+              <option value="pop">Pop</option>
+              <option value="bell">Bell</option>
+            </select>
+            <button class="btn btn-outline" onclick="previewSound()" style="font-size:10px;padding:4px 10px">&#9654; Test</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Data</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Portfolio data auto-saves to browser. Sign in with Google to sync across devices.</p>
+        <button class="btn btn-outline" onclick="if(confirm('Clear all local data and reload?')){localStorage.clear();location.reload()}" style="color:var(--red);border-color:var(--red-dim)">Reset Local Data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Portfolio Command Center v0.5.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -348,7 +403,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
         <input class="mi" type="number" id="mShares" placeholder="0" min="0" step="any" style="margin-bottom:0">
       </div>
       <div style="flex:1">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Broker (optional)</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Account (optional)</div>
         <div id="mBrokerWrap"></div>
       </div>
     </div>
@@ -362,7 +417,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.4.6";
+var VERSION = "0.5.0";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -679,8 +734,8 @@ function setLot(t,idx,shares,broker){
   computeFromLots();
 }
 function addLot(t){
-  if(!lots[t])lots[t]=[{s:0,b:''}];
-  lots[t].push({s:0,b:''});
+  if(!lots[t])lots[t]=[{s:0,b:'',added:new Date().toISOString()}];
+  lots[t].push({s:0,b:'',added:new Date().toISOString()});
   computeFromLots();
   save();render();
 }
@@ -747,13 +802,13 @@ function eLotB(t,idx,el){
   var list=getBrokerList();
   if(list.length===0){eLotBText(t,idx,el,cur);return}
   var sel=document.createElement('select');sel.className='bi';sel.style.width='110px';
-  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'"'+(b===cur?' selected':'')+'>'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
+  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'"'+(b===cur?' selected':'')+'>'+b+'</option>'}).join('')+'<option value="__NEW__">+ New account...</option>';
   el.replaceWith(sel);sel.focus();
   var done=function(){var val=sel.value;if(val==='__NEW__'){var wrap=document.createElement('span');sel.replaceWith(wrap);eLotBText(t,idx,wrap,'');return}setLot(t,idx,undefined,val);save();render()};
   sel.onchange=done;sel.onblur=function(){setTimeout(done,100)};
 }
 function eLotBText(t,idx,el,cur){
-  var i=document.createElement('input');i.type='text';i.className='bi';i.value=cur;i.placeholder='Broker';
+  var i=document.createElement('input');i.type='text';i.className='bi';i.value=cur;i.placeholder='Account';
   el.replaceWith(i);i.focus();i.select();
   var dn=function(){setLot(t,idx,undefined,i.value.trim());save();render()};
   i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}};
@@ -763,17 +818,18 @@ function lotsHTML(t){
   var lt=getLots(t);
   var h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:12px">\ud83d\udcca Holdings by Lot</div><button class="btn btn-outline" onclick="event.stopPropagation();addLot(\''+t+'\')" style="font-size:10px;padding:4px 10px">+ Add Lot</button></div>';
-  h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:4px 10px;align-items:center;font-size:11px">';
-  h+='<div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">#</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Broker</div><div></div>';
+  h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:4px 10px;align-items:center;font-size:11px">';
+  h+='<div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">#</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Account</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Added</div><div></div>';
   lt.forEach(function(lot,i){
     var val=(PR[t]||0)*lot.s;
+    var addedStr=lot.added?new Date(lot.added).toLocaleDateString():'\u2014';
     h+='<div class="mono muted" style="font-size:10px">'+(i+1)+'</div>';
     h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s||'edit')+'</span>';
     h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.b||'set')+'</span>';
+    h+='<div class="muted" style="font-size:10px">'+addedStr+'</div>';
     h+=(lt.length>1?'<button class="rb" onclick="event.stopPropagation();removeLot(\''+t+'\','+i+')" style="font-size:9px">&#10005;</button>':'<div></div>');
   });
   h+='</div>';
-  // Summary
   var totalS=sh[t]||0;
   if(totalS>0&&lt.length>1){
     h+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;gap:16px;flex-wrap:wrap">';
@@ -793,7 +849,7 @@ function eB(t,el){
   var sel=document.createElement('select');
   sel.className='bi';
   sel.style.width='110px';
-  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'"'+(b===cur?' selected':'')+'>'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
+  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'"'+(b===cur?' selected':'')+'>'+b+'</option>'}).join('')+'<option value="__NEW__">+ New account...</option>';
   el.replaceWith(sel);
   sel.focus();
   var done=function(){
@@ -811,7 +867,7 @@ function eB(t,el){
 }
 function eBText(t,el,cur){
   var i=document.createElement('input');
-  i.type='text';i.className='bi';i.value=cur;i.placeholder='Broker name';
+  i.type='text';i.className='bi';i.value=cur;i.placeholder='Account name';
   el.replaceWith(i);
   i.focus();i.select();
   var dn=function(){setLot(t,0,undefined,i.value.trim());save();render()};
@@ -910,13 +966,13 @@ function render(){
     h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">';
     h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span><div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
     h+='<div class="dg">';
-    [["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s||"\u2014"],["Broker",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]].forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
+    [["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s||"\u2014"],["Account",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]].forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
     h+='</div>';
     if(d.yr>=25)h+='<div class="db" style="background:#fcd34d10;border:1px solid #fcd34d20;color:var(--gold)">\ud83d\udc51 '+(d.yr>=50?'Dividend King':'Aristocrat')+' \u2014 '+d.yr+' yrs of increases</div>';
     if(d.pr>80&&d.pr>0)h+='<div class="db" style="background:var(--red-dim);border:1px solid #f8717125;color:var(--red)">\u26a0 High payout ('+d.pr+'%)</div>';
     h+=lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bD').innerHTML=h;
-  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Broker</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+lotsHTML(t)+nwH(t)+'</div></div>'});
+  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mD').innerHTML=mc;
 
   // GROWTH
@@ -927,7 +983,7 @@ function render(){
   var gS=srt('tG',gs,function(t,col){var s=sh[t]||0;return{ticker:t,price:PR[t]||0,sector:DV[t]?DV[t].sc:'',shares:s,broker:bk[t]||'',value:(PR[t]||0)*s}[col]||t});
   h='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s,rid='g_'+t;h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono '+(val>0?'accent2':'muted')+'">'+(val>0?fm(val):'\u2014')+'</td><td><button class="rb" onclick="event.stopPropagation();rmT(\''+t+'\')">&#10005;</button></td></tr><tr class="xr" id="'+rid+'"><td colspan="7"><div class="xp"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px"><div><span style="font-size:15px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge badge-purple">Growth</span><div class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'')+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent2)">'+fm(PR[t]||0)+'</div>'+(s>0?'<div class="muted" style="font-size:9.5px">'+s+' sh \u00b7 '+fm(val)+'</div>':'')+'</div></div>'+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bG').innerHTML=h;
-  mc='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge badge-purple">Growth</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Broker</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v accent2">'+fm(val)+'</span></div>':'')+'<div class="mkd">'+lotsHTML(t)+nwH(t)+'</div></div>'});
+  mc='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge badge-purple">Growth</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v accent2">'+fm(val)+'</span></div>':'')+'<div class="mkd">'+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mG').innerHTML=mc;
 
   // PAYOUT LOG (uses all dividend tickers, not filtered)
@@ -941,12 +997,55 @@ function render(){
   h='';var lm='';entries.forEach(function(e){var mo=e.d.slice(0,7);if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}h+='<div class="le"><div class="ld" style="background:'+(e.up?'var(--accent)':'var(--green)')+'"></div><span class="mono fw7" style="min-width:40px;font-size:11px">'+e.tk+'</span><span class="mono muted" style="font-size:10px;min-width:70px">'+e.d+'</span><span class="mono" style="font-size:10px">$'+e.a+'/sh</span>'+(e.s>0?'<span class="mono muted" style="font-size:10px">'+e.s+' sh</span><span class="mono fw7 green" style="font-size:11px">'+fm(e.tot)+'</span>':'<span class="muted" style="font-size:10px">no shares</span>')+'<span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px;margin-left:auto">'+(e.up?'UPCOMING':'PAID')+'</span>'+(bk[e.tk]?'<span class="badge badge-purple" style="font-size:8px">'+bk[e.tk]+'</span>':'')+'</div>'});
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
-  // ALL
+  // ALL (now with expandable lots)
   var aS=srt('tA',tks.slice(),function(t,col){var d=DV[t],s=sh[t]||0,iD=isDiv(t);return{ticker:t,price:PR[t]||0,sector:d?d.sc:'',dividend:iD?d.a:0,yield:iD?d.y:0,shares:s,broker:bk[t]||'',value:(PR[t]||0)*s,income:iD?d.a*s:0,type:iD?'Dividend':'Growth'}[col]||t});
-  h='';aS.forEach(function(t){var d=DV[t],s=sh[t]||0,iD=isDiv(t),val=(PR[t]||0)*s,inc=iD?d.a*s:0;h+='<tr class="dr"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(d?d.sc:'\u2014')+'</td><td class="mono '+(iD?'green':'muted')+'">'+(iD?'$'+d.a:'\u2014')+'</td><td class="mono '+(iD?'accent2':'muted')+'">'+(iD?d.y+'%':'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono">'+(val>0?fm(val):'\u2014')+'</td><td class="mono '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td><td><span class="badge '+(iD?'badge-green':'badge-purple')+'">'+(iD?'Dividend':'Growth')+'</span></td><td><button class="rb" onclick="rmT(\''+t+'\')">&#10005;</button></td></tr>'});
+  h='';aS.forEach(function(t){var d=DV[t],s=sh[t]||0,iD=isDiv(t),val=(PR[t]||0)*s,inc=iD?d.a*s:0,rid='a_'+t;
+    h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(d?d.sc:'\u2014')+'</td><td class="mono '+(iD?'green':'muted')+'">'+(iD?'$'+d.a:'\u2014')+'</td><td class="mono '+(iD?'accent2':'muted')+'">'+(iD?d.y+'%':'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono">'+(val>0?fm(val):'\u2014')+'</td><td class="mono '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td><td><span class="badge '+(iD?'badge-green':'badge-purple')+'">'+(iD?'Dividend':'Growth')+'</span></td><td><button class="rb" onclick="event.stopPropagation();rmT(\''+t+'\')">&#10005;</button></td></tr>';
+    h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">'+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bA').innerHTML=h;
-  mc='';aS.forEach(function(t){var d=DV[t],s=sh[t]||0,iD=isDiv(t),val=(PR[t]||0)*s,inc=iD?d.a*s:0;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+(iD?'badge-green':'badge-purple')+'">'+(iD?'Div':'Growth')+'</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div>'+(iD?'<div class="mkr"><span class="l">Yield</span><span class="v accent2">'+d.y+'%</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Broker</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v">'+fm(val)+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Sector</span><span class="v">'+(d?d.sc:'\u2014')+'</span></div>'+lotsHTML(t)+'</div></div>'});
+  mc='';aS.forEach(function(t){var d=DV[t],s=sh[t]||0,iD=isDiv(t),val=(PR[t]||0)*s,inc=iD?d.a*s:0;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+(iD?'badge-green':'badge-purple')+'">'+(iD?'Div':'Growth')+'</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div>'+(iD?'<div class="mkr"><span class="l">Yield</span><span class="v accent2">'+d.y+'%</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v">'+fm(val)+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd">'+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mA').innerHTML=mc;
+
+  // ACCOUNTS — group stocks by account
+  var aq=(G('acctQ').value||'').toLowerCase();
+  var acctMap={};
+  tks.forEach(function(t){
+    var lt=getLots(t);
+    lt.forEach(function(lot,i){
+      var acct=lot.b||'Unassigned';
+      if(aq&&acct.toLowerCase().indexOf(aq)<0&&t.toLowerCase().indexOf(aq)<0)return;
+      if(!acctMap[acct])acctMap[acct]={stocks:[],totalVal:0,totalInc:0};
+      var val=(PR[t]||0)*lot.s;
+      var inc=isDiv(t)?(DV[t].a/4)*lot.s*4:0; // approximate
+      acctMap[acct].stocks.push({ticker:t,lot:lot,lotIdx:i,val:val,inc:inc,added:lot.added||''});
+      acctMap[acct].totalVal+=val;
+      acctMap[acct].totalInc+=inc;
+    });
+  });
+  var acctNames=Object.keys(acctMap).sort();
+  h='';
+  acctNames.forEach(function(acct){
+    var grp=acctMap[acct];
+    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px"><div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div><div style="display:flex;gap:12px;font-size:12px"><span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'')+'</div></div>';
+    h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:3px 12px;font-size:11px;align-items:center">';
+    h+='<div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase">Value</div><div class="muted" style="font-size:9px;text-transform:uppercase">Added</div>';
+    grp.stocks.forEach(function(s){
+      h+='<span class="mono fw7">'+s.ticker+'</span>';
+      h+='<span class="mono">'+s.lot.s+'</span>';
+      h+='<span class="mono accent2">'+fm(s.val)+'</span>';
+      h+='<span class="muted" style="font-size:10px">'+(s.added?new Date(s.added).toLocaleDateString():'—')+'</span>';
+    });
+    h+='</div></div>';
+  });
+  if(!acctNames.length)h='<div class="muted" style="text-align:center;padding:30px">No accounts with holdings</div>';
+  G('acctBody').innerHTML=h;
+
+  // Accounts mobile
+  G('mAcct').innerHTML=h; // Same layout works for mobile cards since it's already div-based
+
+  // Settings — render account list
+  renderSettingsAccts();
 
   // RSS
   var base=location.origin+location.pathname.replace(/\/[^/]*$/,'/');
@@ -976,12 +1075,12 @@ function rebuildBrokerSelect(){
   var list=getBrokerList();
   var sel=document.createElement('select');
   sel.className='mi';sel.id='mBrokerSel';sel.style.marginBottom='0';sel.style.padding='8px 10px';
-  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'">'+b+'</option>'}).join('')+'<option value="__NEW__">+ New broker...</option>';
+  sel.innerHTML='<option value="">(none)</option>'+list.map(function(b){return'<option value="'+b.replace(/"/g,'&quot;')+'">'+b+'</option>'}).join('')+'<option value="__NEW__">+ New account...</option>';
   sel.onchange=function(){
     if(sel.value==='__NEW__'){
       wrap.innerHTML='';
       var inp=document.createElement('input');
-      inp.type='text';inp.className='mi';inp.id='mBrokerInp';inp.placeholder='Type broker name';inp.style.marginBottom='0';
+      inp.type='text';inp.className='mi';inp.id='mBrokerInp';inp.placeholder='Account name';inp.style.marginBottom='0';
       wrap.appendChild(inp);
       inp.focus();
     }
@@ -994,39 +1093,223 @@ function addT(){
   var t=G('mIn').value.trim().toUpperCase();
   if(!t)return;
   var sharesVal=parseFloat(G('mShares').value)||0;
-  // Read broker from either select or text input
   var brokerVal='';
   var selEl=G('mBrokerSel');
   var inpEl=G('mBrokerInp');
   if(inpEl){brokerVal=inpEl.value.trim()}
   else if(selEl){brokerVal=selEl.value;if(brokerVal==='__NEW__')brokerVal=''}
+
+  var now=new Date().toISOString();
+
   if(tks.indexOf(t)<0){
+    // Brand new ticker
     tks.push(t);
-    if(sharesVal||brokerVal){
-      lots[t]=[{s:sharesVal,b:brokerVal}];
-      computeFromLots();
-    }
+    lots[t]=[{s:sharesVal,b:brokerVal,added:now}];
+    computeFromLots();
     save();render();rCh();
     if(FINNHUB_KEY){
       fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});
       fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}});
     }
-    // Reset fields for next add
-    G('mIn').value='';G('mShares').value='';
-    rebuildBrokerSelect();
-    G('mIn').focus();
+    G('mIn').value='';G('mShares').value='';rebuildBrokerSelect();G('mIn').focus();
+    showToast('Added '+t+(brokerVal?' at '+brokerVal:''));
   } else {
-    // Ticker already exists — flash the input
-    var inp=G('mIn');inp.style.borderColor='var(--red)';
-    setTimeout(function(){inp.style.borderColor=''},1000);
+    // Ticker exists — check if this account already has a lot
+    var existing=lots[t]||[{s:0,b:''}];
+    var dupIdx=-1;
+    if(brokerVal){
+      existing.forEach(function(lot,i){if(lot.b===brokerVal)dupIdx=i});
+    }
+    if(dupIdx>=0){
+      // Same ticker + same account — warn
+      showToast(t+' already exists at '+brokerVal+'!','warn');
+      var inp=G('mIn');inp.style.borderColor='var(--red)';
+      setTimeout(function(){inp.style.borderColor=''},1500);
+    } else if(brokerVal||sharesVal){
+      // Add as new lot at different account
+      if(!lots[t])lots[t]=[];
+      lots[t].push({s:sharesVal,b:brokerVal,added:now});
+      computeFromLots();
+      save();render();rCh();
+      G('mIn').value='';G('mShares').value='';rebuildBrokerSelect();G('mIn').focus();
+      showToast('Added '+sharesVal+' shares of '+t+' at '+(brokerVal||'no account'));
+    } else {
+      showToast(t+' already in portfolio. Add shares/account to create a new lot.','warn');
+      var inp=G('mIn');inp.style.borderColor='var(--yellow)';
+      setTimeout(function(){inp.style.borderColor=''},1500);
+    }
   }
 }
 function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];computeFromLots();save();render();rCh()}
+
+// ═════════════════════════════════════════════════
+// SETTINGS: Account management
+// ═════════════════════════════════════════════════
+function renderSettingsAccts(){
+  var el=G('settingsAcctList');if(!el)return;
+  var list=getBrokerList();
+  if(!list.length){el.innerHTML='<div class="muted" style="font-size:11px;padding:8px 0">No accounts yet. Add one below or set an account on any stock.</div>';return}
+  var h='';
+  list.forEach(function(acct,i){
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
+    h+='<span class="badge badge-purple" style="font-size:11px;min-width:60px;text-align:center">'+acct+'</span>';
+    h+='<button class="btn btn-outline" onclick="renameAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:3px 8px">Rename</button>';
+    h+='<button class="rb" onclick="deleteAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px">Delete</button>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+function addAccount(){
+  var name=G('newAcctName').value.trim();
+  if(!name)return;
+  // Just add a lot to any ticker to register it, or store it in a separate list
+  // Simpler: just create a placeholder. We'll use a dedicated accounts list.
+  if(!window._accounts)window._accounts=[];
+  // Actually: accounts are derived from lots. To "create" an account, we just
+  // need it to appear in the broker list. Let's store it in prefs.
+  var prefs=loadPrefs();
+  if(!prefs.accounts)prefs.accounts=[];
+  if(prefs.accounts.indexOf(name)<0)prefs.accounts.push(name);
+  savePrefs(prefs);
+  G('newAcctName').value='';
+  render();
+  showToast('Account "'+name+'" created');
+}
+function renameAccount(oldName){
+  var newName=prompt('Rename "'+oldName+'" to:',oldName);
+  if(!newName||newName===oldName)return;
+  // Rename in all lots
+  Object.keys(lots).forEach(function(t){
+    (lots[t]||[]).forEach(function(lot){if(lot.b===oldName)lot.b=newName});
+  });
+  // Rename in prefs
+  var prefs=loadPrefs();
+  if(prefs.accounts){prefs.accounts=prefs.accounts.map(function(a){return a===oldName?newName:a})}
+  savePrefs(prefs);
+  computeFromLots();save();render();
+  showToast('Renamed "'+oldName+'" to "'+newName+'"');
+}
+function deleteAccount(name){
+  if(!confirm('Remove account "'+name+'"? Shares will be kept but account label cleared.'))return;
+  Object.keys(lots).forEach(function(t){
+    (lots[t]||[]).forEach(function(lot){if(lot.b===name)lot.b=''});
+  });
+  var prefs=loadPrefs();
+  if(prefs.accounts){prefs.accounts=prefs.accounts.filter(function(a){return a!==name})}
+  savePrefs(prefs);
+  computeFromLots();save();render();
+  showToast('Account "'+name+'" removed');
+}
+
+// Override getBrokerList to include prefs.accounts too
+var _origGetBrokerList=getBrokerList;
+getBrokerList=function(){
+  var set={};
+  Object.keys(lots).forEach(function(k){(lots[k]||[]).forEach(function(l){if(l.b)set[l.b]=1})});
+  var prefs=loadPrefs();
+  (prefs.accounts||[]).forEach(function(a){if(a)set[a]=1});
+  return Object.keys(set).sort();
+};
+
+// ═════════════════════════════════════════════════
+// PREFERENCES (persisted per user)
+// ═════════════════════════════════════════════════
+function loadPrefs(){
+  try{var p=JSON.parse(localStorage.getItem('pf_prefs'));return p||{}}catch(e){return{}}
+}
+function savePrefs(p){
+  try{localStorage.setItem('pf_prefs',JSON.stringify(p))}catch(e){}
+  // Also sync to cloud
+  if(syncEnabled&&currentUser&&db){
+    db.collection('portfolios').doc(currentUser.uid).set({prefs:p},{merge:true}).catch(function(){});
+  }
+}
+function savePref(){
+  var prefs=loadPrefs();
+  prefs.notifEnabled=G('sNotifEnabled').checked;
+  prefs.soundMuted=G('sSoundMuted').checked;
+  prefs.soundChoice=G('sSoundChoice').value;
+  savePrefs(prefs);
+}
+function loadPrefUI(){
+  var prefs=loadPrefs();
+  var ne=G('sNotifEnabled');if(ne)ne.checked=!!prefs.notifEnabled;
+  var sm=G('sSoundMuted');if(sm)sm.checked=!!prefs.soundMuted;
+  var sc=G('sSoundChoice');if(sc)sc.value=prefs.soundChoice||'chime';
+}
+
+// ═════════════════════════════════════════════════
+// NOTIFICATION SOUNDS (embedded base64 audio)
+// ═════════════════════════════════════════════════
+var SOUNDS={};
+(function(){
+  // Generate simple sounds using Web Audio API
+  var ctx;
+  function getCtx(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();return ctx}
+  SOUNDS.chime=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(880,c.currentTime);o.frequency.setValueAtTime(1100,c.currentTime+0.1);g.gain.setValueAtTime(0.3,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.4);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.4)};
+  SOUNDS.ding=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(1200,c.currentTime);g.gain.setValueAtTime(0.25,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.3)};
+  SOUNDS.pop=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(600,c.currentTime);o.frequency.exponentialRampToValueAtTime(200,c.currentTime+0.15);g.gain.setValueAtTime(0.4,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.15);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.15)};
+  SOUNDS.bell=function(){var c=getCtx(),o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(830,c.currentTime);o2.type='sine';o2.frequency.setValueAtTime(1245,c.currentTime);g.gain.setValueAtTime(0.2,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.6);o.connect(g);o2.connect(g);g.connect(c.destination);o.start();o2.start();o.stop(c.currentTime+0.6);o2.stop(c.currentTime+0.6)};
+})();
+function playNotifSound(){
+  var prefs=loadPrefs();
+  if(prefs.soundMuted)return;
+  var fn=SOUNDS[prefs.soundChoice||'chime'];
+  if(fn)try{fn()}catch(e){}
+}
+function previewSound(){
+  var choice=G('sSoundChoice').value;
+  var fn=SOUNDS[choice||'chime'];
+  if(fn)try{fn()}catch(e){}
+}
+
+// Enhanced toast with type
+function showToast(msg,type){
+  var t=document.getElementById('svt');
+  t.textContent=msg;
+  t.style.background=type==='warn'?'var(--yellow)':type==='error'?'var(--red)':'var(--green)';
+  t.style.color=type==='warn'?'#000':type==='error'?'#fff':'#000';
+  t.classList.add('show');
+  clearTimeout(svTO);
+  svTO=setTimeout(function(){t.classList.remove('show');t.style.background='';t.style.color=''},2500);
+}
+
+// Patch fetchAllNews to trigger notification
+var _origFetchAllNews=fetchAllNews;
+var prevNewsCount=0;
+fetchAllNews=function(){
+  // Count news before
+  var before=0;tks.forEach(function(t){before+=(liveNews[t]||[]).length});
+  prevNewsCount=before;
+  _origFetchAllNews();
+};
+// Patch the news status update to check for new articles
+var _origNewsStatus=null;
+(function(){
+  var origInterval=setInterval;
+  // We'll check after news loads via a watcher
+  setInterval(function(){
+    var after=0;tks.forEach(function(t){after+=(liveNews[t]||[]).length});
+    if(after>prevNewsCount&&prevNewsCount>0){
+      var prefs=loadPrefs();
+      if(prefs.notifEnabled){
+        var diff=after-prevNewsCount;
+        showToast(diff+' new article'+(diff!==1?'s':'')+' loaded');
+        playNotifSound();
+      }
+      prevNewsCount=after;
+    }
+  },2000);
+})();
 
 // INIT
 load();
 ss['tN']={c:'date',d:'desc'};
 render();
+loadPrefUI();
+
+// Set baseline news count for notifications
+prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});
 
 // Fetch live news on load if API key is set and cache is stale
 if (FINNHUB_KEY && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
