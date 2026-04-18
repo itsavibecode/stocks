@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.8</title>
+<title>Portfolio Command Center v0.5.9</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -266,7 +266,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.8</div>
+        <div class="logo-ver">v0.5.9</div>
       </div>
     </div>
     <div class="header-actions">
@@ -481,7 +481,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.8 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.9 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -508,7 +508,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.8";
+var VERSION = "0.5.9";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -891,12 +891,16 @@ var isDiv=function(t){return DV[t]&&DV[t].y>0};
 // ═════════════════════════════════════════════════
 function recheckMissingData(){
   if(!FINNHUB_KEY)return;
-  // Priority 1: stocks missing critical data (no sector, no DV entry at all)
+  // Priority 1: no DV entry at all or no sector
   var critical=tks.filter(function(t){return!DV[t]||!DV[t].sc||DV[t].sc===''||DV[t].sc==='\u2014'});
-  // Priority 2: non-builtin stocks with no dividend info that might be misclassified
+  // Priority 2: has sector but missing dividend details (non-builtin stocks with no pay date, no ex-date, or yield=0 with unknown rating)
   var secondary=tks.filter(function(t){
     if(critical.indexOf(t)>=0)return false;
-    if(!BUILTIN_TICKERS[t]&&DV[t]&&(!DV[t].y||DV[t].y===0)&&(!DV[t].rt||DV[t].rt==='None'||DV[t].rt==='Unknown'))return true;
+    if(BUILTIN_TICKERS[t])return false;
+    var d=DV[t];if(!d)return true;
+    // Missing key dividend data that Finnhub can provide
+    if(d.y>0&&(!d.pd||d.pd==='N/A')&&(!d.ex||d.ex==='N/A'))return true;
+    if((!d.y||d.y===0)&&(!d.rt||d.rt==='None'||d.rt==='Unknown'||d.rt==='ETF'))return true;
     return false;
   });
   var queue=critical.concat(secondary);
@@ -1328,7 +1332,6 @@ function fetchProfile(ticker){
     .then(function(data){
       if(data&&data.finnhubIndustry)DV[ticker].sc=data.finnhubIndustry;
       if(data&&data.name)DV[ticker].name=data.name;
-      // Now fetch metrics
       return fetch('https://finnhub.io/api/v1/stock/metric?symbol='+ticker+'&metric=all&token='+FINNHUB_KEY);
     })
     .then(function(r){return r.json()})
@@ -1346,11 +1349,38 @@ function fetchProfile(ticker){
           if(!DV[ticker].f||DV[ticker].f==='N/A')DV[ticker].f='Quarterly';
         }
       }
+      // Fetch dividend calendar for ex-date and pay date
+      var from=new Date().toISOString().slice(0,10);
+      var to=new Date(Date.now()+180*864e5).toISOString().slice(0,10);
+      return fetch('https://finnhub.io/api/v1/stock/dividend?symbol='+ticker+'&from='+from+'&to='+to+'&token='+FINNHUB_KEY);
+    })
+    .then(function(r){return r.json()})
+    .then(function(divData){
+      if(Array.isArray(divData)&&divData.length>0){
+        // Sort by date ascending, take the next upcoming
+        divData.sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
+        var nxt=divData[0];
+        if(nxt.date)DV[ticker].pd=nxt.date;
+        if(nxt.exDate||nxt.exDividendDate)DV[ticker].ex=nxt.exDate||nxt.exDividendDate;
+        if(nxt.amount&&nxt.amount>0)DV[ticker].np=Math.round(nxt.amount*10000)/10000;
+        if(nxt.payDate)DV[ticker].pd=nxt.payDate;
+        // Determine frequency from spacing if multiple entries
+        if(divData.length>=2){
+          var d1=new Date(divData[0].date),d2=new Date(divData[1].date);
+          var gap=Math.abs(d2-d1)/(864e5*30);
+          if(gap<2)DV[ticker].f='Monthly';
+          else if(gap<5)DV[ticker].f='Quarterly';
+          else if(gap<9)DV[ticker].f='Semi-Annual';
+          else DV[ticker].f='Annual';
+        }
+        // Build history from returned dividends
+        DV[ticker].h=divData.slice(0,4).map(function(d){return{d:d.payDate||d.date,a:d.amount||0}});
+      }
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
     })
     .catch(function(e){
-      logApiError('profile+metric',ticker,e.message||'Request failed');
+      logApiError('profile+metric+div',ticker,e.message||'Request failed');
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
     });
