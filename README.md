@@ -1,38 +1,40 @@
 # Portfolio Command Center
 
-**Current Version: v0.5.4**
+**Current Version: v0.5.5**
 
 ---
 
 ## Changelog
 
+### v0.5.5 — 2026-04-18
+- **Recheck Stocks button** — added "↻ Recheck Stocks" button on Dividends and Growth tabs. Manually triggers Finnhub profile + metric fetch for any stock with missing sector or dividend data. Shows toast with progress and completion count.
+- **Expanded recheckMissingData** — now also rechecks non-builtin stocks that have yield=0 and rating "None"/"Unknown" (catches stocks that were added but Finnhub didn't return data on first try).
+- **Payout Log redesigned with date boxes** — each entry now has a styled date box (rounded card showing month/day + year), plus a colored total box (green for paid, blue for upcoming) instead of flat inline text.
+- **News sorting by date+time** — was only sorting by date string, so same-day articles were randomly ordered. Now sorts by full datetime (date + parsed AM/PM time) for proper chronological order.
+- **Default lot dates** — lots without an `added` timestamp now show 4/16/2026 instead of "—" in the lot grid and accounts view.
+- **Account dividend summary boxes** — top of Accounts tab shows a card per account with total annual dividends and average monthly income.
+- **Auth bar shadow reduced** — backdrop blur reduced from 20px to 12px, padding tightened.
+
 ### v0.5.4 — 2026-04-17
-- **Payout Log spacing fixed** — removed `margin-left:auto` on badge wrapper that was pushing badges to the far right edge, creating huge empty gaps. Badges now flow inline after the payout total. Tightened padding and gaps for a compact, scannable layout.
-- **Tax labels cleaned up** — removed all standard "Qualified dividends" entries (assumed for most stocks). Only special cases now show tags: REIT (VICI), Foreign Tax (BP), Return of Capital (INTC), Multiple Forms (BAC), Spin-off Basis (RTX), Non-Qualified (RGR), ETF Mix (SCHD), K-1/Collectible (SLV, GLD, IAU, PPLT, USO). Tags show short classification name instead of form number.
-- **Orange tax panel in deep-dive** — stocks with special tax situations get a dedicated light-orange background section in the expanded detail panel showing Tax Form, Classification, and full explanatory note. Separate from the standard data grid.
-- **Tax panel on mobile** — same orange tax section appears in mobile card expanded view for dividend stocks.
-- **API error log** — red "⚠ API" badge appears in header next to RSS when any Finnhub API call fails. Click to see last 10 errors with timestamp, ticker, endpoint, and message. Helps diagnose rate limiting or key issues.
-- **Error logging wired** — all three Finnhub endpoints (news, quote, profile+metric) now log failures to the error tracker.
+- Payout log spacing fix, tax labels cleaned up (no more qualified dividends tags)
+- Orange tax panel in deep-dive, API error log badge in header
 
 ### v0.5.3 — 2026-04-17
-- News highlighting fixed (proper AM/PM time parsing)
-- Tax labels moved to Dividends tab only
-- SLV/GLD commodity ETF handling
-- Tax info in deep-dive panel
+- News highlighting fixed, tax moved to Dividends only, SLV/GLD handling
 
 ### v0.5.2 — 2026-04-17
-- Fractional shares display, auto-fix missing data, payout log compact redesign
+- Fractional shares display, auto-fix missing data, fetchProfile chained
 
 ### v0.5.1 — 2026-04-17
-- Stock classification via Finnhub, favicon, theme switching, text size, recent news highlight
+- Stock classification, favicon, theme/text size, recent news highlight
 
 ### v0.5.0 — 2026-04-17
-- "Broker" → "Account", Accounts tab, Settings, notifications, smart add
+- Accounts tab, Settings, notifications, smart add, "Broker" → "Account"
 
-### v0.4.x — 2026-04-15 to 2026-04-17
-- Firebase, Finnhub, multi-lot, panels stay open, search, live prices
+### v0.4.x — 2026-04-15–17
+- Firebase, Finnhub, multi-lot, search, panels stay open, live prices
 
-### v0.1.0–v0.3.0 — 2026-04-14
+### v0.1–v0.3 — 2026-04-14
 - Initial build through mobile cards
 
 ---
@@ -40,16 +42,14 @@
 ## Deploy
 
 ```
-v0.5.4.html    ← Main app
-index.html     ← Redirects to v0.5.4.html
+v0.5.5.html    ← Main app
+index.html     ← Redirects to v0.5.5.html
 feed.xml       ← RSS feed
 rss.xml        ← RSS alias
 README.md      ← This file
 ```
 
-**After deploying: Ctrl+Shift+R (hard refresh) to clear browser cache.**
-
-Settings → Pages → Deploy from branch → main / root
+**Ctrl+Shift+R after deploying** to clear browser cache.
 
 ---
 
@@ -73,31 +73,22 @@ Config embedded. Console setup:
 
 ---
 
-## Tax Labels
+## Rechecking Stocks
 
-Only stocks with non-standard tax situations show ⚠ tags:
+If stocks are misclassified (dividend stock showing as Growth, or missing sector):
 
-| Ticker | Tag | Form | Note |
-|--------|-----|------|------|
-| VICI | REIT | 1099-DIV | Return of capital (Box 3) |
-| BP | Foreign Tax | 1099-DIV + 1116 | Foreign tax credit |
-| INTC | Caution | 1099-DIV | Possible return of capital |
-| BAC | Multiple Forms | 1099-DIV + 1099-INT | Dividends + interest |
-| RTX | Spin-off Basis | 1099-DIV | Cost basis adjustments |
-| RGR | Non-Qualified | 1099-DIV | Special dividends |
-| SCHD | ETF Mix | 1099-DIV | Qualified + non-qualified mix |
-| SLV/GLD | K-1 / 28% | 1099-B / K-1 | Collectible tax rate |
-| USO | K-1 | K-1 | Partnership structure |
+1. **Automatic:** `recheckMissingData()` runs on every page load for stocks with missing data
+2. **Manual:** Click "↻ Recheck Stocks" on the Dividends or Growth tab
+3. **Nuclear:** Run `localStorage.removeItem('pf_dv_custom')` in console, then refresh
 
-Standard qualified dividend stocks (AAPL, MSFT, KO, etc.) do not show tags — it's assumed.
+The recheck fetches Finnhub `/stock/profile2` (sector) and `/stock/metric` (dividend yield, payout ratio) for each stock. Results are cached in `pf_dv_custom`.
 
 ---
 
-## API Error Log
+## Troubleshooting
 
-A red **⚠ API [count]** badge appears in the header when Finnhub API calls fail. Click it to see details. Common causes:
-- **Rate limiting** — Finnhub free tier allows 60 calls/min. The app staggers requests but with 50+ tickers, rapid page loads can hit the limit.
-- **Invalid ticker** — some tickers (OTC, foreign) may not exist in Finnhub's database.
-- **Network issues** — temporary connectivity problems.
+**Stocks still under wrong tab after recheck:** Finnhub may not have data for some tickers (OTC, very small companies, commodity trusts). These will stay as Growth with sector "—". SLV, GLD, IAU, PPLT, USO are handled specially via hardcoded detection.
 
-The badge resets on page refresh.
+**Payout log looks old:** Hard refresh (Ctrl+Shift+R). The new date-box layout won't appear if the browser is caching the old HTML.
+
+**News out of order:** The sort now uses full datetime. If articles still seem out of order, they may have the same timestamp from Finnhub — this is a data quality issue on their end.
