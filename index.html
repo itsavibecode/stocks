@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.6</title>
+<title>Portfolio Command Center v0.5.7</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -219,16 +219,24 @@ body.text-xl .sc .scv{font-size:24px}
 .tax-tag .tax-tip{display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--card3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:10px;font-weight:400;white-space:nowrap;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .tax-tag:hover .tax-tip{display:block}
 
-/* PAYOUT LOG REDESIGN */
-.pl-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap}
-.pl-row:last-child{border-bottom:none}
-.pl-datebox{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;min-width:72px}
-.pl-datebox .pl-db-day{font-weight:700;font-size:11px;color:var(--text)}
-.pl-tk{font-family:var(--mono);font-weight:700;font-size:13px;min-width:40px}
-.pl-amt{font-family:var(--mono);font-size:10.5px;color:var(--text2)}
-.pl-sh{font-family:var(--mono);font-size:10px;color:var(--muted)}
-.pl-totalbox{background:var(--green-dim);border:1px solid rgba(52,211,153,.2);border-radius:6px;padding:2px 8px;font-family:var(--mono);font-weight:700;font-size:11px;color:var(--green)}
-.pl-totalbox.pl-upcoming-box{background:var(--accent-dim);border-color:rgba(78,140,255,.2);color:var(--accent)}
+/* PAYOUT LOG */
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.pl-entry{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;transition:background .1s}
+.pl-entry:hover{background:var(--card2)}
+.pl-entry.pl-is-upcoming{border-left:3px solid var(--accent)}
+.pl-entry.pl-is-paid{border-left:3px solid var(--green)}
+.pl-head{display:flex;justify-content:space-between;align-items:center}
+.pl-ticker{font-family:var(--mono);font-weight:700;font-size:16px}
+.pl-dateblock{text-align:right}
+.pl-dateblock-day{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--text)}
+.pl-dateblock-yr{font-size:10px;color:var(--muted)}
+.pl-details{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pl-pershare{font-family:var(--mono);font-size:12px;color:var(--text2)}
+.pl-shares{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.pl-payout{font-family:var(--mono);font-weight:700;font-size:20px;color:var(--green)}
+.pl-entry.pl-is-upcoming .pl-payout{color:var(--accent)}
+.pl-foot{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:2px}
+@media(max-width:640px){.pl-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -258,7 +266,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.6</div>
+        <div class="logo-ver">v0.5.7</div>
       </div>
     </div>
     <div class="header-actions">
@@ -473,7 +481,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.6 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.7 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -500,7 +508,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.6";
+var VERSION = "0.5.7";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1099,7 +1107,8 @@ function render(){
   G('cD').textContent=dvs.length;
   var tA=dvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0);
   var aY=dvs.reduce(function(s,t){return s+DV[t].y},0)/(dvs.length||1);
-  G('dS').innerHTML=[{l:"Monthly",v:fm(tA/12),c:"var(--green)"},{l:"Annual",v:fm(tA),c:"var(--accent2)"},{l:"Stocks",v:dvs.length,c:"var(--accent)"},{l:"Avg Yield",v:aY.toFixed(2)+"%",c:"var(--yellow)"}].map(function(c){return'<div class="sc"><div class="scl">'+c.l+'</div><div class="scv" style="color:'+c.c+'">'+c.v+'</div></div>'}).join('');
+  var divPortVal=dvs.reduce(function(s,t){return s+(PR[t]||0)*(sh[t]||0)},0);
+  G('dS').innerHTML=[{l:"Dividend Portfolio",v:fm(divPortVal),c:"var(--accent2)"},{l:"Annual Income",v:fm(tA),c:"var(--green)"},{l:"Monthly Avg",v:fm(tA/12),c:"var(--green)"},{l:"Stocks",v:dvs.length,c:"var(--accent)"},{l:"Avg Yield",v:aY.toFixed(2)+"%",c:"var(--yellow)"}].map(function(c){return'<div class="sc"><div class="scl">'+c.l+'</div><div class="scv" style="color:'+c.c+'">'+c.v+'</div></div>'}).join('');
   var dS=srt('tD',dvs,function(t,col){var d=DV[t],s=sh[t]||0;return{ticker:t,price:PR[t]||0,yield:d.y,annualDiv:d.a,nextPayout:d.np,nextTotal:d.np*s,payDate:d.pd,rating:d.rt,shares:s,broker:bk[t]||'',income:d.a*s}[col]||t});
   h='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nextTot=d.np*s,rid='d_'+t;
     h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+taxHTML(t)+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+'</div></td><td><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
@@ -1135,25 +1144,32 @@ function render(){
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
-  h='';var lm='';entries.forEach(function(e){
+  h='';var lm='';var gridOpen=false;
+  entries.forEach(function(e){
     var mo=e.d.slice(0,7);
-    if(mo!==lm){lm=mo;h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>'}
+    if(mo!==lm){
+      if(gridOpen)h+='</div>'; // close previous grid
+      lm=mo;
+      h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>';
+      h+='<div class="pl-grid">';
+      gridOpen=true;
+    }
     var dt=new Date(e.d+'T12:00:00');
     var dayStr=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    h+='<div class="pl-row">';
-    h+='<div class="pl-datebox"><div class="pl-db-day">'+dayStr+'</div><div>'+e.d.slice(0,4)+'</div></div>';
-    h+='<span class="pl-tk">'+e.tk+'</span>';
-    h+='<span class="pl-amt">$'+e.a+'/sh</span>';
+    h+='<div class="pl-entry '+(e.up?'pl-is-upcoming':'pl-is-paid')+'">';
+    h+='<div class="pl-head"><span class="pl-ticker">'+e.tk+'</span><div class="pl-dateblock"><div class="pl-dateblock-day">'+dayStr+'</div><div class="pl-dateblock-yr">'+e.d.slice(0,4)+'</div></div></div>';
     if(e.s>0){
-      h+='<span class="pl-sh">\u00d7'+fmSh(e.s)+'</span>';
-      h+='<span class="pl-totalbox'+(e.up?' pl-upcoming-box':'')+'">'+fm(e.tot)+'</span>';
+      h+='<div class="pl-payout">'+fm(e.tot)+'</div>';
+      h+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares">\u00d7 '+fmSh(e.s)+' shares</span></div>';
     }else{
-      h+='<span class="muted" style="font-size:10px">no shares</span>';
+      h+='<div class="pl-payout" style="color:var(--muted);font-size:14px">\u2014</div>';
+      h+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares muted">no shares set</span></div>';
     }
-    h+='<span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>';
+    h+='<div class="pl-foot"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>';
     if(bk[e.tk])h+='<span class="badge badge-purple" style="font-size:7px">'+bk[e.tk]+'</span>';
-    h+='</div>';
+    h+='</div></div>';
   });
+  if(gridOpen)h+='</div>';
   G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
 
   // ALL (now with expandable lots)
