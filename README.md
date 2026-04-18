@@ -1,62 +1,55 @@
 # Portfolio Command Center
 
-**Current Version: v0.5.8**
+**Current Version: v0.5.9**
 
 ---
 
 ## Changelog
 
+### v0.5.9 — 2026-04-18
+- **Recheck filter expanded** — `recheckMissingData()` now catches ALL stocks with incomplete data, not just those missing a sector. Secondary filter now includes: non-builtin stocks with yield>0 but no pay date or ex-date, and any non-builtin with yield=0 and rating ETF/None/Unknown. This means the "Checking X stocks" count on load should now cover every stock that's missing information.
+- **Dividend calendar fetch** — `fetchProfile` now chains a third API call to Finnhub `/stock/dividend` endpoint, which returns upcoming ex-dates, pay dates, and per-share amounts for the next 6 months. This fills in the missing pay date, ex-date, next payout amount, frequency detection, and dividend history that were previously only available for the 23 builtin tickers.
+- **Frequency auto-detection** — if Finnhub returns 2+ upcoming dividends, the app calculates the spacing and classifies as Monthly (<2 months apart), Quarterly (<5), Semi-Annual (<9), or Annual.
+- **History populated** — up to 4 dividend entries from Finnhub are stored as the stock's payout history, enabling Payout Log entries for non-builtin stocks.
+
 ### v0.5.8 — 2026-04-18
-- **Header shadow removed** — replaced hardcoded dark gradient (`#0a1020`) and backdrop-filter blur with plain `var(--bg)` background. Header now renders cleanly in both dark and light themes with no shadow or washed-out overlay.
-- **70+ ETFs hardcoded** — added `KNOWN_ETFS` lookup table with sector labels for Vanguard (VOO, VTI, VTV, VUG, VEA, VWO, VB, VBR, VO, VOT, VOE, VGT, VHT, VNQ, VXUS, VIG, VYM, etc.), Schwab (SCHG, SCHX, SCHB, SCHF, SCHE, SCHA, SCHV), iShares (IVV, IWM, IWF, IWD, IEFA, IEMG, AGG, TLT, HYG, LQD, QQQ, SPY, DIA), ARK, and SPDR sector ETFs (XLF, XLE, XLK, etc.). These ETFs get their sector set immediately without waiting for Finnhub, which often returns nothing for ETFs.
-- **ETF + Finnhub combined** — known ETFs get their sector from the hardcoded table immediately, then Finnhub still runs to try to fetch dividend data (yield, annual div). This means the sector column is never blank for known ETFs, and dividend data fills in if available.
-- **Commodity ETFs unchanged** — SLV, GLD, IAU, PPLT, USO still bypass Finnhub entirely (returns early with hardcoded data).
+- Header shadow removed (no more gradient/blur)
+- 70+ ETFs hardcoded with sector labels
 
 ### v0.5.7 — 2026-04-18
-- Dividend Portfolio Value card in Dividends tab summary
-- Payout Log card grid redesign
+- Dividend Portfolio Value card, Payout Log card grid
 
 ### v0.5.6 — 2026-04-18
-- Import/Export, per-stock refresh, custom API key, recheck priority
-
-### v0.5.5 — 2026-04-18
-- Recheck button, news datetime sort, default lot dates, account summaries
+- Import/Export, per-stock refresh, custom API key
 
 ---
 
 ## Deploy
 
 ```
-v0.5.8.html    ← Main app
-index.html     ← Redirects to v0.5.8.html
+v0.5.9.html    ← Main app
+index.html     ← Redirects to v0.5.9.html
 ```
 
-**Ctrl+Shift+R after deploying.**
+**Ctrl+Shift+R after deploying.** Then run in console to force full re-fetch:
+```javascript
+localStorage.removeItem('pf_dv_custom');
+```
+Refresh again. This clears stale cached data so every non-builtin stock gets the full 3-endpoint fetch (profile + metric + dividend calendar).
 
 ---
 
-## Known ETFs
+## API Calls Per Stock
 
-These ETFs have hardcoded sector labels and don't depend on Finnhub for classification:
+Each stock now uses up to 3 Finnhub API calls:
+1. `/stock/profile2` — sector, company name
+2. `/stock/metric` — dividend yield, annual dividend, payout ratio
+3. `/stock/dividend` — upcoming ex-dates, pay dates, per-share amounts, history
 
-**Vanguard:** VOO, VTI, VTV, VUG, VEA, VWO, VB, VBR, VO, VOT, VOE, VGT, VHT, VNQ, VXUS, VIG, VYM, VCSH, VCIT, BND, BNDX
-
-**Schwab:** SCHG, SCHD, SCHX, SCHB, SCHF, SCHE, SCHA, SCHV
-
-**iShares:** IVV, IWM, IWF, IWD, IEFA, IEMG, AGG, TLT, HYG, LQD, QQQ, QQQM, SPY, DIA
-
-**SPDR Sectors:** XLF, XLE, XLK, XLV, XLI, XLP, XLY, XLU, XLRE, XLC, XLB
-
-**ARK:** ARKK, ARKW, ARKF, ARKG
-
-**Commodities (bypass Finnhub entirely):** SLV, GLD, IAU, PPLT, USO, UNG, DBA, DBC, PDBC
-
-If you have an ETF not on this list, it will still try Finnhub. If Finnhub returns nothing, sector shows "—". You can request additions.
-
----
+With 73 tickers and 400ms spacing, a full recheck takes ~30 seconds. The free Finnhub tier allows 60 calls/min — the app uses ~3 calls per stock but staggers them to stay under the limit.
 
 ## Troubleshooting
 
-**Light mode still has shadow:** Hard refresh (Ctrl+Shift+R). The old CSS with `linear-gradient(180deg,#0a1020,...)` is cached.
+**Toast says "Checking 22 stocks" but you have 73:** The other 51 already have complete data (builtins + previously cached). After clearing `pf_dv_custom` and refreshing, the count should jump to cover all non-builtin stocks.
 
-**ETF still shows blank sector:** Clear custom DV data: `localStorage.removeItem('pf_dv_custom')` then refresh. Or click ↻ Recheck Stocks.
+**Stocks still missing pay date after recheck:** Finnhub's `/stock/dividend` endpoint may not have future dividend data for all stocks. ETFs in particular may not appear. The pay date will show "N/A" for these — this is a Finnhub data limitation, not a bug.
