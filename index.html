@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.5</title>
+<title>Portfolio Command Center v0.5.6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -258,7 +258,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.5</div>
+        <div class="logo-ver">v0.5.6</div>
       </div>
     </div>
     <div class="header-actions">
@@ -444,6 +444,27 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128273; API Key</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Your Finnhub API key for live news and prices. Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--accent)">finnhub.io/register</a>. Key syncs with your signed-in account.</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="mi" type="text" id="sApiKey" placeholder="Finnhub API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
+          <button class="btn btn-primary" onclick="saveApiKey()" style="font-size:10px">Save Key</button>
+          <button class="btn btn-outline" onclick="resetApiKey()" style="font-size:10px">Use Default</button>
+        </div>
+        <div id="apiKeyStatus" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128229; Import / Export</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Export your entire portfolio (tickers, lots, accounts, preferences) as a JSON file. Import to restore on any device.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="exportPortfolio()">&#128230; Export Portfolio</button>
+          <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">&#128229; Import Portfolio</button>
+          <input type="file" id="importFile" accept=".json" onchange="importPortfolio(event)" style="display:none">
+        </div>
+      </div>
+
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Data</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Portfolio data auto-saves to browser. Sign in with Google to sync across devices.</p>
@@ -452,7 +473,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.5 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.5.6 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -479,7 +500,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.5";
+var VERSION = "0.5.6";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -576,7 +597,6 @@ function loadFromCloud() {
       if (d.tickers) tks = d.tickers;
       if (d.lots) { lots = d.lots; computeFromLots(); }
       else {
-        // Backward compat: old cloud data had shares/brokers
         if (d.shares || d.brokers) {
           var oldS = d.shares || {}, oldB = d.brokers || {};
           lots = {};
@@ -584,6 +604,12 @@ function loadFromCloud() {
           Object.keys(oldB).forEach(function(t){ if(!lots[t]&&oldB[t]) lots[t]=[{s:0,b:oldB[t]}]; });
           computeFromLots();
         }
+      }
+      // Load prefs from cloud (includes API key)
+      if (d.prefs) {
+        savePrefs(d.prefs);
+        if (d.prefs.finnhubKey) { FINNHUB_KEY = d.prefs.finnhubKey; }
+        loadPrefUI();
       }
       saveLocal();
       render();
@@ -641,7 +667,9 @@ TSLA:{y:0,a:0,f:"N/A",ex:"N/A",pd:"N/A",np:0,yp:0,yr:0,pr:0,rt:"None",sc:"Automo
 // LIVE NEWS — Finnhub API (free tier, 60 calls/min)
 // Replace with your free API key from https://finnhub.io
 // ═════════════════════════════════════════════════
-var FINNHUB_KEY = "d7g3v11r01qqb8ri8k1gd7g3v11r01qqb8ri8k20"; // Live news enabled
+var DEFAULT_FINNHUB_KEY = "d7g3v11r01qqb8ri8k1gd7g3v11r01qqb8ri8k20";
+var FINNHUB_KEY = DEFAULT_FINNHUB_KEY;
+function loadApiKey(){var p=loadPrefs();if(p.finnhubKey)FINNHUB_KEY=p.finnhubKey;else FINNHUB_KEY=DEFAULT_FINNHUB_KEY}
 var liveNews = {};
 var newsLastFetched = 0;
 var NEWS_CACHE_MS = 10 * 60 * 1000; // 10 min cache
@@ -855,27 +883,38 @@ var isDiv=function(t){return DV[t]&&DV[t].y>0};
 // ═════════════════════════════════════════════════
 function recheckMissingData(){
   if(!FINNHUB_KEY)return;
-  // Recheck: missing sector, missing dividend data for non-builtin, or yield=0 for non-builtin
-  var queue=tks.filter(function(t){
-    if(!DV[t]||!DV[t].sc||DV[t].sc===''||DV[t].sc==='\u2014')return true;
-    if(!BUILTIN_TICKERS[t]&&(!DV[t].y||DV[t].y===0)&&(!DV[t].rt||DV[t].rt==='None'||DV[t].rt==='Unknown'))return true;
+  // Priority 1: stocks missing critical data (no sector, no DV entry at all)
+  var critical=tks.filter(function(t){return!DV[t]||!DV[t].sc||DV[t].sc===''||DV[t].sc==='\u2014'});
+  // Priority 2: non-builtin stocks with no dividend info that might be misclassified
+  var secondary=tks.filter(function(t){
+    if(critical.indexOf(t)>=0)return false;
+    if(!BUILTIN_TICKERS[t]&&DV[t]&&(!DV[t].y||DV[t].y===0)&&(!DV[t].rt||DV[t].rt==='None'||DV[t].rt==='Unknown'))return true;
     return false;
   });
+  var queue=critical.concat(secondary);
   if(!queue.length){showToast('All stocks up to date');return}
-  showToast('Checking '+queue.length+' stocks...');
+  showToast('Checking '+queue.length+' stocks ('+critical.length+' critical)...');
   var idx=0;
   function next(){
     if(idx>=queue.length){
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
-      showToast('Recheck complete — '+queue.length+' stocks updated');
+      showToast('Recheck complete \u2014 '+queue.length+' stocks checked');
       return;
     }
     var t=queue[idx++];
     fetchProfile(t);
-    setTimeout(next,350);
+    setTimeout(next,400);
   }
   next();
+}
+// Refresh a single stock's data
+function refreshStock(ticker){
+  if(!FINNHUB_KEY){showToast('No API key','warn');return}
+  showToast('Refreshing '+ticker+'...');
+  fetchProfile(ticker);
+  fetchPriceForTicker(ticker).then(function(p){if(p){livePrices[ticker]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}}});
+  fetchNewsForTicker(ticker).then(function(a){if(a.length){liveNews[ticker]=a;try{localStorage.setItem('pf_news',JSON.stringify(liveNews))}catch(e){}render()}});
 }
 function rc(r){return{King:'badge-gold',Aristocrat:'badge-gold',Excellent:'badge-green',Strong:'badge-green','ETF - Strong':'badge-green',Good:'badge-accent','REIT - Good':'badge-accent',Stable:'badge-accent',Moderate:'badge-yellow',Variable:'badge-yellow',Caution:'badge-red',New:'badge-purple'}[r]||''}
 function rb(r){return r==='King'?'\ud83d\udc51 King':r==='Aristocrat'?'\ud83c\udfc6 Aristocrat':r}
@@ -908,7 +947,7 @@ function eLotBText(t,idx,el,cur){
 function lotsHTML(t){
   var lt=getLots(t);
   var h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">';
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:700;font-size:12px">\ud83d\udcca Holdings by Lot</div><button class="btn btn-outline" onclick="event.stopPropagation();addLot(\''+t+'\')" style="font-size:10px;padding:4px 10px">+ Add Lot</button></div>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px"><div style="display:flex;align-items:center;gap:6px"><button class="btn btn-outline" onclick="event.stopPropagation();refreshStock(\''+t+'\')" style="font-size:9px;padding:3px 7px" title="Refresh '+t+' data">&#8635;</button><span style="font-weight:700;font-size:12px">\ud83d\udcca Holdings by Lot</span></div><button class="btn btn-outline" onclick="event.stopPropagation();addLot(\''+t+'\')" style="font-size:10px;padding:4px 10px">+ Add Lot</button></div>';
   h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:4px 10px;align-items:center;font-size:11px">';
   h+='<div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">#</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Account</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Added</div><div></div>';
   lt.forEach(function(lot,i){
@@ -1462,6 +1501,9 @@ function loadPrefUI(){
   var sc=G('sSoundChoice');if(sc)sc.value=prefs.soundChoice||'chime';
   var th=G('sTheme');if(th)th.value=prefs.theme||'dark';
   var ts=G('sTextSize');if(ts)ts.value=prefs.textSize||'normal';
+  var ak=G('sApiKey');if(ak)ak.value=prefs.finnhubKey||'';
+  loadApiKey();
+  updateApiKeyStatus();
 }
 
 // ═════════════════════════════════════════════════
@@ -1517,6 +1559,78 @@ function showApiErrors(){
   alert('Recent API Errors (last '+Math.min(apiErrors.length,10)+' of '+apiErrors.length+'):\n\n'+msg);
 }
 
+// ═════════════════════════════════════════════════
+// IMPORT / EXPORT
+// ═════════════════════════════════════════════════
+function exportPortfolio(){
+  var data={
+    version:VERSION,
+    exported:new Date().toISOString(),
+    tickers:tks,
+    lots:lots,
+    prefs:loadPrefs(),
+    customDV:getDVCustom()
+  };
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='portfolio-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+  showToast('Portfolio exported');
+}
+function importPortfolio(evt){
+  var file=evt.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=JSON.parse(e.target.result);
+      if(!data.tickers||!Array.isArray(data.tickers)){showToast('Invalid portfolio file','error');return}
+      if(!confirm('Import '+data.tickers.length+' tickers? This will REPLACE your current portfolio.'))return;
+      tks=data.tickers;
+      if(data.lots)lots=data.lots;
+      if(data.prefs)savePrefs(data.prefs);
+      if(data.customDV){Object.keys(data.customDV).forEach(function(t){DV[t]=data.customDV[t]});try{localStorage.setItem('pf_dv_custom',JSON.stringify(data.customDV))}catch(e){}}
+      computeFromLots();
+      save();render();loadPrefUI();
+      showToast('Imported '+tks.length+' tickers');
+    }catch(err){showToast('Import failed: '+err.message,'error')}
+  };
+  reader.readAsText(file);
+  evt.target.value=''; // reset so same file can be re-imported
+}
+
+// ═════════════════════════════════════════════════
+// API KEY MANAGEMENT
+// ═════════════════════════════════════════════════
+function saveApiKey(){
+  var key=G('sApiKey').value.trim();
+  if(!key){showToast('Enter an API key','warn');return}
+  var prefs=loadPrefs();
+  prefs.finnhubKey=key;
+  savePrefs(prefs);
+  FINNHUB_KEY=key;
+  updateApiKeyStatus();
+  showToast('API key saved'+(syncEnabled?' and synced to cloud':''));
+}
+function resetApiKey(){
+  var prefs=loadPrefs();
+  delete prefs.finnhubKey;
+  savePrefs(prefs);
+  FINNHUB_KEY=DEFAULT_FINNHUB_KEY;
+  G('sApiKey').value='';
+  updateApiKeyStatus();
+  showToast('Using default API key');
+}
+function updateApiKeyStatus(){
+  var el=G('apiKeyStatus');if(!el)return;
+  var prefs=loadPrefs();
+  if(prefs.finnhubKey){
+    el.innerHTML='<span style="color:var(--green)">\u2713 Custom key active</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced to cloud</span>':'');
+  }else{
+    el.innerHTML='<span style="color:var(--muted)">Using shared default key</span>';
+  }
+}
+
 // Patch fetchAllNews to trigger notification
 var _origFetchAllNews=fetchAllNews;
 var prevNewsCount=0;
@@ -1550,6 +1664,7 @@ fetchAllNews=function(){
 
 // INIT
 load();
+loadApiKey(); // load API key from prefs before any fetches
 loadThemePrefs();
 ss['tN']={c:'date',d:'desc'};
 render();
