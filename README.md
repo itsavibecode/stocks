@@ -1,55 +1,55 @@
 # Portfolio Command Center
 
-**Current Version: v0.5.5**
+**Current Version: v0.5.6**
 
 ---
 
 ## Changelog
 
+### v0.5.6 — 2026-04-18
+- **Import / Export** — Settings → Import/Export panel. Export saves tickers, lots, preferences, and custom stock data as a JSON file. Import restores everything from a backup file (confirms before replacing).
+- **Recheck prioritization** — "↻ Recheck Stocks" now processes critical stocks first (missing sector/DV entry entirely), then secondary (missing dividend data). Uses 400ms spacing to avoid exhausting API. Shows progress toast with critical vs total count.
+- **Per-stock refresh button** — every expanded panel now has a ↻ button in the upper-left of the Holdings by Lot section. Fetches fresh profile, price, and news for that specific ticker without touching other stocks.
+- **API Key in Settings** — new "API Key" panel with input field, Save Key and Use Default buttons, status indicator. Custom key saves to preferences and syncs to Firestore with your Google account. When you sign in on another device, your key loads automatically.
+- **API key loaded at init** — `loadApiKey()` runs before any Finnhub calls so a custom key is active from the first fetch.
+- **Cloud sync loads prefs** — signing in now also loads your preferences (including API key, theme, text size, notification settings) from Firestore.
+
 ### v0.5.5 — 2026-04-18
-- **Recheck Stocks button** — added "↻ Recheck Stocks" button on Dividends and Growth tabs. Manually triggers Finnhub profile + metric fetch for any stock with missing sector or dividend data. Shows toast with progress and completion count.
-- **Expanded recheckMissingData** — now also rechecks non-builtin stocks that have yield=0 and rating "None"/"Unknown" (catches stocks that were added but Finnhub didn't return data on first try).
-- **Payout Log redesigned with date boxes** — each entry now has a styled date box (rounded card showing month/day + year), plus a colored total box (green for paid, blue for upcoming) instead of flat inline text.
-- **News sorting by date+time** — was only sorting by date string, so same-day articles were randomly ordered. Now sorts by full datetime (date + parsed AM/PM time) for proper chronological order.
-- **Default lot dates** — lots without an `added` timestamp now show 4/16/2026 instead of "—" in the lot grid and accounts view.
-- **Account dividend summary boxes** — top of Accounts tab shows a card per account with total annual dividends and average monthly income.
-- **Auth bar shadow reduced** — backdrop blur reduced from 20px to 12px, padding tightened.
+- Recheck Stocks button on Dividends/Growth tabs
+- Payout Log with date boxes and colored total boxes
+- News sorting by full datetime, default lot dates, account dividend summaries
 
 ### v0.5.4 — 2026-04-17
-- Payout log spacing fix, tax labels cleaned up (no more qualified dividends tags)
-- Orange tax panel in deep-dive, API error log badge in header
+- Payout log spacing fix, tax labels cleanup, orange tax panel, API error log
 
 ### v0.5.3 — 2026-04-17
-- News highlighting fixed, tax moved to Dividends only, SLV/GLD handling
+- News highlighting, tax in Dividends only, SLV/GLD handling
 
 ### v0.5.2 — 2026-04-17
-- Fractional shares display, auto-fix missing data, fetchProfile chained
+- Fractional shares, auto-fix, fetchProfile chained
 
 ### v0.5.1 — 2026-04-17
-- Stock classification, favicon, theme/text size, recent news highlight
+- Stock classification, favicon, theme, text size, recent news highlight
 
 ### v0.5.0 — 2026-04-17
-- Accounts tab, Settings, notifications, smart add, "Broker" → "Account"
+- Accounts, Settings, notifications, smart add, "Broker" → "Account"
 
 ### v0.4.x — 2026-04-15–17
 - Firebase, Finnhub, multi-lot, search, panels stay open, live prices
-
-### v0.1–v0.3 — 2026-04-14
-- Initial build through mobile cards
 
 ---
 
 ## Deploy
 
 ```
-v0.5.5.html    ← Main app
-index.html     ← Redirects to v0.5.5.html
+v0.5.6.html    ← Main app
+index.html     ← Redirects to v0.5.6.html
 feed.xml       ← RSS feed
 rss.xml        ← RSS alias
 README.md      ← This file
 ```
 
-**Ctrl+Shift+R after deploying** to clear browser cache.
+**Ctrl+Shift+R after deploying.**
 
 ---
 
@@ -73,22 +73,60 @@ Config embedded. Console setup:
 
 ---
 
-## Rechecking Stocks
+## API Key Setup
 
-If stocks are misclassified (dividend stock showing as Growth, or missing sector):
+### Using your own Finnhub key (recommended for heavy use):
 
-1. **Automatic:** `recheckMissingData()` runs on every page load for stocks with missing data
-2. **Manual:** Click "↻ Recheck Stocks" on the Dividends or Growth tab
-3. **Nuclear:** Run `localStorage.removeItem('pf_dv_custom')` in console, then refresh
+1. Register free at [finnhub.io/register](https://finnhub.io/register)
+2. Copy your API key from the dashboard
+3. Go to Settings → API Key → paste key → Save Key
+4. Key saves to your browser and syncs to your Google account via Firestore
+5. When you sign in on another device, your key loads automatically
 
-The recheck fetches Finnhub `/stock/profile2` (sector) and `/stock/metric` (dividend yield, payout ratio) for each stock. Results are cached in `pf_dv_custom`.
+### Using the default shared key:
+The app ships with a built-in key. Click "Use Default" in Settings to revert. The shared key has a 60 calls/min limit shared across all users.
 
 ---
 
-## Troubleshooting
+## Import / Export
 
-**Stocks still under wrong tab after recheck:** Finnhub may not have data for some tickers (OTC, very small companies, commodity trusts). These will stay as Growth with sector "—". SLV, GLD, IAU, PPLT, USO are handled specially via hardcoded detection.
+### Export
+Settings → Import/Export → Export Portfolio. Downloads a `.json` file containing:
+- All tickers
+- All lots (shares, accounts, timestamps)
+- Preferences (theme, text size, notifications, API key)
+- Custom stock data (sectors, dividend info fetched from Finnhub)
 
-**Payout log looks old:** Hard refresh (Ctrl+Shift+R). The new date-box layout won't appear if the browser is caching the old HTML.
+### Import
+Settings → Import/Export → Import Portfolio. Select a previously exported `.json` file. Confirms before replacing your current portfolio. After import, all data is immediately saved and synced.
 
-**News out of order:** The sort now uses full datetime. If articles still seem out of order, they may have the same timestamp from Finnhub — this is a data quality issue on their end.
+---
+
+## Per-Stock Refresh
+
+When you expand any stock's detail panel, there's a ↻ button in the upper-left corner of the "Holdings by Lot" section. Click it to:
+1. Re-fetch sector and dividend data from Finnhub `/stock/profile2` and `/stock/metric`
+2. Re-fetch the current price from `/quote`
+3. Re-fetch the latest news from `/company-news`
+
+This uses 3 API calls for one stock instead of hundreds for a full recheck.
+
+---
+
+## Features
+
+| Feature | Details |
+|---------|---------|
+| Import/Export | Full portfolio backup and restore as JSON |
+| Per-Stock Refresh | ↻ button in each expanded panel |
+| Custom API Key | Settings → save your own Finnhub key, syncs to cloud |
+| Recheck Priority | Critical missing data first, then secondary |
+| Accounts Tab | Stocks grouped by account with dividend summaries |
+| Multi-Lot Holdings | Multiple lots per stock |
+| Live Prices + News | Finnhub, cached 10 min |
+| Tax Labels | ⚠ tags for REIT, foreign, K-1, collectible |
+| Theme + Text Size | Dark/Light, Normal/Large/XL |
+| Notification Sounds | 4 embedded sounds, configurable |
+| Sortable Tables | All column headers |
+| Auto-Save | localStorage + Firestore |
+| Mobile | Card layout below 640px |
