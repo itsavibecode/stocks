@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.5.9</title>
+<title>Portfolio Command Center v0.6.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -266,7 +266,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.5.9</div>
+        <div class="logo-ver">v0.6.0</div>
       </div>
     </div>
     <div class="header-actions">
@@ -481,7 +481,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.5.9 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.6.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -508,7 +508,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.5.9";
+var VERSION = "0.6.0";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1300,7 +1300,10 @@ function fetchProfile(ticker){
     VO:'US Mid Cap',VOT:'US Mid Growth',VOE:'US Mid Value',VGT:'Technology',VHT:'Healthcare',
     VNQ:'Real Estate',VXUS:'Total International',VIG:'Dividend Appreciation',VYM:'High Dividend',
     VCSH:'Short-Term Corporate Bond',VCIT:'Intermediate Corporate Bond',BND:'Total US Bond',
-    BNDX:'Total International Bond',
+    BNDX:'Total International Bond',VBK:'US Small Growth',VV:'US Large Cap',
+    VXF:'Extended Market',VTIP:'TIPS Inflation-Protected',VGSH:'Short-Term Treasury',
+    VGIT:'Intermediate Treasury',VGLT:'Long-Term Treasury',EDV:'Extended Duration Treasury',
+    BIV:'Intermediate Bond',BSV:'Short-Term Bond',BLV:'Long-Term Bond',
     // Schwab ETFs
     SCHG:'US Large Growth',SCHD:'US Dividend',SCHX:'US Large Cap',SCHB:'US Broad Market',
     SCHF:'International Equity',SCHE:'Emerging Markets',SCHA:'US Small Cap',SCHV:'US Large Value',
@@ -1309,6 +1312,12 @@ function fetchProfile(ticker){
     IEFA:'International Developed',IEMG:'Emerging Markets',AGG:'US Aggregate Bond',
     TLT:'20+ Year Treasury',HYG:'High Yield Corporate Bond',LQD:'Investment Grade Bond',
     QQQ:'Nasdaq 100',QQQM:'Nasdaq 100',SPY:'S&P 500 Index',DIA:'Dow Jones',
+    IWB:'Russell 1000',IWR:'Russell Mid Cap',IWS:'Russell Mid Value',IWP:'Russell Mid Growth',
+    IWN:'Russell 2000 Value',IWO:'Russell 2000 Growth',
+    SHY:'1-3 Year Treasury',IEF:'7-10 Year Treasury',SHV:'Short Treasury',
+    EMB:'Emerging Market Bond',MUB:'Municipal Bond',TIPS:'TIPS Bond',
+    DVY:'Select Dividend',HDV:'High Dividend',DGRO:'Dividend Growth',
+    ITOT:'Total US Market',IXUS:'Total International',
     // ARK / Specialty
     ARKK:'Innovation',ARKW:'Internet',ARKF:'Fintech',ARKG:'Genomics',
     XLF:'Financials',XLE:'Energy',XLK:'Technology',XLV:'Healthcare',XLI:'Industrials',
@@ -1340,6 +1349,11 @@ function fetchProfile(ticker){
         var m=data.metric;
         var divYield=m.dividendYieldIndicatedAnnual||m.dividendYield5Y||0;
         var divPerShare=m.dividendsPerShareAnnual||0;
+        // If Finnhub gives yield but no per-share amount, calculate from price
+        if(divYield>0&&!divPerShare){
+          var price=livePrices[ticker]||PR[ticker]||0;
+          if(price>0)divPerShare=Math.round(price*divYield/100*100)/100;
+        }
         if(divPerShare>0||divYield>0){
           DV[ticker].y=Math.round(divYield*100)/100;
           DV[ticker].a=Math.round(divPerShare*100)/100;
@@ -1349,22 +1363,52 @@ function fetchProfile(ticker){
           if(!DV[ticker].f||DV[ticker].f==='N/A')DV[ticker].f='Quarterly';
         }
       }
-      // Fetch dividend calendar for ex-date and pay date
-      var from=new Date().toISOString().slice(0,10);
-      var to=new Date(Date.now()+180*864e5).toISOString().slice(0,10);
-      return fetch('https://finnhub.io/api/v1/stock/dividend?symbol='+ticker+'&from='+from+'&to='+to+'&token='+FINNHUB_KEY);
+      // Fetch dividend calendar — look backward 6 months AND forward 6 months for best coverage
+      var fromPast=new Date(Date.now()-180*864e5).toISOString().slice(0,10);
+      var toFuture=new Date(Date.now()+180*864e5).toISOString().slice(0,10);
+      return fetch('https://finnhub.io/api/v1/stock/dividend?symbol='+ticker+'&from='+fromPast+'&to='+toFuture+'&token='+FINNHUB_KEY);
     })
     .then(function(r){return r.json()})
     .then(function(divData){
       if(Array.isArray(divData)&&divData.length>0){
-        // Sort by date ascending, take the next upcoming
         divData.sort(function(a,b){return(a.date||'').localeCompare(b.date||'')});
-        var nxt=divData[0];
-        if(nxt.date)DV[ticker].pd=nxt.date;
-        if(nxt.exDate||nxt.exDividendDate)DV[ticker].ex=nxt.exDate||nxt.exDividendDate;
-        if(nxt.amount&&nxt.amount>0)DV[ticker].np=Math.round(nxt.amount*10000)/10000;
-        if(nxt.payDate)DV[ticker].pd=nxt.payDate;
-        // Determine frequency from spacing if multiple entries
+        var today=new Date().toISOString().slice(0,10);
+        var future=divData.filter(function(d){return(d.payDate||d.date)>=today});
+        var past=divData.filter(function(d){return(d.payDate||d.date)<today});
+
+        // Set next upcoming pay date and ex-date
+        if(future.length>0){
+          var nxt=future[0];
+          if(nxt.payDate)DV[ticker].pd=nxt.payDate;
+          else if(nxt.date)DV[ticker].pd=nxt.date;
+          if(nxt.exDate)DV[ticker].ex=nxt.exDate;
+          else if(nxt.exDividendDate)DV[ticker].ex=nxt.exDividendDate;
+          if(nxt.amount&&nxt.amount>0)DV[ticker].np=Math.round(nxt.amount*10000)/10000;
+        }
+
+        // Calculate annual div from actual amounts if we have enough history
+        var allAmts=divData.filter(function(d){return d.amount&&d.amount>0});
+        if(allAmts.length>0){
+          // Use last 4 payments or however many we have in the past year
+          var yearAgo=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+          var recentPayments=allAmts.filter(function(d){return(d.date||'')>=yearAgo});
+          if(recentPayments.length>0){
+            var annualFromHistory=recentPayments.reduce(function(s,d){return s+d.amount},0);
+            // If we only have partial year, extrapolate
+            if(recentPayments.length<4&&recentPayments.length>0){
+              annualFromHistory=recentPayments[0].amount*4; // assume quarterly
+            }
+            DV[ticker].a=Math.round(annualFromHistory*100)/100;
+            if(!DV[ticker].np||DV[ticker].np===0){
+              DV[ticker].np=Math.round(recentPayments[0].amount*10000)/10000;
+            }
+            // Recalculate yield from actual annual div
+            var price=livePrices[ticker]||PR[ticker]||0;
+            if(price>0)DV[ticker].y=Math.round(annualFromHistory/price*10000)/100;
+          }
+        }
+
+        // Determine frequency
         if(divData.length>=2){
           var d1=new Date(divData[0].date),d2=new Date(divData[1].date);
           var gap=Math.abs(d2-d1)/(864e5*30);
@@ -1373,8 +1417,9 @@ function fetchProfile(ticker){
           else if(gap<9)DV[ticker].f='Semi-Annual';
           else DV[ticker].f='Annual';
         }
-        // Build history from returned dividends
-        DV[ticker].h=divData.slice(0,4).map(function(d){return{d:d.payDate||d.date,a:d.amount||0}});
+
+        // Build history
+        DV[ticker].h=divData.slice(-6).map(function(d){return{d:d.payDate||d.date,a:d.amount||0}});
       }
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
       render();
