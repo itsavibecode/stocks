@@ -1,10 +1,16 @@
 # Portfolio Command Center
 
-**Current Version: v0.6.1**
+**Current Version: v0.6.2**
 
 ---
 
 ## Changelog
+
+### v0.6.2 — 2026-04-27
+- **Share price column in the News tab** — each news row now shows the current share price next to the ticker, sortable.
+- **Company logos in expanded panels** — clicking a row in Dividends or Growth opens the deep-dive with the company's logo via [logo.dev](https://logo.dev). Falls back to a ticker-letter placeholder if the image doesn't load.
+- **Market indices + Bitcoin in the header** — live tickers for S&P 500 (SPY), NASDAQ (QQQ), Dow (DIA), and BTC. Indices use Finnhub; BTC pulls from CoinGecko (no key required). Refreshes every 10 minutes alongside the rest of the data.
+- **Removed `index.jsx`** — vestigial 4/9 React prototype that was superseded the next day. It was never wired into the deployment.
 
 ### v0.6.1 — 2026-04-27
 - **Removed the shared default Finnhub API key.** Every user now needs their own free key from [finnhub.io/register](https://finnhub.io/register), entered once under Settings → API Key. The previous shared key was being burned by anyone visiting the public site; now your quota is yours.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.6.1</title>
+<title>Portfolio Command Center v0.6.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -67,6 +67,18 @@ input,button,select{font-family:inherit}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .stat-val{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--accent2)}
+.market-tickers{display:flex;gap:6px;flex-wrap:wrap}
+.mkt-tk{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;text-align:left;font-family:var(--mono);min-width:78px;line-height:1.2}
+.mkt-tk-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.mkt-tk-val{font-size:11px;font-weight:700;color:var(--text);font-family:var(--mono)}
+.mkt-tk-val.muted{color:var(--muted)}
+.mkt-tk-chg{font-size:9px;font-weight:600;font-family:var(--mono)}
+.mkt-tk-chg.up{color:var(--green)}
+.mkt-tk-chg.down{color:var(--red)}
+.tk-logo{position:relative;width:36px;height:36px;border-radius:8px;background:var(--card3);border:1px solid var(--border2);overflow:hidden;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.tk-logo .tk-logo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--muted);letter-spacing:.3px}
+.tk-logo img{position:relative;width:100%;height:100%;object-fit:cover;display:block}
+.tk-logo img[data-broken="1"]{display:none}
 .local-clock{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:center;font-family:var(--mono);line-height:1.2}
 .local-clock-time{font-size:14px;font-weight:700;color:var(--accent2);letter-spacing:.5px}
 .local-clock-date{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:1px}
@@ -269,7 +281,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.6.1</div>
+        <div class="logo-ver">v0.6.2</div>
       </div>
     </div>
     <div class="header-actions">
@@ -278,6 +290,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
       <button class="btn btn-primary" onclick="openMod()">+ Add</button>
       <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()">&#128225; RSS</button>
+      <div class="market-tickers" id="mktTickers" title="Live market indices and Bitcoin"></div>
       <span id="apiErrorBadge" style="display:none;cursor:pointer" onclick="showApiErrors()"><span class="badge badge-red" style="font-size:9px">&#9888; API <span id="apiErrCount">0</span></span></span>
     </div>
   </div>
@@ -315,6 +328,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
     <div class="table-wrap dt"><table id="tN"><thead><tr>
       <th data-col="ticker" onclick="ds('tN','ticker')">Ticker <span class="sa">&#9660;</span></th>
+      <th data-col="price" onclick="ds('tN','price')">Price <span class="sa">&#9660;</span></th>
       <th data-col="title" onclick="ds('tN','title')">Headline <span class="sa">&#9660;</span></th>
       <th data-col="source" onclick="ds('tN','source')">Source <span class="sa">&#9660;</span></th>
       <th data-col="date" onclick="ds('tN','date')" class="sorted">Date <span class="sa">&#9660;</span></th>
@@ -485,7 +499,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.6.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.6.2 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -512,7 +526,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.6.1";
+var VERSION = "0.6.2";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -748,6 +762,48 @@ function fetchPriceForTicker(ticker) {
       if (data && typeof data.c === 'number' && data.c > 0) return data.c;
       return null;
     }).catch(function(e){logApiError('quote',ticker,e.message||'Failed');return null});
+}
+
+// ═════════════════════════════════════════════════
+// MARKET INDICES + BTC — header tickers
+// SPY/QQQ/DIA from Finnhub (track S&P/NASDAQ/Dow), BTC from CoinGecko (no key needed)
+// ═════════════════════════════════════════════════
+var marketData={};
+var MARKET_INDICES=[{sym:'SPY',label:'S&P 500'},{sym:'QQQ',label:'NASDAQ'},{sym:'DIA',label:'Dow'}];
+function renderMarketTickers(){
+  var el=G('mktTickers');if(!el)return;
+  var items=MARKET_INDICES.concat([{sym:'BTC',label:'BTC'}]);
+  el.innerHTML=items.map(function(it){
+    var d=marketData[it.sym];
+    if(!d)return '<div class="mkt-tk"><div class="mkt-tk-label">'+it.label+'</div><div class="mkt-tk-val muted">--</div></div>';
+    var chgCls=(d.change>=0)?'up':'down';
+    var chgPrefix=(d.change>=0)?'+':'';
+    var priceStr=(it.sym==='BTC')?'$'+Math.round(d.price).toLocaleString():'$'+d.price.toFixed(2);
+    return '<div class="mkt-tk"><div class="mkt-tk-label">'+it.label+'</div><div class="mkt-tk-val">'+priceStr+'</div><div class="mkt-tk-chg '+chgCls+'">'+chgPrefix+d.change.toFixed(2)+'%</div></div>';
+  }).join('');
+}
+function fetchMarketIndices(){
+  if(!FINNHUB_KEY)return;
+  MARKET_INDICES.forEach(function(idx){
+    fetch('https://finnhub.io/api/v1/quote?symbol='+idx.sym+'&token='+FINNHUB_KEY)
+      .then(function(r){return r.json()})
+      .then(function(data){
+        if(data&&typeof data.c==='number'&&data.c>0){
+          marketData[idx.sym]={price:data.c,change:data.dp||0};
+          renderMarketTickers();
+        }
+      }).catch(function(e){logApiError('index',idx.sym,e.message||'Failed')});
+  });
+}
+function fetchBTC(){
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(data&&data.bitcoin&&typeof data.bitcoin.usd==='number'){
+        marketData['BTC']={price:data.bitcoin.usd,change:data.bitcoin.usd_24h_change||0};
+        renderMarketTickers();
+      }
+    }).catch(function(e){logApiError('btc','BTC',e.message||'Failed')});
 }
 
 function fetchAllPrices() {
@@ -1106,7 +1162,7 @@ function render(){
     });
   });
   if(q)all=all.filter(function(n){return n.t.toLowerCase().indexOf(q)>=0||n.tk.toLowerCase().indexOf(q)>=0||n.s.toLowerCase().indexOf(q)>=0});
-  all=srt('tN',all,function(i,c){if(c==='date')return i.d+'T'+(i.tm?String(parseNewsTime(i.d,i.tm)):i.d);return{ticker:i.tk,title:i.t,source:i.s,date:i.d}[c]||''});
+  all=srt('tN',all,function(i,c){if(c==='date')return i.d+'T'+(i.tm?String(parseNewsTime(i.d,i.tm)):i.d);if(c==='price')return PR[i.tk]||0;return{ticker:i.tk,title:i.t,source:i.s,date:i.d}[c]||''});
   var nowMs=Date.now();var oneHrMs=36e5;
   var recentCount=all.filter(function(n){var t=n.ts||parseNewsTime(n.d,n.tm);return(nowMs-t)<oneHrMs&&t<=nowMs}).length;
   G('cN').textContent=recentCount;
@@ -1119,9 +1175,9 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td class="mono '+(px>0?'':'muted')+'" style="font-size:11px">'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
-  var mc='';all.forEach(function(n){mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
+  var mc='';all.forEach(function(n){var px=PR[n.tk]||0;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono" style="font-size:11px;color:var(--accent2)">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
 
   // DIVIDENDS
@@ -1137,7 +1193,7 @@ function render(){
   h='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nextTot=d.np*s,rid='d_'+t;
     h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+taxHTML(t)+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+'</div></td><td><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
     h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span>'+taxHTML(t)+'<div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div style="display:flex;gap:10px;align-items:flex-start">'+logoHTML(t)+'<div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span>'+taxHTML(t)+'<div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
     h+='<div class="dg">';
     var ddItems=[["Price",fm(PR[t]||0)],["Annual Div","$"+d.a],["Next Pay/Share","$"+d.np],["Next Total Payout",s?fm(d.np*s):"\u2014"],["Frequency",d.f],["Ex-Date",d.ex],["Pay Date",d.pd],["Payout Ratio",d.pr+"%"],["5yr Growth",(d.g5>0?"+":"")+d.g5+"%"],["Yrs Paying",d.yp],["Yrs Raising",d.yr],["Rating",d.rt],["Sector",d.sc],["Shares",s?fmSh(s):"\u2014"],["Account",bk[t]||"\u2014"],["Annual Income",s?fm(inc):"\u2014"],["Monthly",s?fm(inc/12):"\u2014"],["Position",s?fm((PR[t]||0)*s):"\u2014"]];
     ddItems.forEach(function(it){var vc='';if(typeof it[1]==='string'&&it[1].charAt(0)==='+')vc='color:var(--green)';else if(typeof it[1]==='string'&&it[1].charAt(0)==='-'&&it[1]!=='\u2014')vc='color:var(--red)';h+='<div class="di"><span class="dl">'+it[0]+'</span><span class="dv" style="'+vc+'">'+it[1]+'</span></div>'});
@@ -1155,7 +1211,7 @@ function render(){
   if(gq)gs=gs.filter(function(t){return t.toLowerCase().indexOf(gq)>=0||(DV[t]?(DV[t].sc||''):'').toLowerCase().indexOf(gq)>=0||(bk[t]||'').toLowerCase().indexOf(gq)>=0});
   G('cG').textContent=gs.length;
   var gS=srt('tG',gs,function(t,col){var s=sh[t]||0;return{ticker:t,price:PR[t]||0,sector:DV[t]?DV[t].sc:'',shares:s,broker:bk[t]||'',value:(PR[t]||0)*s}[col]||t});
-  h='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s,rid='g_'+t;h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono '+(val>0?'accent2':'muted')+'">'+(val>0?fm(val):'\u2014')+'</td><td><button class="rb" onclick="event.stopPropagation();rmT(\''+t+'\')">&#10005;</button></td></tr><tr class="xr" id="'+rid+'"><td colspan="7"><div class="xp"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px"><div><span style="font-size:15px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge badge-purple">Growth</span><div class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'')+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent2)">'+fm(PR[t]||0)+'</div>'+(s>0?'<div class="muted" style="font-size:9.5px">'+s+' sh \u00b7 '+fm(val)+'</div>':'')+'</div></div>'+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
+  h='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s,rid='g_'+t;h+='<tr class="dr" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'\u2014')+'</td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono '+(val>0?'accent2':'muted')+'">'+(val>0?fm(val):'\u2014')+'</td><td><button class="rb" onclick="event.stopPropagation();rmT(\''+t+'\')">&#10005;</button></td></tr><tr class="xr" id="'+rid+'"><td colspan="7"><div class="xp"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px"><div style="display:flex;gap:10px;align-items:flex-start">'+logoHTML(t)+'<div><span style="font-size:15px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge badge-purple">Growth</span><div class="muted" style="font-size:10.5px">'+(DV[t]?DV[t].sc:'')+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div></div><div style="text-align:right"><div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--accent2)">'+fm(PR[t]||0)+'</div>'+(s>0?'<div class="muted" style="font-size:9.5px">'+s+' sh \u00b7 '+fm(val)+'</div>':'')+'</div></div>'+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bG').innerHTML=h;
   mc='';gS.forEach(function(t){var s=sh[t]||0,val=(PR[t]||0)*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge badge-purple">Growth</span></div><span class="mkp">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(val>0?'<div class="mkr"><span class="l">Value</span><span class="v accent2">'+fm(val)+'</span></div>':'')+'<div class="mkd">'+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mG').innerHTML=mc;
@@ -1298,6 +1354,12 @@ function taxHTML(t){
   var info=TAX_INFO[t];
   if(!info)return'';
   return' <span class="tax-tag">\u26a0 '+info.tag+'<span class="tax-tip">'+info.form+': '+info.note+'</span></span>';
+}
+// Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load
+var LOGO_DEV_TOKEN="pk_X-1ZO13GSgeOoUrIuJ6GMQ";
+function logoHTML(t){
+  var url='https://img.logo.dev/ticker/'+encodeURIComponent(t)+'?token='+LOGO_DEV_TOKEN+'&size=80&format=png';
+  return '<span class="tk-logo" aria-label="'+t+' logo"><span class="tk-logo-fallback">'+t+'</span><img src="'+url+'" alt="" onerror="this.setAttribute(\'data-broken\',\'1\')"></span>';
 }
 function taxPanelHTML(t){
   var info=TAX_INFO[t];
@@ -1842,9 +1904,15 @@ if (FINNHUB_KEY && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
   var ps = G('priceStatus'); if (ps) ps.innerHTML = '<span class="news-live">&#9679; Prices cached &mdash; ' + new Date(pricesLastFetched).toLocaleTimeString() + '</span>';
 }
 
-// Auto-refresh news and prices every 10 minutes
+// Initial market tickers render (placeholders) and fetch
+renderMarketTickers();
+fetchBTC();
+if (FINNHUB_KEY) fetchMarketIndices();
+
+// Auto-refresh news, prices, and market tickers every 10 minutes
 setInterval(function(){
-  if (FINNHUB_KEY) { fetchAllNews(); fetchAllPrices(); }
+  if (FINNHUB_KEY) { fetchAllNews(); fetchAllPrices(); fetchMarketIndices(); }
+  fetchBTC();
 }, NEWS_CACHE_MS);
 </script>
 </body>
