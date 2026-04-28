@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.6.2**
+**Current Version: v0.6.3**
 
 ---
 
 ## Changelog
+
+### v0.6.3 — 2026-04-27
+- **Monthly payout bar chart** on the Payout Log tab — aggregates per-stock pay dates by month (last 12 months with data) and shows them as horizontal bars. Current month is highlighted; future months use a different gradient. Sits above the existing month-by-month grid.
+- **AlphaVantage and Tiingo as backup data providers** — quotes and news now follow Finnhub → AlphaVantage → Tiingo. The first provider to return data wins. Settings has a new "Backup API Keys" card with separate fields for each (both free with sign-up; AlphaVantage 25/day, Tiingo 1000/hour). Keys sync to Firestore alongside the primary key. Profile + dividend metadata stay Finnhub-only since the secondary providers don't expose equivalents.
+- **Firestore warm cache** for news + prices — the most recent fetched data persists in your portfolio doc as a `cache` field. Sign in on a new device or browser and the cache loads with the rest of your portfolio, so you see content immediately instead of waiting for the first fetch. The existing 10-minute TTL still triggers a re-fetch when stale; this layer just removes the cold start.
 
 ### v0.6.2 — 2026-04-27
 - **Share price column in the News tab** — each news row now shows the current share price next to the ticker, sortable.
