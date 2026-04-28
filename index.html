@@ -67,6 +67,17 @@ input,button,select{font-family:inherit}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .stat-val{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--accent2)}
+.payout-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0}
+.payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+.payout-chart-title .pct-sub{font-size:10px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
+.pct-row{display:grid;grid-template-columns:62px 1fr 80px;gap:10px;align-items:center;margin-bottom:5px;font-size:11px}
+.pct-month{font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+.pct-bar-bg{background:var(--card3);border-radius:4px;height:18px;position:relative;overflow:hidden}
+.pct-bar{background:linear-gradient(90deg,var(--green),var(--accent2));height:100%;border-radius:4px;min-width:2px;transition:width .25s}
+.pct-bar.future{background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.85}
+.pct-bar.empty{background:var(--card3)}
+.pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
+.pct-amt.zero{color:var(--muted);font-weight:400}
 .market-tickers{display:flex;gap:6px;flex-wrap:wrap}
 .mkt-tk{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;text-align:left;font-family:var(--mono);min-width:78px;line-height:1.2}
 .mkt-tk-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
@@ -383,6 +394,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div class="sc"><div class="scl">&#128197; Next 90 Days</div><div class="scv green" id="p90">$0</div></div>
       <div class="sc"><div class="scl">&#128200; Annual Projected</div><div class="scv accent2" id="pAn">$0</div></div>
     </div>
+    <div class="payout-chart-wrap" id="pChart"></div>
     <div id="pBd"></div>
   </div>
 
@@ -1224,6 +1236,32 @@ function render(){
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
+
+  // Monthly payouts bar chart — aggregate entries by month, show last 12 months with data
+  var moTot={};
+  entries.forEach(function(e){
+    if(e.s<=0)return;
+    var k=e.d.slice(0,7);
+    if(!moTot[k])moTot[k]={amt:0,label:new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'2-digit'})};
+    moTot[k].amt+=e.tot;
+  });
+  var moKeys=Object.keys(moTot).sort().slice(-12);
+  if(moKeys.length>0){
+    var maxAmt=Math.max.apply(null,moKeys.map(function(k){return moTot[k].amt}).concat([1]));
+    var todayMo=new Date().toISOString().slice(0,7);
+    var chartH='<div class="payout-chart-title">📊 Monthly Payouts<span class="pct-sub">'+moKeys.length+' months · peak '+fm(maxAmt)+'</span></div>';
+    moKeys.forEach(function(k){
+      var m=moTot[k];
+      var pct=(m.amt/maxAmt*100);
+      var isFuture=k>todayMo;
+      var isCur=k===todayMo;
+      var moStyle=isCur?' style="color:var(--accent);font-weight:700"':'';
+      chartH+='<div class="pct-row"><span class="pct-month"'+moStyle+'>'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt">'+fm(m.amt)+'</span></div>';
+    });
+    G('pChart').innerHTML=chartH;
+  }else{
+    G('pChart').innerHTML='';
+  }
   h='';var lm='';var gridOpen=false;
   entries.forEach(function(e){
     var mo=e.d.slice(0,7);
