@@ -483,7 +483,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128273; API Key</div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128273; API Key (Primary)</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:8px"><strong style="color:var(--yellow)">Required.</strong> Without your own Finnhub API key, news and prices will not fetch. Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--accent)">finnhub.io/register</a>. Key syncs with your signed-in account.</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="mi" type="text" id="sApiKey" placeholder="Finnhub API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
@@ -491,6 +491,30 @@ body.text-xl .sc .scv{font-size:24px}
           <button class="btn btn-outline" onclick="resetApiKey()" style="font-size:10px">Clear Key</button>
         </div>
         <div id="apiKeyStatus" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128274; Backup API Keys</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Optional. If Finnhub fails or hits its quota, the app falls back to these in order. Both are free with sign-up.</p>
+        <div style="margin-bottom:10px">
+          <label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:3px">AlphaVantage <span class="muted">— 25 calls/day free · <a href="https://www.alphavantage.co/support/#api-key" target="_blank" style="color:var(--accent)">get key</a></span></label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input class="mi" type="text" id="sAvKey" placeholder="AlphaVantage API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
+            <button class="btn btn-primary" onclick="saveAvKey()" style="font-size:10px">Save</button>
+            <button class="btn btn-outline" onclick="clearAvKey()" style="font-size:10px">Clear</button>
+          </div>
+          <div id="avKeyStatus" style="font-size:10px;color:var(--muted);margin-top:3px"></div>
+        </div>
+        <div>
+          <label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:3px">Tiingo <span class="muted">— 1000 calls/hour free · <a href="https://www.tiingo.com/account/api/token" target="_blank" style="color:var(--accent)">get key</a></span></label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <input class="mi" type="text" id="sTgKey" placeholder="Tiingo API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
+            <button class="btn btn-primary" onclick="saveTgKey()" style="font-size:10px">Save</button>
+            <button class="btn btn-outline" onclick="clearTgKey()" style="font-size:10px">Clear</button>
+          </div>
+          <div id="tgKeyStatus" style="font-size:10px;color:var(--muted);margin-top:3px"></div>
+        </div>
+        <p style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Order tried: Finnhub → AlphaVantage → Tiingo. The first one to return data wins. BTC always uses CoinGecko (no key needed).</p>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
@@ -643,10 +667,12 @@ function loadFromCloud() {
           computeFromLots();
         }
       }
-      // Load prefs from cloud (includes API key)
+      // Load prefs from cloud (includes API keys)
       if (d.prefs) {
         savePrefs(d.prefs);
         if (d.prefs.finnhubKey) { FINNHUB_KEY = d.prefs.finnhubKey; }
+        if (d.prefs.alphavantageKey) { ALPHAVANTAGE_KEY = d.prefs.alphavantageKey; }
+        if (d.prefs.tiingoKey) { TIINGO_KEY = d.prefs.tiingoKey; }
         loadPrefUI();
       }
       saveLocal();
@@ -707,37 +733,87 @@ TSLA:{y:0,a:0,f:"N/A",ex:"N/A",pd:"N/A",np:0,yp:0,yr:0,pr:0,rt:"None",sc:"Automo
 // ═════════════════════════════════════════════════
 var DEFAULT_FINNHUB_KEY = "";
 var FINNHUB_KEY = DEFAULT_FINNHUB_KEY;
-function loadApiKey(){var p=loadPrefs();FINNHUB_KEY=p.finnhubKey||""}
+var ALPHAVANTAGE_KEY = "";
+var TIINGO_KEY = "";
+function loadApiKey(){
+  var p=loadPrefs();
+  FINNHUB_KEY=p.finnhubKey||"";
+  ALPHAVANTAGE_KEY=p.alphavantageKey||"";
+  TIINGO_KEY=p.tiingoKey||"";
+}
+function anyKeySet(){return !!(FINNHUB_KEY||ALPHAVANTAGE_KEY||TIINGO_KEY)}
 var liveNews = {};
 var newsLastFetched = 0;
 var NEWS_CACHE_MS = 10 * 60 * 1000; // 10 min cache
 
-function fetchNewsForTicker(ticker) {
-  if (!FINNHUB_KEY) return Promise.resolve([]);
-  var today = new Date().toISOString().slice(0,10);
-  var weekAgo = new Date(Date.now() - 7*864e5).toISOString().slice(0,10);
+// Normalize a ms timestamp to {d, tm, ts} in local TZ
+function tsParts(ms){
+  var dt=new Date(ms);
+  return {
+    d: dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'),
+    tm: dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
+    ts: ms
+  };
+}
+function fetchNewsFinnhub(ticker){
+  if(!FINNHUB_KEY)return Promise.resolve(null);
+  var today=new Date().toISOString().slice(0,10);
+  var weekAgo=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
   return fetch('https://finnhub.io/api/v1/company-news?symbol='+ticker+'&from='+weekAgo+'&to='+today+'&token='+FINNHUB_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
-      if (!Array.isArray(data)) return [];
+      if(!Array.isArray(data)||data.length===0)return null;
       return data.slice(0,3).map(function(n){
-        var dt = new Date(n.datetime*1000);
-        var localD = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-        return {
-          t: n.headline||'',
-          d: localD,
-          tm: dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
-          ts: n.datetime*1000,
-          s: n.source||'',
-          sm: n.summary||'',
-          u: n.url||'#'
-        };
+        var p=tsParts(n.datetime*1000);
+        return {t:n.headline||'',d:p.d,tm:p.tm,ts:p.ts,s:n.source||'',sm:n.summary||'',u:n.url||'#'};
       });
-    }).catch(function(e){logApiError('news',ticker,e.message||'Failed');return[]});
+    }).catch(function(e){logApiError('news-finnhub',ticker,e.message||'Failed');return null});
+}
+function fetchNewsAlphaVantage(ticker){
+  if(!ALPHAVANTAGE_KEY)return Promise.resolve(null);
+  return fetch('https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers='+ticker+'&limit=5&apikey='+ALPHAVANTAGE_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!data||!Array.isArray(data.feed)||data.feed.length===0)return null;
+      return data.feed.slice(0,3).map(function(n){
+        // time_published format: "20260427T203000"
+        var s=n.time_published||'';
+        var ms=Date.now();
+        if(s.length>=15){
+          var iso=s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(9,11)+':'+s.slice(11,13)+':'+s.slice(13,15)+'Z';
+          var d=new Date(iso);if(!isNaN(d))ms=d.getTime();
+        }
+        var p=tsParts(ms);
+        return {t:n.title||'',d:p.d,tm:p.tm,ts:p.ts,s:n.source||'',sm:n.summary||'',u:n.url||'#'};
+      });
+    }).catch(function(e){logApiError('news-alphavantage',ticker,e.message||'Failed');return null});
+}
+function fetchNewsTiingo(ticker){
+  if(!TIINGO_KEY)return Promise.resolve(null);
+  return fetch('https://api.tiingo.com/tiingo/news?tickers='+ticker+'&limit=3&token='+TIINGO_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!Array.isArray(data)||data.length===0)return null;
+      return data.slice(0,3).map(function(n){
+        var ms=n.publishedDate?new Date(n.publishedDate).getTime():Date.now();
+        var p=tsParts(ms);
+        return {t:n.title||'',d:p.d,tm:p.tm,ts:p.ts,s:n.source||'',sm:n.description||'',u:n.url||'#'};
+      });
+    }).catch(function(e){logApiError('news-tiingo',ticker,e.message||'Failed');return null});
+}
+function fetchNewsForTicker(ticker){
+  if(!anyKeySet())return Promise.resolve([]);
+  return fetchNewsFinnhub(ticker).then(function(r){
+    if(r&&r.length)return r;
+    return fetchNewsAlphaVantage(ticker).then(function(r2){
+      if(r2&&r2.length)return r2;
+      return fetchNewsTiingo(ticker).then(function(r3){return r3||[]});
+    });
+  });
 }
 
 function fetchAllNews() {
-  if (!FINNHUB_KEY) {
+  if (!anyKeySet()) {
     document.getElementById('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
     return;
   }
@@ -765,15 +841,46 @@ function fetchAllNews() {
 // ═════════════════════════════════════════════════
 // LIVE PRICES — Finnhub /quote endpoint
 // ═════════════════════════════════════════════════
-function fetchPriceForTicker(ticker) {
-  if (!FINNHUB_KEY) return Promise.resolve(null);
+function fetchPriceFinnhub(ticker){
+  if(!FINNHUB_KEY)return Promise.resolve(null);
   return fetch('https://finnhub.io/api/v1/quote?symbol='+ticker+'&token='+FINNHUB_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
-      // Finnhub quote returns: c = current price, d = change, dp = % change, h = high, l = low, o = open, pc = prev close
-      if (data && typeof data.c === 'number' && data.c > 0) return data.c;
+      if(data&&typeof data.c==='number'&&data.c>0)return data.c;
       return null;
-    }).catch(function(e){logApiError('quote',ticker,e.message||'Failed');return null});
+    }).catch(function(e){logApiError('quote-finnhub',ticker,e.message||'Failed');return null});
+}
+function fetchPriceAlphaVantage(ticker){
+  if(!ALPHAVANTAGE_KEY)return Promise.resolve(null);
+  return fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+ALPHAVANTAGE_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var q=data&&data['Global Quote'];
+      if(q&&q['05. price']){var p=parseFloat(q['05. price']);if(p>0)return p}
+      return null;
+    }).catch(function(e){logApiError('quote-alphavantage',ticker,e.message||'Failed');return null});
+}
+function fetchPriceTiingo(ticker){
+  if(!TIINGO_KEY)return Promise.resolve(null);
+  return fetch('https://api.tiingo.com/iex/?tickers='+ticker+'&token='+TIINGO_KEY)
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(Array.isArray(data)&&data.length>0){
+        var p=data[0].tngoLast||data[0].last||0;
+        if(p>0)return p;
+      }
+      return null;
+    }).catch(function(e){logApiError('quote-tiingo',ticker,e.message||'Failed');return null});
+}
+function fetchPriceForTicker(ticker){
+  if(!anyKeySet())return Promise.resolve(null);
+  return fetchPriceFinnhub(ticker).then(function(p){
+    if(p)return p;
+    return fetchPriceAlphaVantage(ticker).then(function(p2){
+      if(p2)return p2;
+      return fetchPriceTiingo(ticker);
+    });
+  });
 }
 
 // ═════════════════════════════════════════════════
@@ -795,16 +902,28 @@ function renderMarketTickers(){
   }).join('');
 }
 function fetchMarketIndices(){
-  if(!FINNHUB_KEY)return;
+  if(!anyKeySet())return;
+  // Indices use the same fallback chain as individual quotes (Finnhub → AV → Tiingo)
   MARKET_INDICES.forEach(function(idx){
-    fetch('https://finnhub.io/api/v1/quote?symbol='+idx.sym+'&token='+FINNHUB_KEY)
-      .then(function(r){return r.json()})
-      .then(function(data){
-        if(data&&typeof data.c==='number'&&data.c>0){
-          marketData[idx.sym]={price:data.c,change:data.dp||0};
+    fetchPriceForTicker(idx.sym).then(function(p){
+      if(p){
+        // Finnhub gives us change% directly; for AV/Tiingo we'd need a separate call.
+        // If we got the price via Finnhub, fetch the full quote for change%; otherwise show price-only.
+        if(FINNHUB_KEY){
+          fetch('https://finnhub.io/api/v1/quote?symbol='+idx.sym+'&token='+FINNHUB_KEY)
+            .then(function(r){return r.json()})
+            .then(function(data){
+              if(data&&typeof data.c==='number'&&data.c>0){
+                marketData[idx.sym]={price:data.c,change:data.dp||0};
+                renderMarketTickers();
+              }
+            }).catch(function(e){logApiError('index',idx.sym,e.message||'Failed')});
+        }else{
+          marketData[idx.sym]={price:p,change:0};
           renderMarketTickers();
         }
-      }).catch(function(e){logApiError('index',idx.sym,e.message||'Failed')});
+      }
+    });
   });
 }
 function fetchBTC(){
@@ -819,7 +938,7 @@ function fetchBTC(){
 }
 
 function fetchAllPrices() {
-  if (!FINNHUB_KEY) {
+  if (!anyKeySet()) {
     var stx = document.getElementById('priceStatus');
     if (stx) stx.innerHTML = '<span style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No key</span>';
     return;
@@ -1000,9 +1119,9 @@ function recheckMissingData(){
 }
 // Refresh a single stock's data
 function refreshStock(ticker){
-  if(!FINNHUB_KEY){showToast('No API key','warn');return}
+  if(!anyKeySet()){showToast('No API key','warn');return}
   showToast('Refreshing '+ticker+'...');
-  fetchProfile(ticker);
+  if(FINNHUB_KEY)fetchProfile(ticker);
   fetchPriceForTicker(ticker).then(function(p){if(p){livePrices[ticker]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}}});
   fetchNewsForTicker(ticker).then(function(a){if(a.length){liveNews[ticker]=a;try{localStorage.setItem('pf_news',JSON.stringify(liveNews))}catch(e){}render()}});
 }
@@ -1606,8 +1725,8 @@ function addT(){
     lots[t]=[{s:sharesVal,b:brokerVal,added:now}];
     computeFromLots();
     save();render();rCh();
-    if(FINNHUB_KEY){
-      fetchProfile(t);
+    if(FINNHUB_KEY)fetchProfile(t);
+    if(anyKeySet()){
       fetchNewsForTicker(t).then(function(a){if(a.length){liveNews[t]=a;render()}});
       fetchPriceForTicker(t).then(function(p){if(p){livePrices[t]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}render()}});
     }
@@ -1742,6 +1861,8 @@ function loadPrefUI(){
   var th=G('sTheme');if(th)th.value=prefs.theme||'dark';
   var ts=G('sTextSize');if(ts)ts.value=prefs.textSize||'normal';
   var ak=G('sApiKey');if(ak)ak.value=prefs.finnhubKey||'';
+  var avEl=G('sAvKey');if(avEl)avEl.value=prefs.alphavantageKey||'';
+  var tgEl=G('sTgKey');if(tgEl)tgEl.value=prefs.tiingoKey||'';
   loadApiKey();
   updateApiKeyStatus();
 }
@@ -1862,13 +1983,50 @@ function resetApiKey(){
   showToast('API key cleared');
 }
 function updateApiKeyStatus(){
-  var el=G('apiKeyStatus');if(!el)return;
-  var prefs=loadPrefs();
-  if(prefs.finnhubKey){
-    el.innerHTML='<span style="color:var(--green)">\u2713 Custom key active</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced to cloud</span>':'');
-  }else{
-    el.innerHTML='<span style="color:var(--yellow)">\u26a0 No API key set \u2014 news and prices will not fetch. Add your free key above.</span>';
+  var el=G('apiKeyStatus');if(el){
+    var prefs=loadPrefs();
+    if(prefs.finnhubKey){
+      el.innerHTML='<span style="color:var(--green)">\u2713 Custom key active</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced to cloud</span>':'');
+    }else{
+      el.innerHTML='<span style="color:var(--yellow)">\u26a0 No API key set \u2014 news and prices will not fetch. Add your free key above.</span>';
+    }
   }
+  var avEl=G('avKeyStatus');if(avEl){
+    var p=loadPrefs();
+    avEl.innerHTML=p.alphavantageKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
+  }
+  var tgEl=G('tgKeyStatus');if(tgEl){
+    var p2=loadPrefs();
+    tgEl.innerHTML=p2.tiingoKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
+  }
+}
+function saveAvKey(){
+  var key=G('sAvKey').value.trim();
+  if(!key){showToast('Enter an AlphaVantage key','warn');return}
+  var p=loadPrefs();p.alphavantageKey=key;savePrefs(p);
+  ALPHAVANTAGE_KEY=key;
+  updateApiKeyStatus();
+  showToast('AlphaVantage key saved'+(syncEnabled?' and synced':''));
+}
+function clearAvKey(){
+  var p=loadPrefs();delete p.alphavantageKey;savePrefs(p);
+  ALPHAVANTAGE_KEY="";G('sAvKey').value='';
+  updateApiKeyStatus();
+  showToast('AlphaVantage key cleared');
+}
+function saveTgKey(){
+  var key=G('sTgKey').value.trim();
+  if(!key){showToast('Enter a Tiingo key','warn');return}
+  var p=loadPrefs();p.tiingoKey=key;savePrefs(p);
+  TIINGO_KEY=key;
+  updateApiKeyStatus();
+  showToast('Tiingo key saved'+(syncEnabled?' and synced':''));
+}
+function clearTgKey(){
+  var p=loadPrefs();delete p.tiingoKey;savePrefs(p);
+  TIINGO_KEY="";G('sTgKey').value='';
+  updateApiKeyStatus();
+  showToast('Tiingo key cleared');
 }
 
 // Patch fetchAllNews to trigger notification
@@ -1917,9 +2075,9 @@ prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length}
 recheckMissingData();
 
 // Fetch live news on load if API key is set and cache is stale
-if (FINNHUB_KEY && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
+if (anyKeySet() && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
   fetchAllNews();
-} else if (!FINNHUB_KEY) {
+} else if (!anyKeySet()) {
   G('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
 }
 
@@ -1936,20 +2094,20 @@ tickLocalClock();
 setInterval(tickLocalClock,1000);
 
 // Fetch live prices on load if API key is set and cache is stale
-if (FINNHUB_KEY && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
+if (anyKeySet() && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
   fetchAllPrices();
-} else if (FINNHUB_KEY && pricesLastFetched > 0) {
+} else if (anyKeySet() && pricesLastFetched > 0) {
   var ps = G('priceStatus'); if (ps) ps.innerHTML = '<span class="news-live">&#9679; Prices cached &mdash; ' + new Date(pricesLastFetched).toLocaleTimeString() + '</span>';
 }
 
 // Initial market tickers render (placeholders) and fetch
 renderMarketTickers();
 fetchBTC();
-if (FINNHUB_KEY) fetchMarketIndices();
+if (anyKeySet()) fetchMarketIndices();
 
 // Auto-refresh news, prices, and market tickers every 10 minutes
 setInterval(function(){
-  if (FINNHUB_KEY) { fetchAllNews(); fetchAllPrices(); fetchMarketIndices(); }
+  if (anyKeySet()) { fetchAllNews(); fetchAllPrices(); fetchMarketIndices(); }
   fetchBTC();
 }, NEWS_CACHE_MS);
 </script>
