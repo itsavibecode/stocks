@@ -649,6 +649,19 @@ function saveToCloud() {
   }).catch(function(e){ console.error("Cloud save error:", e); if(ind) ind.innerHTML = '<span style="color:var(--red)">Sync error</span>'; });
 }
 
+// Cross-device warm cache for news + prices, written to the user's Firestore portfolio doc.
+// Fire-and-forget after each successful fetchAllNews/fetchAllPrices. Profile/dividend metadata
+// already persists via pf_dv_custom + the lots sync, so it doesn't need a separate cache field.
+function saveCacheToCloud(){
+  if(!syncEnabled||!currentUser||!db)return;
+  db.collection('portfolios').doc(currentUser.uid).set({
+    cache:{
+      news:liveNews,newsTs:newsLastFetched,
+      prices:livePrices,pricesTs:pricesLastFetched
+    }
+  },{merge:true}).catch(function(e){console.error('Cache sync error:',e)});
+}
+
 function loadFromCloud() {
   if (!syncEnabled || !currentUser || !db) return;
   var ind = document.getElementById('syncInd');
@@ -674,6 +687,20 @@ function loadFromCloud() {
         if (d.prefs.alphavantageKey) { ALPHAVANTAGE_KEY = d.prefs.alphavantageKey; }
         if (d.prefs.tiingoKey) { TIINGO_KEY = d.prefs.tiingoKey; }
         loadPrefUI();
+      }
+      // Warm cache from cloud — only adopt if newer than what's already in localStorage
+      if (d.cache) {
+        var c = d.cache;
+        if (c.newsTs && c.newsTs > newsLastFetched && c.news) {
+          liveNews = c.news;
+          newsLastFetched = c.newsTs;
+          try{localStorage.setItem('pf_news',JSON.stringify(liveNews));localStorage.setItem('pf_news_ts',''+newsLastFetched)}catch(e){}
+        }
+        if (c.pricesTs && c.pricesTs > pricesLastFetched && c.prices) {
+          livePrices = c.prices;
+          pricesLastFetched = c.pricesTs;
+          try{localStorage.setItem('pf_prices',JSON.stringify(livePrices));localStorage.setItem('pf_prices_ts',''+pricesLastFetched)}catch(e){}
+        }
       }
       saveLocal();
       render();
@@ -825,6 +852,7 @@ function fetchAllNews() {
     if (idx >= queue.length) {
       newsLastFetched = Date.now();
       try{localStorage.setItem('pf_news',JSON.stringify(liveNews));localStorage.setItem('pf_news_ts',''+newsLastFetched)}catch(e){}
+      saveCacheToCloud();
       document.getElementById('newsStatus').innerHTML = '<span class="news-live">&#9679; Live &mdash; ' + new Date().toLocaleTimeString() + '</span>';
       render();
       return;
@@ -951,6 +979,7 @@ function fetchAllPrices() {
     if (idx >= queue.length) {
       pricesLastFetched = Date.now();
       try { localStorage.setItem('pf_prices', JSON.stringify(livePrices)); localStorage.setItem('pf_prices_ts', ''+pricesLastFetched); } catch(e){}
+      saveCacheToCloud();
       if (st) st.innerHTML = '<span class="news-live">&#9679; Prices live &mdash; ' + new Date().toLocaleTimeString() + '</span>';
       render();
       return;
