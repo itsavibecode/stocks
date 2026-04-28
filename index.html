@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.6.0</title>
+<title>Portfolio Command Center v0.6.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -67,6 +67,9 @@ input,button,select{font-family:inherit}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .stat-val{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--accent2)}
+.local-clock{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:center;font-family:var(--mono);line-height:1.2}
+.local-clock-time{font-size:14px;font-weight:700;color:var(--accent2);letter-spacing:.5px}
+.local-clock-date{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:1px}
 .btn{font-family:var(--sans);font-weight:600;font-size:11px;border:none;border-radius:7px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
 .btn-primary{background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff}
 .btn-primary:hover{filter:brightness(1.15)}
@@ -266,10 +269,11 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.6.0</div>
+        <div class="logo-ver">v0.6.1</div>
       </div>
     </div>
     <div class="header-actions">
+      <div class="local-clock" title="Your local time — news timestamps below are shown in this timezone"><div class="local-clock-time" id="hClockTime">--:--:--</div><div class="local-clock-date" id="hClockDate">--</div></div>
       <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value <span id="priceStatus" style="font-size:8px;text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="stat-val" id="pvV"></div></div>
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
       <button class="btn btn-primary" onclick="openMod()">+ Add</button>
@@ -454,11 +458,11 @@ body.text-xl .sc .scv{font-size:24px}
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128273; API Key</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Your Finnhub API key for live news and prices. Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--accent)">finnhub.io/register</a>. Key syncs with your signed-in account.</p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px"><strong style="color:var(--yellow)">Required.</strong> Without your own Finnhub API key, news and prices will not fetch. Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--accent)">finnhub.io/register</a>. Key syncs with your signed-in account.</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="mi" type="text" id="sApiKey" placeholder="Finnhub API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
           <button class="btn btn-primary" onclick="saveApiKey()" style="font-size:10px">Save Key</button>
-          <button class="btn btn-outline" onclick="resetApiKey()" style="font-size:10px">Use Default</button>
+          <button class="btn btn-outline" onclick="resetApiKey()" style="font-size:10px">Clear Key</button>
         </div>
         <div id="apiKeyStatus" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
       </div>
@@ -481,7 +485,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.6.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.6.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -508,7 +512,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.6.0";
+var VERSION = "0.6.1";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -675,9 +679,9 @@ TSLA:{y:0,a:0,f:"N/A",ex:"N/A",pd:"N/A",np:0,yp:0,yr:0,pr:0,rt:"None",sc:"Automo
 // LIVE NEWS — Finnhub API (free tier, 60 calls/min)
 // Replace with your free API key from https://finnhub.io
 // ═════════════════════════════════════════════════
-var DEFAULT_FINNHUB_KEY = "d7g3v11r01qqb8ri8k1gd7g3v11r01qqb8ri8k20";
+var DEFAULT_FINNHUB_KEY = "";
 var FINNHUB_KEY = DEFAULT_FINNHUB_KEY;
-function loadApiKey(){var p=loadPrefs();if(p.finnhubKey)FINNHUB_KEY=p.finnhubKey;else FINNHUB_KEY=DEFAULT_FINNHUB_KEY}
+function loadApiKey(){var p=loadPrefs();FINNHUB_KEY=p.finnhubKey||""}
 var liveNews = {};
 var newsLastFetched = 0;
 var NEWS_CACHE_MS = 10 * 60 * 1000; // 10 min cache
@@ -692,10 +696,12 @@ function fetchNewsForTicker(ticker) {
       if (!Array.isArray(data)) return [];
       return data.slice(0,3).map(function(n){
         var dt = new Date(n.datetime*1000);
+        var localD = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
         return {
           t: n.headline||'',
-          d: dt.toISOString().slice(0,10),
+          d: localD,
           tm: dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}),
+          ts: n.datetime*1000,
           s: n.source||'',
           sm: n.summary||'',
           u: n.url||'#'
@@ -706,7 +712,7 @@ function fetchNewsForTicker(ticker) {
 
 function fetchAllNews() {
   if (!FINNHUB_KEY) {
-    document.getElementById('newsStatus').innerHTML = '<span class="news-stale">No API key &mdash; using fallback data</span>';
+    document.getElementById('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
     return;
   }
   document.getElementById('newsStatus').innerHTML = '<span class="sync-spinner" style="width:10px;height:10px;border-width:1.5px"></span> Fetching live news...';
@@ -745,7 +751,11 @@ function fetchPriceForTicker(ticker) {
 }
 
 function fetchAllPrices() {
-  if (!FINNHUB_KEY) return;
+  if (!FINNHUB_KEY) {
+    var stx = document.getElementById('priceStatus');
+    if (stx) stx.innerHTML = '<span style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No key</span>';
+    return;
+  }
   var st = document.getElementById('priceStatus');
   if (st) st.innerHTML = '<span class="sync-spinner" style="width:10px;height:10px;border-width:1.5px"></span> Fetching prices...';
   var queue = tks.slice();
@@ -1085,11 +1095,21 @@ function render(){
 
   // NEWS
   var q=(G('nQ').value||'').toLowerCase();
-  var all=[];tks.forEach(function(t){getNews(t).forEach(function(n){all.push({tk:t,t:n.t,d:n.d,tm:n.tm||'',s:n.s,sm:n.sm||'',u:n.u||'#'})})});
+  var seenN={};
+  var all=[];
+  tks.forEach(function(t){
+    getNews(t).forEach(function(n){
+      var k=(n.t||'').trim().toLowerCase()+'|'+(n.s||'').trim().toLowerCase();
+      if(seenN[k])return;
+      seenN[k]=1;
+      all.push({tk:t,t:n.t,d:n.d,tm:n.tm||'',ts:n.ts||0,s:n.s,sm:n.sm||'',u:n.u||'#'});
+    });
+  });
   if(q)all=all.filter(function(n){return n.t.toLowerCase().indexOf(q)>=0||n.tk.toLowerCase().indexOf(q)>=0||n.s.toLowerCase().indexOf(q)>=0});
   all=srt('tN',all,function(i,c){if(c==='date')return i.d+'T'+(i.tm?String(parseNewsTime(i.d,i.tm)):i.d);return{ticker:i.tk,title:i.t,source:i.s,date:i.d}[c]||''});
-  G('cN').textContent=all.length;
   var nowMs=Date.now();var oneHrMs=36e5;
+  var recentCount=all.filter(function(n){var t=n.ts||parseNewsTime(n.d,n.tm);return(nowMs-t)<oneHrMs&&t<=nowMs}).length;
+  G('cN').textContent=recentCount;
   function parseNewsTime(d,tm){
     // d = "2026-04-17", tm = "2:34 PM" or "14:34"
     if(!tm)return new Date(d+'T00:00:00').getTime();
@@ -1099,7 +1119,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="4"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -1340,6 +1360,7 @@ function fetchProfile(ticker){
     .then(function(r){return r.json()})
     .then(function(data){
       if(data&&data.finnhubIndustry)DV[ticker].sc=data.finnhubIndustry;
+      else if(!DV[ticker].sc||DV[ticker].sc===''||DV[ticker].sc==='—')DV[ticker].sc='Unknown';
       if(data&&data.name)DV[ticker].name=data.name;
       return fetch('https://finnhub.io/api/v1/stock/metric?symbol='+ticker+'&metric=all&token='+FINNHUB_KEY);
     })
@@ -1735,10 +1756,10 @@ function resetApiKey(){
   var prefs=loadPrefs();
   delete prefs.finnhubKey;
   savePrefs(prefs);
-  FINNHUB_KEY=DEFAULT_FINNHUB_KEY;
+  FINNHUB_KEY="";
   G('sApiKey').value='';
   updateApiKeyStatus();
-  showToast('Using default API key');
+  showToast('API key cleared');
 }
 function updateApiKeyStatus(){
   var el=G('apiKeyStatus');if(!el)return;
@@ -1746,7 +1767,7 @@ function updateApiKeyStatus(){
   if(prefs.finnhubKey){
     el.innerHTML='<span style="color:var(--green)">\u2713 Custom key active</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced to cloud</span>':'');
   }else{
-    el.innerHTML='<span style="color:var(--muted)">Using shared default key</span>';
+    el.innerHTML='<span style="color:var(--yellow)">\u26a0 No API key set \u2014 news and prices will not fetch. Add your free key above.</span>';
   }
 }
 
@@ -1799,8 +1820,20 @@ recheckMissingData();
 if (FINNHUB_KEY && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
   fetchAllNews();
 } else if (!FINNHUB_KEY) {
-  G('newsStatus').innerHTML = '<span class="news-stale">&#9679; Fallback data &mdash; add Finnhub API key for live news</span>';
+  G('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
 }
+
+// Live local clock — updates every second so news timestamps can be visually compared
+function tickLocalClock(){
+  var d=new Date();
+  var hh=String(d.getHours()).padStart(2,'0');
+  var mm=String(d.getMinutes()).padStart(2,'0');
+  var ss=String(d.getSeconds()).padStart(2,'0');
+  var t=G('hClockTime');if(t)t.textContent=hh+':'+mm+':'+ss;
+  var dd=G('hClockDate');if(dd)dd.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+tickLocalClock();
+setInterval(tickLocalClock,1000);
 
 // Fetch live prices on load if API key is set and cache is stale
 if (FINNHUB_KEY && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
