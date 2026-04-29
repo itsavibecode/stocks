@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.3</title>
+<title>Portfolio Command Center v0.7.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -357,7 +357,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.3</div>
+        <div class="logo-ver">v0.7.4</div>
       </div>
     </div>
     <div class="header-actions">
@@ -461,12 +461,14 @@ body.text-xl .sc .scv{font-size:24px}
         <div style="font-weight:700;font-size:14px">Connected Brokerages</div>
         <div class="muted" style="font-size:11px">Read-only view of positions reported by SnapTrade. Manage connections in <a onclick="sTab('settings')" style="color:var(--accent);cursor:pointer">Settings</a>.</div>
       </div>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-outline" onclick="snapTradeRefresh()" style="font-size:10px">&#8635; Refresh</button>
         <button class="btn btn-primary" onclick="startSnapTradeSync()" style="font-size:10px">&#128229; Sync to Portfolio</button>
+        <button class="btn btn-outline" onclick="snapTradeFetchTransactions()" style="font-size:10px">&#128176; Fetch Transactions</button>
       </div>
     </div>
     <div id="bBrokers"></div>
+    <div id="bDripPanel"></div>
   </div>
 
   <!-- PAYOUT LOG -->
@@ -656,7 +658,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.3 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.4 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -683,7 +685,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.3";
+var VERSION = "0.7.4";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -864,7 +866,10 @@ if (firebaseReady) {
     _wasSignedIn = !!user;
     updateAuthUI();
     if (user) {
-      loadFromCloud();
+      loadFromCloud().then(function(){
+        // Daily auto-sync runs after cloud load so prefs + userSecret are populated
+        if (typeof maybeRunAutoSync === 'function') maybeRunAutoSync();
+      });
       if (becameSignedIn) logActivity('auth.signin', 'Signed in as '+(user.email||user.displayName||user.uid));
     }
   });
@@ -900,10 +905,10 @@ function saveCacheToCloud(){
 }
 
 function loadFromCloud() {
-  if (!syncEnabled || !currentUser || !db) return;
+  if (!syncEnabled || !currentUser || !db) return Promise.resolve();
   var ind = document.getElementById('syncInd');
   if (ind) ind.innerHTML = '<span class="sync-spinner"></span> Loading...';
-  db.collection('portfolios').doc(currentUser.uid).get().then(function(doc) {
+  return db.collection('portfolios').doc(currentUser.uid).get().then(function(doc) {
     if (doc.exists) {
       var d = doc.data();
       if (d.tickers) tks = d.tickers;
@@ -1025,7 +1030,7 @@ var TIINGO_KEY = "";
 // SnapTrade integration — calls go through stocks-worker (Cloudflare Worker)
 // so the SnapTrade consumerKey never reaches the browser.
 var WORKER_URL = "https://stocks-worker.sevendwarfs.workers.dev";
-var stApiState = { userSecret: "", accounts: [], lastFetched: 0, lastError: "" };
+var stApiState = { userSecret: "", accounts: [], lastFetched: 0, lastError: "", transactions: [], txLastFetched: 0 };
 
 // Activity log — local mirror of the Firestore-stored audit trail for the
 // signed-in user. Each entry: {type, detail, ts}. Capped at 500 most-recent.
@@ -2706,6 +2711,36 @@ function applySnapTradeSync(){
   logActivity('snaptrade.sync','Sync applied: '+addedCount+' added, '+updatedCount+' updated');
 }
 
+async function snapTradeFetchTransactions(){
+  if(!currentUser){showToast('Sign in first','warn');return}
+  if(!stApiState.userSecret){showToast('Connect a brokerage first','warn');return}
+  showToast('Fetching last 90 days of transactions...');
+  var data=await callWorker('/transactions',{
+    snaptradeUserId:currentUser.uid,
+    snaptradeUserSecret:stApiState.userSecret
+  });
+  if(!data)return;
+  stApiState.transactions=data.activities||[];
+  stApiState.txLastFetched=Date.now();
+  renderBrokersTab();
+  showToast(stApiState.transactions.length+' transaction'+(stApiState.transactions.length!==1?'s':'')+' fetched');
+  logActivity('snaptrade.transactions','Fetched '+stApiState.transactions.length+' transactions (last 90 days)');
+}
+
+// Identify dividend-reinvestment activities. SnapTrade activity types are
+// inconsistent across brokers — some use "DRIP", some "REI"/"REINVEST",
+// some report it as a DIVIDEND with a positive units field. We pattern-match
+// generously and fall back on the description text.
+function _stIsDripActivity(act){
+  var type=(act.type||'').toUpperCase();
+  if(type==='DRIP'||type==='REI'||type==='REINVEST'||type==='DIVIDEND_REINVESTMENT')return true;
+  var desc=((act.description||'')+'').toLowerCase();
+  if(desc.indexOf('reinvest')>=0||desc.indexOf('drip')>=0)return true;
+  // DIVIDEND with positive units = reinvested (cash dividends have units==0)
+  if(type==='DIVIDEND'&&(act.units||0)>0)return true;
+  return false;
+}
+
 async function snapTradeDisconnect(){
   if(!confirm('Disconnect from SnapTrade?\n\nThis clears your local registration. To fully revoke a brokerage, do that on the brokerage side too.\n\nContinue?'))return;
   stApiState.userSecret='';
@@ -2725,6 +2760,7 @@ function renderSnapTradeCard(){
   }
   var hasSecret=!!stApiState.userSecret;
   var accts=stApiState.accounts.length;
+  var prefs=loadPrefs();
   var html='';
   if(!hasSecret){
     html+='<button class="btn btn-primary" onclick="snapTradeConnect()">Connect a Brokerage</button>';
@@ -2738,6 +2774,11 @@ function renderSnapTradeCard(){
     if(accts>=5)summary+=' (free-tier max reached)';
     if(stApiState.lastFetched)summary+=' &middot; last sync '+new Date(stApiState.lastFetched).toLocaleTimeString();
     html+='<div style="margin-top:8px;font-size:10.5px;color:var(--muted)">'+summary+'</div>';
+    // Auto-sync toggle
+    html+='<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="snapAutoSyncCb"'+(prefs.snaptradeAutoSync?' checked':'')+' onchange="toggleSnapAutoSync(this.checked)" style="accent-color:var(--accent);width:14px;height:14px"><span>Auto-sync daily</span><span class="muted" style="font-size:10px">— refreshes once per 24h on load and opens the diff modal for review (never auto-applies)</span></label>';
+    if(prefs.snaptradeLastAutoSync){
+      html+='<div style="margin-top:4px;font-size:10px;color:var(--muted);padding-left:22px">Last auto-sync: '+new Date(prefs.snaptradeLastAutoSync).toLocaleString()+'</div>';
+    }
   }
   if(stApiState.lastError){
     html+='<div style="margin-top:8px;font-size:10.5px;color:var(--red)">⚠ '+stApiState.lastError+'</div>';
@@ -2745,7 +2786,66 @@ function renderSnapTradeCard(){
   body.innerHTML=html;
 }
 
+function toggleSnapAutoSync(checked){
+  var prefs=loadPrefs();
+  prefs.snaptradeAutoSync=!!checked;
+  savePrefs(prefs);
+  showToast(checked?'Auto-sync enabled':'Auto-sync disabled');
+  logActivity('snaptrade.autosync.'+(checked?'on':'off'),'Auto-sync '+(checked?'enabled':'disabled'));
+  renderSnapTradeCard();
+}
+
+// Daily auto-sync check — runs once on app load if toggle is on and >24h elapsed.
+// Refreshes accounts then opens the diff modal; never silent-applies.
+function maybeRunAutoSync(){
+  if(!currentUser||!stApiState.userSecret)return;
+  var prefs=loadPrefs();
+  if(!prefs.snaptradeAutoSync)return;
+  var last=prefs.snaptradeLastAutoSync||0;
+  var dayMs=24*60*60*1000;
+  if(Date.now()-last<dayMs)return;
+  // Mark first to avoid loops if refresh fails
+  prefs.snaptradeLastAutoSync=Date.now();
+  savePrefs(prefs);
+  showToast('Daily auto-sync running...');
+  snapTradeRefresh().then(function(){
+    if(stApiState.accounts.length>0){
+      setTimeout(startSnapTradeSync,800);
+    }
+  });
+}
+
+function renderDripPanel(){
+  var el=G('bDripPanel');if(!el)return;
+  if(!stApiState.userSecret||stApiState.transactions.length===0){el.innerHTML='';return}
+  var drips=stApiState.transactions.filter(_stIsDripActivity);
+  if(drips.length===0){
+    el.innerHTML='<div class="broker-card"><div class="broker-header"><div class="broker-name">💰 DRIP History</div><div class="broker-meta">Last fetched '+new Date(stApiState.txLastFetched).toLocaleString()+'</div></div><div class="muted" style="font-size:11px;font-style:italic">No dividend reinvestments found in the last 90 days.</div></div>';
+    return;
+  }
+  // Sort newest first
+  var sorted=drips.slice().sort(function(a,b){return (b.trade_date||'').localeCompare(a.trade_date||'')});
+  var totalShares=sorted.reduce(function(s,d){return s+(d.units||0)},0);
+  var totalAmt=sorted.reduce(function(s,d){return s+Math.abs(d.amount||0)},0);
+  var html='<div class="broker-card"><div class="broker-header"><div><div class="broker-name">💰 DRIP History (last 90 days)</div><div class="broker-meta">'+drips.length+' reinvestment'+(drips.length!==1?'s':'')+' · '+totalShares.toFixed(4).replace(/\.?0+$/,'')+' shares acquired · '+fm(totalAmt)+' reinvested</div></div></div>';
+  html+='<table class="broker-pos"><thead><tr><th>Date</th><th>Ticker</th><th>Shares Added</th><th>Price</th><th>Amount</th></tr></thead><tbody>';
+  sorted.forEach(function(d){
+    var sym='?';
+    if(d.symbol&&d.symbol.symbol&&d.symbol.symbol.symbol)sym=d.symbol.symbol.symbol;
+    else if(d.symbol&&d.symbol.symbol&&typeof d.symbol.symbol==='string')sym=d.symbol.symbol;
+    else if(typeof d.symbol==='string')sym=d.symbol;
+    var date=(d.trade_date||'').slice(0,10);
+    var units=d.units||0;
+    var price=d.price||0;
+    var amt=Math.abs(d.amount||0);
+    html+='<tr><td class="mono" style="font-size:10.5px">'+date+'</td><td class="mono fw7">'+sym+'</td><td>'+units.toFixed(4).replace(/\.?0+$/,'')+'</td><td>'+(price?fm(price):'—')+'</td><td>'+(amt?fm(amt):'—')+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
 function renderBrokersTab(){
+  renderDripPanel();
   var el=G('bBrokers');if(!el)return;
   // Tab counter
   var cnt=G('cBk');if(cnt)cnt.textContent=stApiState.accounts.length;

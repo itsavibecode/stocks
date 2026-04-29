@@ -1,10 +1,17 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.3**
+**Current Version: v0.7.4**
 
 ---
 
 ## Changelog
+
+### v0.7.4 — 2026-04-29
+- **SnapTrade Phase 4 — Auto-sync toggle + DRIP visibility.** Final piece of the SnapTrade roadmap.
+- **Auto-sync daily** (Settings → SnapTrade card → checkbox). When enabled, on next page load (if more than 24 hours since last auto-sync), the app refreshes accounts and opens the diff modal for review. **Never silent-applies** — same approval flow as a manual Sync click. Last auto-sync timestamp shown under the toggle. Toggle state persists in `prefs.snaptradeAutoSync` (Firestore-synced).
+- **DRIP History panel on the Brokers tab.** Click "💰 Fetch Transactions" to pull the last 90 days of activities through a new Worker endpoint (`POST /transactions`), then any reinvestment-type entries are summarized: ticker, date, shares added, price, dollar amount, plus totals at top. SnapTrade activity types are inconsistent across brokers — we match `DRIP` / `REI` / `REINVEST` / `DIVIDEND_REINVESTMENT`, fall back on description text, and treat `DIVIDEND` with positive units as a reinvestment.
+- **Activity log captures both** — `snaptrade.transactions`, `snaptrade.autosync.on`, `snaptrade.autosync.off`.
+- This completes the SnapTrade integration roadmap: Phase 1 (Worker scaffold) → Phase 2 (read-only positions) → Phase 3 (sync diff/approval) → Phase 4 (auto-sync + DRIP).
 
 ### v0.7.3 — 2026-04-29
 - **SnapTrade Phase 3 — Sync to Portfolio with diff/approval UI.** Click "Sync" on the Brokers tab (or Settings → SnapTrade card) to open a per-row review modal. Each SnapTrade-reported position becomes an ADD / UPDATE / NOOP entry against your existing portfolio. Per-row checkboxes default ADD/UPDATE checked, NOOP excluded. Click "Apply Selected" to commit only the rows you approved.
