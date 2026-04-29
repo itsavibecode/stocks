@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.1**
+**Current Version: v0.7.2**
 
 ---
 
 ## Changelog
+
+### v0.7.2 — 2026-04-29
+- **Activity Log** — every state-changing action while signed in is now logged to a new "Activity Log" card in Settings. Captures portfolio mutations (add/remove/lots), account add/rename/delete, API key set/clear (never the value), SnapTrade events (register/connect/refresh/disconnect), auth (sign-in/out/forget-my-data), import/export, and local-data reset. Filter dropdown by category; "Export CSV" downloads the full log; "Clear Log" wipes both local and Firestore copies. Capped at 500 entries with auto-trim.
+- **Activity persists locally too** — first 100 entries mirror to localStorage so local-only sessions can still see recent activity, and the log survives between page loads even before sign-in.
 
 ### v0.7.1 — 2026-04-29
 - **Payout chart shows the full calendar year** — Jan→Dec of the current year, not "last 12 months with data." The current month gets a subtle background highlight and a small ▶ arrow to its left so the eye finds "today" instantly. Months with no scheduled payouts show a dash and a transparent bar.
