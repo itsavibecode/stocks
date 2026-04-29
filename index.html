@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.6.4</title>
+<title>Portfolio Command Center v0.7.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -78,6 +78,28 @@ input,button,select{font-family:inherit}
 .pct-bar.empty{background:var(--card3)}
 .pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
+.px-up-strong{color:var(--green)}
+.px-up{color:#6ee7b7}
+.px-down{color:#fca5a5}
+.px-down-strong{color:var(--red)}
+.settings-grid{max-width:1200px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start}
+.settings-grid h3{grid-column:1/-1}
+@media (max-width:760px){.settings-grid{grid-template-columns:1fr}}
+.key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
+.key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
+.key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
+.key-pill.empty{display:none}
+.broker-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.broker-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.broker-name{font-weight:700;font-size:13px}
+.broker-meta{font-size:10.5px;color:var(--muted);margin-top:2px}
+.broker-bal{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--accent2);text-align:right}
+.broker-pos{width:100%;border-collapse:collapse;font-size:11px}
+.broker-pos th{text-align:left;padding:6px 8px;color:var(--muted);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.broker-pos td{padding:6px 8px;border-bottom:1px solid var(--border)}
+.broker-pos td:nth-child(2),.broker-pos td:nth-child(3),.broker-pos td:nth-child(4){text-align:right;font-family:var(--mono)}
+.broker-pos th:nth-child(2),.broker-pos th:nth-child(3),.broker-pos th:nth-child(4){text-align:right}
+.broker-pos tbody tr:last-child td{border-bottom:none}
 .market-tickers{display:flex;gap:6px;flex-wrap:wrap}
 .mkt-tk{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:3px 8px;text-align:left;font-family:var(--mono);min-width:78px;line-height:1.2}
 .mkt-tk-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
@@ -86,10 +108,12 @@ input,button,select{font-family:inherit}
 .mkt-tk-chg{font-size:9px;font-weight:600;font-family:var(--mono)}
 .mkt-tk-chg.up{color:var(--green)}
 .mkt-tk-chg.down{color:var(--red)}
-.tk-logo{position:relative;width:36px;height:36px;border-radius:8px;background:var(--card3);border:1px solid var(--border2);overflow:hidden;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.tk-logo{position:relative;width:36px;height:36px;border-radius:8px;background:var(--card3);border:1px solid var(--border2);overflow:hidden;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
 .tk-logo .tk-logo-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:10px;color:var(--muted);letter-spacing:.3px}
 .tk-logo img{position:relative;width:100%;height:100%;object-fit:cover;display:block}
 .tk-logo img[data-broken="1"]{display:none}
+.tk-logo-sm{width:22px;height:22px;border-radius:5px}
+.tk-logo-sm .tk-logo-fallback{font-size:7px}
 .local-clock{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:center;font-family:var(--mono);line-height:1.2}
 .local-clock-time{font-size:14px;font-weight:700;color:var(--accent2);letter-spacing:.5px}
 .local-clock-date{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:1px}
@@ -292,17 +316,16 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.6.4</div>
+        <div class="logo-ver">v0.7.0</div>
       </div>
     </div>
     <div class="header-actions">
       <div class="local-clock" title="Your local time — news timestamps below are shown in this timezone"><div class="local-clock-time" id="hClockTime">--:--:--</div><div class="local-clock-date" id="hClockDate">--</div></div>
       <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value <span id="priceStatus" style="font-size:8px;text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="stat-val" id="pvV"></div></div>
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
-      <button class="btn btn-primary" onclick="openMod()">+ Add</button>
-      <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()">&#128225; RSS</button>
       <div class="market-tickers" id="mktTickers" title="Live market indices and Bitcoin"></div>
       <span id="apiErrorBadge" style="display:none;cursor:pointer" onclick="showApiErrors()"><span class="badge badge-red" style="font-size:9px">&#9888; API <span id="apiErrCount">0</span></span></span>
+      <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()" style="margin-left:auto">&#128225; RSS</button>
     </div>
   </div>
 </header>
@@ -325,9 +348,11 @@ body.text-xl .sc .scv{font-size:24px}
     <button class="tab" data-tab="div" onclick="sTab('div')">&#128176; Dividends <span class="tab-count" id="cD">0</span></button>
     <button class="tab" data-tab="growth" onclick="sTab('growth')">&#128200; Growth <span class="tab-count" id="cG">0</span></button>
     <button class="tab" data-tab="accounts" onclick="sTab('accounts')">&#127974; Accounts</button>
+    <button class="tab" data-tab="brokers" onclick="sTab('brokers')">&#127974; Brokers <span class="tab-count" id="cBk">0</span></button>
     <button class="tab" data-tab="paylog" onclick="sTab('paylog')">&#128203; Payout Log</button>
     <button class="tab" data-tab="all" onclick="sTab('all')">&#128451; All</button>
     <button class="tab" data-tab="settings" onclick="sTab('settings')">&#9881; Settings</button>
+    <button class="btn btn-primary" onclick="openMod()" style="margin-left:auto;align-self:center">+ Add</button>
   </div>
 
   <!-- NEWS -->
@@ -388,6 +413,20 @@ body.text-xl .sc .scv{font-size:24px}
     <div class="mc" id="mG"></div>
   </div>
 
+  <!-- BROKERS (SnapTrade-connected accounts, read-only) -->
+  <div class="tab-content" id="content-brokers">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div>
+        <div style="font-weight:700;font-size:14px">Connected Brokerages</div>
+        <div class="muted" style="font-size:11px">Read-only view of positions reported by SnapTrade. Manage connections in <a onclick="sTab('settings')" style="color:var(--accent);cursor:pointer">Settings</a>.</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-outline" onclick="snapTradeRefresh()" style="font-size:10px">&#8635; Refresh</button>
+      </div>
+    </div>
+    <div id="bBrokers"></div>
+  </div>
+
   <!-- PAYOUT LOG -->
   <div class="tab-content" id="content-paylog">
     <div class="sg" style="max-width:500px">
@@ -425,15 +464,21 @@ body.text-xl .sc .scv{font-size:24px}
 
   <!-- SETTINGS -->
   <div class="tab-content" id="content-settings">
-    <div style="max-width:600px">
-      <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">&#9881; Settings</h3>
+    <div class="settings-grid">
+      <h3 style="font-size:16px;font-weight:700">&#9881; Settings</h3>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px" id="acctCard">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px" id="acctCard">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128100; Your Account</div>
         <div id="acctCardBody"></div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Connect Brokerages (SnapTrade)</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Sync positions from your real brokerages. Free tier supports up to 5 connected accounts. Your connection authenticates through SnapTrade — we never see your brokerage password.</p>
+        <div id="snaptradeCardBody"></div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
         <div id="settingsAcctList"></div>
@@ -443,7 +488,7 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127912; Appearance</div>
         <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
           <div>
@@ -464,7 +509,7 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; News Notifications</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Toast notification with sound when new articles arrive. Enabled by default.</p>
         <div style="display:flex;flex-direction:column;gap:8px">
@@ -487,8 +532,11 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128273; API Key (Primary)</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span>&#128273; Finnhub API Key</span>
+          <span class="key-pill" id="finnhubKeyPill"></span>
+        </div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:8px"><strong style="color:var(--yellow)">Required.</strong> Without your own Finnhub API key, news and prices will not fetch. Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--accent)">finnhub.io/register</a>. Key syncs with your signed-in account.</p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="mi" type="text" id="sApiKey" placeholder="Finnhub API key" style="margin:0;flex:1;min-width:200px;font-size:11px">
@@ -498,8 +546,11 @@ body.text-xl .sc .scv{font-size:24px}
         <div id="apiKeyStatus" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128274; Backup API Keys</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span>&#128274; Backup API Keys</span>
+          <span class="key-pill" id="backupKeyPill"></span>
+        </div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Optional. If Finnhub fails or hits its quota, the app falls back to these in order. Both are free with sign-up.</p>
         <div style="margin-bottom:10px">
           <label style="font-size:10.5px;color:var(--text2);display:block;margin-bottom:3px">AlphaVantage <span class="muted">— 25 calls/day free · <a href="https://www.alphavantage.co/support/#api-key" target="_blank" style="color:var(--accent)">get key</a></span></label>
@@ -522,7 +573,7 @@ body.text-xl .sc .scv{font-size:24px}
         <p style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Order tried: Finnhub → AlphaVantage → Tiingo. The first one to return data wins. BTC always uses CoinGecko (no key needed).</p>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128229; Import / Export</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Export your entire portfolio (tickers, lots, accounts, preferences) as a JSON file. Import to restore on any device.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -540,7 +591,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.6.4 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -567,7 +618,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.6.4";
+var VERSION = "0.7.0";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -628,6 +679,8 @@ function updateAuthUI() {
     act.innerHTML = '<button class="auth-btn google" onclick="signInGoogle()"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in with Google</button>';
   }
   renderAccountCard();
+  renderSnapTradeCard();
+  renderBrokersTab();
 }
 
 // Settings → Your Account card. Surfaces every piece of user data we have
@@ -735,13 +788,16 @@ function loadFromCloud() {
           computeFromLots();
         }
       }
-      // Load prefs from cloud (includes API keys)
+      // Load prefs from cloud (includes API keys + SnapTrade userSecret)
       if (d.prefs) {
         savePrefs(d.prefs);
         if (d.prefs.finnhubKey) { FINNHUB_KEY = d.prefs.finnhubKey; }
         if (d.prefs.alphavantageKey) { ALPHAVANTAGE_KEY = d.prefs.alphavantageKey; }
         if (d.prefs.tiingoKey) { TIINGO_KEY = d.prefs.tiingoKey; }
+        if (d.prefs.snaptradeUserSecret) { stApiState.userSecret = d.prefs.snaptradeUserSecret; }
         loadPrefUI();
+        renderSnapTradeCard();
+        renderBrokersTab();
       }
       // Warm cache from cloud — only adopt if newer than what's already in localStorage
       if (d.cache) {
@@ -771,9 +827,19 @@ var DT=["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP",
 // Fallback prices — these are stale. Live prices from Finnhub override these on page load.
 var FALLBACK_PR={NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57,MSFT:448.72,RTX:123.05,BP:29.60,SCHD:82.44,ABBV:204.30,AXP:285.60,F:10.49,GOOG:177.80,AAPL:232.56,TSLA:271.34,TGT:132.55,KO:70.68,VICI:33.40,CMCSA:39.74,BAC:44.44,INTC:31.65,AMZN:197.12};
 var livePrices = {};
+// Day-change % from Finnhub (when available). Used to color price cells red/green.
+var liveChanges = {};
 // PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
 var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
 var pricesLastFetched = 0;
+function priceCls(t){
+  var c=liveChanges[t];
+  if(c==null||c===0)return '';
+  if(c>=2)return 'px-up-strong';
+  if(c>0)return 'px-up';
+  if(c<=-2)return 'px-down-strong';
+  return 'px-down';
+}
 var PRICE_CACHE_MS = 10 * 60 * 1000; // 10 min
 // Load cached prices
 try {
@@ -817,11 +883,47 @@ var DEFAULT_FINNHUB_KEY = "";
 var FINNHUB_KEY = DEFAULT_FINNHUB_KEY;
 var ALPHAVANTAGE_KEY = "";
 var TIINGO_KEY = "";
+
+// SnapTrade integration — calls go through stocks-worker (Cloudflare Worker)
+// so the SnapTrade consumerKey never reaches the browser.
+var WORKER_URL = "https://stocks-worker.sevendwarfs.workers.dev";
+var stApiState = { userSecret: "", accounts: [], lastFetched: 0, lastError: "" };
+
+async function callWorker(path, body, method) {
+  method = method || "POST";
+  if (!currentUser) { showToast('Sign in to use SnapTrade','warn'); return null; }
+  var token;
+  try { token = await currentUser.getIdToken(); }
+  catch (e) { showToast('Auth refresh failed','warn'); return null; }
+  var resp;
+  try {
+    resp = await fetch(WORKER_URL + path, {
+      method: method,
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } catch (e) {
+    stApiState.lastError = 'Network: ' + e.message;
+    showToast('Worker unreachable: ' + e.message, 'warn');
+    return null;
+  }
+  var data;
+  try { data = await resp.json(); } catch (e) { data = { error: 'Invalid JSON from worker' }; }
+  if (!resp.ok) {
+    stApiState.lastError = (data && data.error) || ('HTTP ' + resp.status);
+    if (data && data.detail) console.error('Worker '+path+' detail:', data.detail);
+    showToast('SnapTrade ' + path + ': ' + stApiState.lastError, 'warn');
+    return null;
+  }
+  stApiState.lastError = "";
+  return data;
+}
 function loadApiKey(){
   var p=loadPrefs();
   FINNHUB_KEY=p.finnhubKey||"";
   ALPHAVANTAGE_KEY=p.alphavantageKey||"";
   TIINGO_KEY=p.tiingoKey||"";
+  stApiState.userSecret=p.snaptradeUserSecret||"";
 }
 function anyKeySet(){return !!(FINNHUB_KEY||ALPHAVANTAGE_KEY||TIINGO_KEY)}
 var liveNews = {};
@@ -929,7 +1031,11 @@ function fetchPriceFinnhub(ticker){
   return fetch('https://finnhub.io/api/v1/quote?symbol='+ticker+'&token='+FINNHUB_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
-      if(data&&typeof data.c==='number'&&data.c>0)return data.c;
+      if(data&&typeof data.c==='number'&&data.c>0){
+        // Capture day-change % for price-cell coloring (Finnhub-only — AV/Tiingo would need extra calls)
+        if(typeof data.dp==='number')liveChanges[ticker]=data.dp;
+        return data.c;
+      }
       return null;
     }).catch(function(e){logApiError('quote-finnhub',ticker,e.message||'Failed');return null});
 }
@@ -1390,9 +1496,9 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></td><td class="mono '+(px>0?'':'muted')+'" style="font-size:11px">'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
-  var mc='';all.forEach(function(n){var px=PR[n.tk]||0;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px"><span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono" style="font-size:11px;color:var(--accent2)">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
+  var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
 
   // DIVIDENDS
@@ -1445,21 +1551,26 @@ function render(){
   entries.forEach(function(e){
     if(e.s<=0)return;
     var k=e.d.slice(0,7);
-    if(!moTot[k])moTot[k]={amt:0,label:new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'2-digit'})};
+    if(!moTot[k])moTot[k]={amt:0,label:new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'2-digit'}),byTk:{}};
     moTot[k].amt+=e.tot;
+    moTot[k].byTk[e.tk]=(moTot[k].byTk[e.tk]||0)+e.tot;
   });
   var moKeys=Object.keys(moTot).sort().slice(-12);
   if(moKeys.length>0){
     var maxAmt=Math.max.apply(null,moKeys.map(function(k){return moTot[k].amt}).concat([1]));
     var todayMo=new Date().toISOString().slice(0,7);
-    var chartH='<div class="payout-chart-title">📊 Monthly Payouts<span class="pct-sub">'+moKeys.length+' months · peak '+fm(maxAmt)+'</span></div>';
+    var chartH='<div class="payout-chart-title">📊 Monthly Payouts<span class="pct-sub">'+moKeys.length+' months · peak '+fm(maxAmt)+' · hover for tickers</span></div>';
     moKeys.forEach(function(k){
       var m=moTot[k];
       var pct=(m.amt/maxAmt*100);
       var isFuture=k>todayMo;
       var isCur=k===todayMo;
       var moStyle=isCur?' style="color:var(--accent);font-weight:700"':'';
-      chartH+='<div class="pct-row"><span class="pct-month"'+moStyle+'>'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt">'+fm(m.amt)+'</span></div>';
+      // Tooltip: tickers paying out that month, sorted by amount desc
+      var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
+      var tip=m.label+' — '+fm(m.amt)+'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n');
+      var tipAttr=tip.replace(/"/g,'&quot;');
+      chartH+='<div class="pct-row" title="'+tipAttr+'"><span class="pct-month"'+moStyle+'>'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt">'+fm(m.amt)+'</span></div>';
     });
     G('pChart').innerHTML=chartH;
   }else{
@@ -1478,7 +1589,7 @@ function render(){
     var dt=new Date(e.d+'T12:00:00');
     var dayStr=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     h+='<div class="pl-entry '+(e.up?'pl-is-upcoming':'pl-is-paid')+'">';
-    h+='<div class="pl-head"><span class="pl-ticker">'+e.tk+'</span><div class="pl-dateblock"><div class="pl-dateblock-day">'+dayStr+'</div><div class="pl-dateblock-yr">'+e.d.slice(0,4)+'</div></div></div>';
+    h+='<div class="pl-head"><div style="display:inline-flex;align-items:center;gap:8px">'+logoHTML(e.tk,true)+'<span class="pl-ticker">'+e.tk+'</span></div><div class="pl-dateblock"><div class="pl-dateblock-day">'+dayStr+'</div><div class="pl-dateblock-yr">'+e.d.slice(0,4)+'</div></div></div>';
     if(e.s>0){
       h+='<div class="pl-payout">'+fm(e.tot)+'</div>';
       h+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares">\u00d7 '+fmSh(e.s)+' shares</span></div>';
@@ -1596,11 +1707,14 @@ function taxHTML(t){
   if(!info)return'';
   return' <span class="tax-tag">\u26a0 '+info.tag+'<span class="tax-tip">'+info.form+': '+info.note+'</span></span>';
 }
-// Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load
+// Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load.
+// `small` produces a 22\u00d722 inline-friendly version for table cells / list items.
 var LOGO_DEV_TOKEN="pk_X-1ZO13GSgeOoUrIuJ6GMQ";
-function logoHTML(t){
-  var url='https://img.logo.dev/ticker/'+encodeURIComponent(t)+'?token='+LOGO_DEV_TOKEN+'&size=80&format=png';
-  return '<span class="tk-logo" aria-label="'+t+' logo"><span class="tk-logo-fallback">'+t+'</span><img src="'+url+'" alt="" onerror="this.setAttribute(\'data-broken\',\'1\')"></span>';
+function logoHTML(t,small){
+  var size=small?40:80;
+  var cls=small?'tk-logo tk-logo-sm':'tk-logo';
+  var url='https://img.logo.dev/ticker/'+encodeURIComponent(t)+'?token='+LOGO_DEV_TOKEN+'&size='+size+'&format=png';
+  return '<span class="'+cls+'" aria-label="'+t+' logo"><span class="tk-logo-fallback">'+t+'</span><img src="'+url+'" alt="" onerror="this.setAttribute(\'data-broken\',\'1\')"></span>';
 }
 function taxPanelHTML(t){
   var info=TAX_INFO[t];
@@ -2067,21 +2181,30 @@ function resetApiKey(){
   showToast('API key cleared');
 }
 function updateApiKeyStatus(){
+  var prefs=loadPrefs();
   var el=G('apiKeyStatus');if(el){
-    var prefs=loadPrefs();
     if(prefs.finnhubKey){
       el.innerHTML='<span style="color:var(--green)">\u2713 Custom key active</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced to cloud</span>':'');
     }else{
       el.innerHTML='<span style="color:var(--yellow)">\u26a0 No API key set \u2014 news and prices will not fetch. Add your free key above.</span>';
     }
   }
+  // Finnhub pill: "In use" green when key set, "Not set" yellow when missing
+  var fPill=G('finnhubKeyPill');if(fPill){
+    if(prefs.finnhubKey){fPill.className='key-pill active';fPill.textContent='In use'}
+    else{fPill.className='key-pill inactive';fPill.textContent='Not set'}
+  }
+  // Backup pill: counts how many of AV/Tiingo are configured
+  var bPill=G('backupKeyPill');if(bPill){
+    var n=(prefs.alphavantageKey?1:0)+(prefs.tiingoKey?1:0);
+    if(n>0){bPill.className='key-pill active';bPill.textContent=n+' configured'}
+    else{bPill.className='key-pill empty';bPill.textContent=''}
+  }
   var avEl=G('avKeyStatus');if(avEl){
-    var p=loadPrefs();
-    avEl.innerHTML=p.alphavantageKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
+    avEl.innerHTML=prefs.alphavantageKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
   }
   var tgEl=G('tgKeyStatus');if(tgEl){
-    var p2=loadPrefs();
-    tgEl.innerHTML=p2.tiingoKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
+    tgEl.innerHTML=prefs.tiingoKey?'<span style="color:var(--green)">\u2713 Saved</span>'+(syncEnabled?' <span style="color:var(--accent)">\u2022 Synced</span>':''):'<span class="muted">Not set \u2014 fallback disabled for this provider</span>';
   }
 }
 function saveAvKey(){
@@ -2111,6 +2234,146 @@ function clearTgKey(){
   TIINGO_KEY="";G('sTgKey').value='';
   updateApiKeyStatus();
   showToast('Tiingo key cleared');
+}
+
+// ═════════════════════════════════════════════════
+// SNAPTRADE — connect / refresh / render
+// ═════════════════════════════════════════════════
+async function snapTradeRegister(){
+  if(!currentUser){showToast('Sign in first','warn');return false}
+  showToast('Registering with SnapTrade...');
+  var data=await callWorker('/register',{});
+  if(!data)return false;
+  stApiState.userSecret=data.snaptradeUserSecret;
+  // Persist userSecret in prefs (Firestore-synced)
+  var prefs=loadPrefs();
+  prefs.snaptradeUserSecret=data.snaptradeUserSecret;
+  prefs.snaptradeUserId=data.snaptradeUserId;
+  savePrefs(prefs);
+  showToast('Registered — opening connection portal...');
+  return true;
+}
+
+async function snapTradeConnect(){
+  if(!currentUser){showToast('Sign in first','warn');return}
+  if(!stApiState.userSecret){
+    var ok=await snapTradeRegister();
+    if(!ok)return;
+  }
+  var data=await callWorker('/connect-url',{
+    snaptradeUserId:currentUser.uid,
+    snaptradeUserSecret:stApiState.userSecret
+  });
+  if(!data||!data.redirectURI){return}
+  var popup=window.open(data.redirectURI,'snaptrade','width=520,height=720,scrollbars=yes');
+  if(!popup){showToast('Popup blocked — allow popups for this site','warn');return}
+  // Auto-refresh accounts when popup closes
+  var timer=setInterval(function(){
+    if(popup.closed){
+      clearInterval(timer);
+      showToast('Connection portal closed — refreshing accounts...');
+      setTimeout(snapTradeRefresh,800);
+    }
+  },1500);
+}
+
+async function snapTradeRefresh(){
+  if(!currentUser){showToast('Sign in first','warn');return}
+  if(!stApiState.userSecret){showToast('Connect a brokerage first','warn');return}
+  var data=await callWorker('/accounts',{
+    snaptradeUserId:currentUser.uid,
+    snaptradeUserSecret:stApiState.userSecret
+  });
+  if(!data)return;
+  stApiState.accounts=data.accounts||[];
+  stApiState.lastFetched=Date.now();
+  renderSnapTradeCard();
+  renderBrokersTab();
+  showToast(stApiState.accounts.length+' account'+(stApiState.accounts.length!==1?'s':'')+' synced');
+}
+
+async function snapTradeDisconnect(){
+  if(!confirm('Disconnect from SnapTrade?\n\nThis clears your local registration. To fully revoke a brokerage, do that on the brokerage side too.\n\nContinue?'))return;
+  stApiState.userSecret='';
+  stApiState.accounts=[];
+  var p=loadPrefs();delete p.snaptradeUserSecret;delete p.snaptradeUserId;savePrefs(p);
+  renderSnapTradeCard();
+  renderBrokersTab();
+  showToast('SnapTrade disconnected locally');
+}
+
+function renderSnapTradeCard(){
+  var body=G('snaptradeCardBody');if(!body)return;
+  if(!currentUser){
+    body.innerHTML='<div class="muted" style="font-size:11.5px">Sign in with Google (top of page) to use SnapTrade.</div>';
+    return;
+  }
+  var hasSecret=!!stApiState.userSecret;
+  var accts=stApiState.accounts.length;
+  var html='';
+  if(!hasSecret){
+    html+='<button class="btn btn-primary" onclick="snapTradeConnect()">Connect a Brokerage</button>';
+  }else{
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-primary" onclick="snapTradeConnect()">+ Connect Another</button>';
+    html+='<button class="btn btn-outline" onclick="snapTradeRefresh()">&#8635; Refresh</button>';
+    html+='<button class="btn btn-outline" onclick="sTab(\'brokers\')">View Brokers Tab</button>';
+    html+='<button class="btn btn-outline" onclick="snapTradeDisconnect()" style="color:var(--red);border-color:var(--red-dim)">Disconnect</button></div>';
+    var summary=accts+' connected account'+(accts!==1?'s':'');
+    if(accts>=5)summary+=' (free-tier max reached)';
+    if(stApiState.lastFetched)summary+=' &middot; last sync '+new Date(stApiState.lastFetched).toLocaleTimeString();
+    html+='<div style="margin-top:8px;font-size:10.5px;color:var(--muted)">'+summary+'</div>';
+  }
+  if(stApiState.lastError){
+    html+='<div style="margin-top:8px;font-size:10.5px;color:var(--red)">⚠ '+stApiState.lastError+'</div>';
+  }
+  body.innerHTML=html;
+}
+
+function renderBrokersTab(){
+  var el=G('bBrokers');if(!el)return;
+  // Tab counter
+  var cnt=G('cBk');if(cnt)cnt.textContent=stApiState.accounts.length;
+  if(!currentUser){
+    el.innerHTML='<div class="muted" style="text-align:center;padding:30px">Sign in with Google to view connected brokerages.</div>';
+    return;
+  }
+  if(!stApiState.userSecret){
+    el.innerHTML='<div style="text-align:center;padding:30px"><div class="muted">No brokerages connected yet.</div><button class="btn btn-primary" style="margin-top:10px" onclick="sTab(\'settings\')">Go to Settings</button></div>';
+    return;
+  }
+  if(stApiState.accounts.length===0){
+    el.innerHTML='<div style="text-align:center;padding:30px"><div class="muted">Registered with SnapTrade but no accounts connected.</div><button class="btn btn-primary" style="margin-top:10px" onclick="snapTradeConnect()">Connect a Brokerage</button></div>';
+    return;
+  }
+  var html='';
+  stApiState.accounts.forEach(function(acct){
+    var positions=(acct.positions||[]).filter(function(p){
+      var q=p.units||p.quantity||0;
+      return q>0;
+    });
+    html+='<div class="broker-card">';
+    html+='<div class="broker-header"><div><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+'</div></div>';
+    var bal=(acct.balance&&acct.balance.total&&typeof acct.balance.total.amount==='number')?acct.balance.total.amount:null;
+    if(bal!==null)html+='<div class="broker-bal">'+fm(bal)+'</div>';
+    html+='</div>';
+    if(positions.length>0){
+      html+='<table class="broker-pos"><thead><tr><th>Ticker</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead><tbody>';
+      positions.forEach(function(p){
+        var sym='?';
+        if(p.symbol&&p.symbol.symbol&&p.symbol.symbol.symbol)sym=p.symbol.symbol.symbol;
+        else if(p.symbol&&p.symbol.symbol)sym=p.symbol.symbol;
+        else if(typeof p.symbol==='string')sym=p.symbol;
+        var qty=p.units||p.quantity||0;
+        var price=p.price||0;
+        html+='<tr><td class="mono fw7">'+sym+'</td><td>'+qty+'</td><td>'+fm(price)+'</td><td>'+fm(qty*price)+'</td></tr>';
+      });
+      html+='</tbody></table>';
+    }else{
+      html+='<div class="muted" style="font-size:11px;font-style:italic">No positions reported.</div>';
+    }
+    html+='</div>';
+  });
+  el.innerHTML=html;
 }
 
 // Patch fetchAllNews to trigger notification
@@ -2146,11 +2409,13 @@ fetchAllNews=function(){
 
 // INIT
 load();
-loadApiKey(); // load API key from prefs before any fetches
+loadApiKey(); // load API key from prefs before any fetches; also seeds stApiState.userSecret
 loadThemePrefs();
 ss['tN']={c:'date',d:'desc'};
 render();
 loadPrefUI();
+renderSnapTradeCard();
+renderBrokersTab();
 
 // Set baseline news count for notifications
 prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});

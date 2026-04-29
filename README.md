@@ -1,10 +1,21 @@
 # Portfolio Command Center
 
-**Current Version: v0.6.4**
+**Current Version: v0.7.0**
 
 ---
 
 ## Changelog
+
+### v0.7.0 — 2026-04-29
+- **SnapTrade brokerage integration (read-only)** — connect real brokerage accounts (M1, Schwab, Fidelity, Robinhood, Coinbase, etc.) via SnapTrade's hosted OAuth. Free tier supports up to 5 connected accounts per user. All API calls go through a Cloudflare Worker proxy ([itsavibecode/stocks-worker](https://github.com/itsavibecode/stocks-worker)) so the SnapTrade `consumerKey` (private secret) never reaches the browser. Phase 2 of 4 — read-only view of reported positions; Phase 3 will add diff/approval-flow UI to merge into the manual portfolio.
+- **New Brokers tab** — lists each connected account with reported positions (ticker, shares, price, value) and total balance. Refresh button + tab counter showing connection count.
+- **Settings → Connect Brokerages (SnapTrade)** card — Connect, +Connect Another, Refresh, View Brokers Tab, Disconnect actions. SnapTrade `userSecret` syncs through Firestore alongside the rest of your prefs.
+- **Settings panels are a responsive grid now** — two-column on desktop (≥760px), single-column on mobile. Less scrolling on bigger screens.
+- **API Key card renamed** to "Finnhub API Key" with "In use" / "Not set" status pill in the title. Backup keys card got a "N configured" pill matching the same pattern.
+- **Payout chart tooltips** — hovering a monthly bar shows the per-ticker breakdown for that month (e.g. "IBM: $167.00, KO: $100.00, AAPL: $50.00").
+- **Header reorganized** — RSS button pushed to far right of the header; the "+ Add" button moved into the tabs row to free up header space (now sits next to Settings on the right end of the tab bar).
+- **Small company logos in News rows + Payout Log entries** — extending the v0.6.2 logos beyond the deep-dive panels. Same logo.dev source with letter fallback; 22×22 inline-friendly variant.
+- **News price cell colored by today's change** — green for up days, red for down, lighter shade for moves under 2% in either direction. Hover shows the exact percent. Only applies when Finnhub provides the change data (AlphaVantage/Tiingo fallbacks don't surface it).
 
 ### v0.6.4 — 2026-04-28
 - **"Your Account" card in Settings** — surfaces every piece of data we have on file from Google sign-in: display name, email, email-verified status, provider, user ID (with copy-full button), account creation timestamp, and last sign-in timestamp. Sits at the top of the Settings tab so it's not buried.
