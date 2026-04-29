@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.0</title>
+<title>Portfolio Command Center v0.7.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -68,23 +68,33 @@ input,button,select{font-family:inherit}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
 .stat-val{font-size:14px;font-weight:700;font-family:var(--mono);color:var(--accent2)}
 .payout-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0}
-.payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+.payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
 .payout-chart-title .pct-sub{font-size:10px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
-.pct-row{display:grid;grid-template-columns:62px 1fr 80px;gap:10px;align-items:center;margin-bottom:5px;font-size:11px}
+.pct-row{display:grid;grid-template-columns:14px 56px 1fr 80px;gap:10px;align-items:center;padding:3px 6px;border-radius:5px;margin:1px -6px;font-size:11px;transition:background .15s}
+.pct-row.pct-current{background:var(--accent-dim)}
+.pct-arrow-cell{font-size:11px;color:var(--accent);text-align:center;line-height:1;font-weight:700}
 .pct-month{font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+.pct-row.pct-current .pct-month{color:var(--accent);font-weight:700}
 .pct-bar-bg{background:var(--card3);border-radius:4px;height:18px;position:relative;overflow:hidden}
 .pct-bar{background:linear-gradient(90deg,var(--green),var(--accent2));height:100%;border-radius:4px;min-width:2px;transition:width .25s}
 .pct-bar.future{background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.85}
-.pct-bar.empty{background:var(--card3)}
+.pct-bar.empty{background:transparent;min-width:0}
 .pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
+.pl-past{margin-top:18px;border-top:1px dashed var(--border2);padding-top:14px}
+.pl-past>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);user-select:none;transition:background .15s}
+.pl-past>summary:hover{background:var(--card3)}
+.pl-past[open]>summary{margin-bottom:14px}
+.pl-past>summary::-webkit-details-marker{display:none}
 .px-up-strong{color:var(--green)}
 .px-up{color:#6ee7b7}
 .px-down{color:#fca5a5}
 .px-down-strong{color:var(--red)}
-.settings-grid{max-width:1200px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start}
-.settings-grid h3{grid-column:1/-1}
-@media (max-width:760px){.settings-grid{grid-template-columns:1fr}}
+.settings-wrap{max-width:1200px}
+.settings-wrap>h3{margin-bottom:14px}
+.settings-grid{columns:2;column-gap:14px}
+.settings-grid>div{break-inside:avoid;margin-bottom:14px;display:block}
+@media (max-width:760px){.settings-grid{columns:1}}
 .key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
@@ -316,7 +326,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.0</div>
+        <div class="logo-ver">v0.7.1</div>
       </div>
     </div>
     <div class="header-actions">
@@ -464,8 +474,9 @@ body.text-xl .sc .scv{font-size:24px}
 
   <!-- SETTINGS -->
   <div class="tab-content" id="content-settings">
-    <div class="settings-grid">
+    <div class="settings-wrap">
       <h3 style="font-size:16px;font-weight:700">&#9881; Settings</h3>
+      <div class="settings-grid">
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px" id="acctCard">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128100; Your Account</div>
@@ -588,10 +599,11 @@ body.text-xl .sc .scv{font-size:24px}
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Portfolio data auto-saves to browser. Sign in with Google to sync across devices.</p>
         <button class="btn btn-outline" onclick="if(confirm('Clear all local data and reload?')){localStorage.clear();location.reload()}" style="color:var(--red);border-color:var(--red-dim)">Reset Local Data</button>
       </div>
+      </div>
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.0 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.1 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -618,7 +630,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.0";
+var VERSION = "0.7.1";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1541,68 +1553,87 @@ function render(){
   var allDvs=tks.filter(isDiv);
   var today=new Date().toISOString().slice(0,10);var entries=[];
   allDvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})})});
-  entries.sort(function(a,b){return b.d.localeCompare(a.d)});
+  entries.sort(function(a,b){return a.d.localeCompare(b.d)});
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
   G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
 
-  // Monthly payouts bar chart — aggregate entries by month, show last 12 months with data
+  // Monthly payouts bar chart — Jan->Dec of current year, current month highlighted with left arrow.
+  var nowDate=new Date();
+  var curYear=nowDate.getFullYear();
+  var todayMo=nowDate.toISOString().slice(0,7);
   var moTot={};
+  for(var mi=1;mi<=12;mi++){
+    var key=curYear+'-'+String(mi).padStart(2,'0');
+    moTot[key]={amt:0,label:new Date(curYear,mi-1,1).toLocaleDateString('en-US',{month:'short'}),byTk:{}};
+  }
   entries.forEach(function(e){
     if(e.s<=0)return;
     var k=e.d.slice(0,7);
-    if(!moTot[k])moTot[k]={amt:0,label:new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'2-digit'}),byTk:{}};
-    moTot[k].amt+=e.tot;
-    moTot[k].byTk[e.tk]=(moTot[k].byTk[e.tk]||0)+e.tot;
-  });
-  var moKeys=Object.keys(moTot).sort().slice(-12);
-  if(moKeys.length>0){
-    var maxAmt=Math.max.apply(null,moKeys.map(function(k){return moTot[k].amt}).concat([1]));
-    var todayMo=new Date().toISOString().slice(0,7);
-    var chartH='<div class="payout-chart-title">📊 Monthly Payouts<span class="pct-sub">'+moKeys.length+' months · peak '+fm(maxAmt)+' · hover for tickers</span></div>';
-    moKeys.forEach(function(k){
-      var m=moTot[k];
-      var pct=(m.amt/maxAmt*100);
-      var isFuture=k>todayMo;
-      var isCur=k===todayMo;
-      var moStyle=isCur?' style="color:var(--accent);font-weight:700"':'';
-      // Tooltip: tickers paying out that month, sorted by amount desc
-      var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
-      var tip=m.label+' — '+fm(m.amt)+'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n');
-      var tipAttr=tip.replace(/"/g,'&quot;');
-      chartH+='<div class="pct-row" title="'+tipAttr+'"><span class="pct-month"'+moStyle+'>'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt">'+fm(m.amt)+'</span></div>';
-    });
-    G('pChart').innerHTML=chartH;
-  }else{
-    G('pChart').innerHTML='';
-  }
-  h='';var lm='';var gridOpen=false;
-  entries.forEach(function(e){
-    var mo=e.d.slice(0,7);
-    if(mo!==lm){
-      if(gridOpen)h+='</div>'; // close previous grid
-      lm=mo;
-      h+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>';
-      h+='<div class="pl-grid">';
-      gridOpen=true;
+    if(moTot[k]){
+      moTot[k].amt+=e.tot;
+      moTot[k].byTk[e.tk]=(moTot[k].byTk[e.tk]||0)+e.tot;
     }
+  });
+  var moKeys=Object.keys(moTot).sort();
+  var maxAmt=Math.max.apply(null,moKeys.map(function(k){return moTot[k].amt}).concat([1]));
+  var chartH='<div class="payout-chart-title">📊 Monthly Payouts <span class="pct-sub">'+curYear+' calendar · peak '+fm(maxAmt)+' · hover for tickers</span></div>';
+  moKeys.forEach(function(k){
+    var m=moTot[k];
+    var pct=(m.amt/maxAmt*100);
+    var isFuture=k>todayMo;
+    var isCur=k===todayMo;
+    var rowCls='pct-row'+(isCur?' pct-current':'');
+    var arrow=isCur?'<span class="pct-arrow-cell">▶</span>':'<span class="pct-arrow-cell"></span>';
+    var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
+    var tip=m.label+' '+curYear+' — '+fm(m.amt)+(tkPairs.length?'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n'):' (no scheduled payouts)');
+    var tipAttr=tip.replace(/"/g,'&quot;');
+    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+(m.amt<=0?' empty':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt'+(m.amt<=0?' zero':'')+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
+  });
+  G('pChart').innerHTML=chartH;
+  // Cards: future months (current month onwards) shown by default; past months in a collapsed <details>
+  function _renderEntryCard(e){
     var dt=new Date(e.d+'T12:00:00');
     var dayStr=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-    h+='<div class="pl-entry '+(e.up?'pl-is-upcoming':'pl-is-paid')+'">';
-    h+='<div class="pl-head"><div style="display:inline-flex;align-items:center;gap:8px">'+logoHTML(e.tk,true)+'<span class="pl-ticker">'+e.tk+'</span></div><div class="pl-dateblock"><div class="pl-dateblock-day">'+dayStr+'</div><div class="pl-dateblock-yr">'+e.d.slice(0,4)+'</div></div></div>';
+    var html='<div class="pl-entry '+(e.up?'pl-is-upcoming':'pl-is-paid')+'">';
+    html+='<div class="pl-head"><div style="display:inline-flex;align-items:center;gap:8px">'+logoHTML(e.tk,true)+'<span class="pl-ticker">'+e.tk+'</span></div><div class="pl-dateblock"><div class="pl-dateblock-day">'+dayStr+'</div><div class="pl-dateblock-yr">'+e.d.slice(0,4)+'</div></div></div>';
     if(e.s>0){
-      h+='<div class="pl-payout">'+fm(e.tot)+'</div>';
-      h+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares">\u00d7 '+fmSh(e.s)+' shares</span></div>';
+      html+='<div class="pl-payout">'+fm(e.tot)+'</div>';
+      html+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares">\u00d7 '+fmSh(e.s)+' shares</span></div>';
     }else{
-      h+='<div class="pl-payout" style="color:var(--muted);font-size:14px">\u2014</div>';
-      h+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares muted">no shares set</span></div>';
+      html+='<div class="pl-payout" style="color:var(--muted);font-size:14px">\u2014</div>';
+      html+='<div class="pl-details"><span class="pl-pershare">$'+e.a+'/sh</span><span class="pl-shares muted">no shares set</span></div>';
     }
-    h+='<div class="pl-foot"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>';
-    if(bk[e.tk])h+='<span class="badge badge-purple" style="font-size:7px">'+bk[e.tk]+'</span>';
-    h+='</div></div>';
-  });
-  if(gridOpen)h+='</div>';
-  G('pBd').innerHTML=h||'<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
+    html+='<div class="pl-foot"><span class="badge '+(e.up?'badge-accent':'badge-green')+'" style="font-size:8px">'+(e.up?'UPCOMING':'PAID')+'</span>';
+    if(bk[e.tk])html+='<span class="badge badge-purple" style="font-size:7px">'+bk[e.tk]+'</span>';
+    html+='</div></div>';
+    return html;
+  }
+  function _renderEntriesByMonth(arr){
+    var out='';var lm='';var gridOpen=false;
+    arr.forEach(function(e){
+      var mo=e.d.slice(0,7);
+      if(mo!==lm){
+        if(gridOpen)out+='</div>';
+        lm=mo;
+        out+='<div class="lmh">'+new Date(e.d+'T12:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})+'</div>';
+        out+='<div class="pl-grid">';
+        gridOpen=true;
+      }
+      out+=_renderEntryCard(e);
+    });
+    if(gridOpen)out+='</div>';
+    return out;
+  }
+  var futureEntries=entries.filter(function(e){return e.d>=today}); // already ascending
+  var pastEntries=entries.filter(function(e){return e.d<today}).reverse(); // descending (most recent past first)
+  var futH=_renderEntriesByMonth(futureEntries);
+  var pastH=_renderEntriesByMonth(pastEntries);
+  var bdH='';
+  if(futH){bdH+='<div class="pl-section">'+futH+'</div>'}
+  if(pastH){bdH+='<details class="pl-past"><summary>\ud83d\udcc4 Show past months ('+pastEntries.length+' payment'+(pastEntries.length!==1?'s':'')+')</summary>'+pastH+'</details>'}
+  if(!bdH)bdH='<div class="muted" style="text-align:center;padding:30px">No dividend stocks</div>';
+  G('pBd').innerHTML=bdH;
 
   // ALL (now with expandable lots)
   var aS=srt('tA',tks.slice(),function(t,col){var d=DV[t],s=sh[t]||0,iD=isDiv(t);return{ticker:t,price:PR[t]||0,sector:d?d.sc:'',dividend:iD?d.a:0,yield:iD?d.y:0,shares:s,broker:bk[t]||'',value:(PR[t]||0)*s,income:iD?d.a*s:0,type:iD?'Dividend':'Growth'}[col]||t});

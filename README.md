@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.0**
+**Current Version: v0.7.1**
 
 ---
 
 ## Changelog
+
+### v0.7.1 — 2026-04-29
+- **Payout chart shows the full calendar year** — Jan→Dec of the current year, not "last 12 months with data." The current month gets a subtle background highlight and a small ▶ arrow to its left so the eye finds "today" instantly. Months with no scheduled payouts show a dash and a transparent bar.
+- **Payout Log card order rewritten** — current month appears first, then forward chronologically. Past months are tucked into a "📄 Show past months (N payments)" collapsible details element below; click to expand. No more scrolling past last year to find this month.
+- **Settings panels packed into a masonry-style 2-column layout** — switching from CSS grid to CSS columns so short cards (Appearance, Data, Import/Export) don't leave dead space below tall ones (Your Account, Backup API Keys). Single column on mobile (≤760px).
 
 ### v0.7.0 — 2026-04-29
 - **SnapTrade brokerage integration (read-only)** — connect real brokerage accounts (M1, Schwab, Fidelity, Robinhood, Coinbase, etc.) via SnapTrade's hosted OAuth. Free tier supports up to 5 connected accounts per user. All API calls go through a Cloudflare Worker proxy ([itsavibecode/stocks-worker](https://github.com/itsavibecode/stocks-worker)) so the SnapTrade `consumerKey` (private secret) never reaches the browser. Phase 2 of 4 — read-only view of reported positions; Phase 3 will add diff/approval-flow UI to merge into the manual portfolio.
