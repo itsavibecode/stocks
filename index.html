@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.2</title>
+<title>Portfolio Command Center v0.7.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -78,9 +78,12 @@ input,button,select{font-family:inherit}
 .pct-bar-bg{background:var(--card3);border-radius:4px;height:18px;position:relative;overflow:hidden}
 .pct-bar{background:linear-gradient(90deg,var(--green),var(--accent2));height:100%;border-radius:4px;min-width:2px;transition:width .25s}
 .pct-bar.future{background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.85}
-.pct-bar.empty{background:transparent;min-width:0}
+.pct-bar.past{background:linear-gradient(90deg,#5a6e8a,#2a3548);opacity:.55}
+.pct-bar.empty{background:transparent;min-width:0;opacity:1}
 .pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
+.pct-amt.past{color:var(--muted);font-weight:500}
+.pct-row.past .pct-month{color:var(--muted);opacity:.7}
 .pl-past{margin-top:18px;border-top:1px dashed var(--border2);padding-top:14px}
 .pl-past>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);user-select:none;transition:background .15s}
 .pl-past>summary:hover{background:var(--card3)}
@@ -99,6 +102,34 @@ input,button,select{font-family:inherit}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
 .key-pill.empty{display:none}
+.sync-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.sync-modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:760px;display:flex;flex-direction:column;max-height:calc(100vh - 60px)}
+.sync-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.sync-head h3{font-size:15px;font-weight:700}
+.sync-head .sync-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
+.sync-body{padding:14px 20px;overflow-y:auto;flex:1}
+.sync-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.sync-acct{margin-bottom:18px;padding-bottom:16px;border-bottom:1px dashed var(--border2)}
+.sync-acct:last-child{border-bottom:none}
+.sync-acct-head{font-weight:700;font-size:12.5px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.sync-acct-meta{font-size:10.5px;color:var(--muted);font-weight:500}
+.sync-map-row{display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:8px;flex-wrap:wrap}
+.sync-map-row label{color:var(--muted)}
+.sync-map-row select,.sync-map-row input{background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;color:var(--text);font-family:var(--sans);min-width:200px}
+.sync-row{display:grid;grid-template-columns:24px 80px 70px 1fr 90px;gap:10px;align-items:center;padding:6px 4px;border-radius:5px;font-size:11px}
+.sync-row:hover{background:var(--card2)}
+.sync-row input[type="checkbox"]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.sync-row.row-noop{opacity:.5}
+.sync-row.row-noop input[type="checkbox"]{display:none}
+.sync-action-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.4px;text-align:center;font-family:var(--mono)}
+.sync-action-tag.act-add{background:var(--green-dim);color:var(--green)}
+.sync-action-tag.act-update{background:var(--accent-dim);color:var(--accent)}
+.sync-action-tag.act-noop{background:var(--card3);color:var(--muted)}
+.sync-row-ticker{font-family:var(--mono);font-weight:700}
+.sync-row-detail{color:var(--text2)}
+.sync-row-value{font-family:var(--mono);font-weight:600;text-align:right;color:var(--accent2)}
+.sync-empty{text-align:center;padding:30px;color:var(--muted);font-size:11px}
+.sync-acct-skipped{opacity:.5}
 .broker-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
 .broker-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
 .broker-name{font-weight:700;font-size:13px}
@@ -326,7 +357,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.2</div>
+        <div class="logo-ver">v0.7.3</div>
       </div>
     </div>
     <div class="header-actions">
@@ -432,6 +463,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
       <div style="display:flex;gap:6px">
         <button class="btn btn-outline" onclick="snapTradeRefresh()" style="font-size:10px">&#8635; Refresh</button>
+        <button class="btn btn-primary" onclick="startSnapTradeSync()" style="font-size:10px">&#128229; Sync to Portfolio</button>
       </div>
     </div>
     <div id="bBrokers"></div>
@@ -624,7 +656,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.2 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.3 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -651,7 +683,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.2";
+var VERSION = "0.7.3";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1710,13 +1742,17 @@ function render(){
     var m=moTot[k];
     var pct=(m.amt/maxAmt*100);
     var isFuture=k>todayMo;
+    var isPast=k<todayMo;
     var isCur=k===todayMo;
-    var rowCls='pct-row'+(isCur?' pct-current':'');
+    var rowCls='pct-row'+(isCur?' pct-current':'')+(isPast?' past':'');
     var arrow=isCur?'<span class="pct-arrow-cell">▶</span>':'<span class="pct-arrow-cell"></span>';
+    var barCls=isFuture?'future':(isPast?'past':'');
+    if(m.amt<=0)barCls=(barCls?barCls+' ':'')+'empty';
+    var amtCls=m.amt<=0?'zero':(isPast?'past':'');
     var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
     var tip=m.label+' '+curYear+' — '+fm(m.amt)+(tkPairs.length?'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n'):' (no scheduled payouts)');
     var tipAttr=tip.replace(/"/g,'&quot;');
-    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+(isFuture?'future':'')+(m.amt<=0?' empty':'')+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt'+(m.amt<=0?' zero':'')+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
+    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+barCls+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt '+amtCls+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
   });
   G('pChart').innerHTML=chartH;
   // Cards: future months (current month onwards) shown by default; past months in a collapsed <details>
@@ -2467,6 +2503,209 @@ async function snapTradeRefresh(){
   logActivity('snaptrade.refresh','Refreshed SnapTrade accounts ('+stApiState.accounts.length+' synced)');
 }
 
+// ═════════════════════════════════════════════════
+// SNAPTRADE PHASE 3 — sync to portfolio (diff + approval)
+// ═════════════════════════════════════════════════
+function _stExtractTicker(pos){
+  if(pos.symbol&&pos.symbol.symbol&&pos.symbol.symbol.symbol)return pos.symbol.symbol.symbol;
+  if(pos.symbol&&pos.symbol.symbol&&typeof pos.symbol.symbol==='string')return pos.symbol.symbol;
+  if(typeof pos.symbol==='string')return pos.symbol;
+  return null;
+}
+function _stAcctAutoName(acct){
+  // Auto-suggest a portfolio account name from SnapTrade's institution + account name
+  var inst=acct.institution_name||acct.brokerage||'';
+  var name=acct.name||'';
+  if(inst&&name)return inst+' - '+name;
+  return inst||name||('Account '+(acct.id||'').slice(0,6));
+}
+function _stBuildDiffForAccount(acct,mappedAccountName){
+  var rows=[];
+  (acct.positions||[]).forEach(function(pos){
+    var tk=_stExtractTicker(pos);
+    var snapShares=pos.units||pos.quantity||0;
+    if(!tk||snapShares<=0)return;
+    var existingLots=(lots[tk]||[]).filter(function(l){return l.b===mappedAccountName});
+    var snapPrice=pos.price||0;
+    if(existingLots.length===0){
+      rows.push({action:'ADD',ticker:tk,account:mappedAccountName,current:0,proposed:snapShares,snapPrice:snapPrice});
+    }else if(existingLots.length===1){
+      var lot=existingLots[0];
+      if(Math.abs(lot.s-snapShares)<0.0001){
+        rows.push({action:'NOOP',ticker:tk,account:mappedAccountName,current:lot.s,proposed:snapShares,snapPrice:snapPrice});
+      }else{
+        rows.push({action:'UPDATE',ticker:tk,account:mappedAccountName,current:lot.s,proposed:snapShares,snapPrice:snapPrice});
+      }
+    }else{
+      // Multiple lots at same account — show as UPDATE on the first lot, conservative
+      var lot1=existingLots[0];
+      var totalCurrent=existingLots.reduce(function(s,l){return s+l.s},0);
+      rows.push({action:'UPDATE',ticker:tk,account:mappedAccountName,current:totalCurrent,proposed:snapShares,snapPrice:snapPrice,multiLot:existingLots.length});
+    }
+  });
+  return rows;
+}
+
+var stSyncSession=null;
+function startSnapTradeSync(){
+  if(!stApiState.accounts||stApiState.accounts.length===0){
+    showToast('No SnapTrade accounts loaded — refresh first','warn');
+    return;
+  }
+  // Initialize session: per-account mapping decisions, pre-seeded from saved mappings
+  var prefs=loadPrefs();
+  var savedMap=prefs.snaptradeAccountMap||{};
+  stSyncSession={choices:{}};
+  stApiState.accounts.forEach(function(acct){
+    if(savedMap[acct.id]){
+      stSyncSession.choices[acct.id]={action:'map',target:savedMap[acct.id]};
+    }else{
+      stSyncSession.choices[acct.id]={action:'create',target:_stAcctAutoName(acct)};
+    }
+  });
+  showSyncModal();
+}
+function showSyncModal(){
+  var ov=document.createElement('div');
+  ov.className='sync-overlay';
+  ov.id='syncOverlay';
+  ov.innerHTML='<div class="sync-modal"><div class="sync-head"><h3>📥 Sync from SnapTrade</h3><button class="sync-close" onclick="closeSyncModal()">×</button></div><div class="sync-body" id="syncBody"></div><div class="sync-foot"><button class="btn btn-outline" onclick="closeSyncModal()">Cancel</button><button class="btn btn-primary" onclick="applySnapTradeSync()" id="syncApplyBtn">Apply Selected</button></div></div>';
+  ov.addEventListener('click',function(e){if(e.target===ov)closeSyncModal()});
+  document.body.appendChild(ov);
+  renderSyncModal();
+}
+function closeSyncModal(){
+  var ov=document.getElementById('syncOverlay');
+  if(ov)ov.remove();
+  stSyncSession=null;
+}
+function renderSyncModal(){
+  var body=G('syncBody');if(!body||!stSyncSession)return;
+  var brokerList=getBrokerList();
+  var html='';
+  var totalSelected=0;
+  stApiState.accounts.forEach(function(acct){
+    var choice=stSyncSession.choices[acct.id];
+    var skipped=choice.action==='skip';
+    html+='<div class="sync-acct'+(skipped?' sync-acct-skipped':'')+'" data-snap-id="'+acct.id+'">';
+    html+='<div class="sync-acct-head"><div><div>'+(acct.institution_name||acct.brokerage||'(unknown broker)')+'</div><div class="sync-acct-meta">'+(acct.name||acct.id)+' · '+(acct.positions||[]).filter(function(p){return _stExtractTicker(p)&&(p.units||p.quantity||0)>0}).length+' positions</div></div></div>';
+    // Mapping selector
+    html+='<div class="sync-map-row"><label>Map to:</label><select onchange="onSyncMapChange(\''+acct.id+'\',this.value,this)">';
+    html+='<option value="__skip__"'+(choice.action==='skip'?' selected':'')+'>Skip — don\'t sync this account</option>';
+    html+='<option value="__create__:'+_stAcctAutoName(acct).replace(/"/g,'&quot;')+'"'+(choice.action==='create'?' selected':'')+'>Create new: "'+_stAcctAutoName(acct)+'"</option>';
+    brokerList.forEach(function(b){
+      var sel=(choice.action==='map'&&choice.target===b)?' selected':'';
+      html+='<option value="__map__:'+b.replace(/"/g,'&quot;')+'"'+sel+'>'+b+'</option>';
+    });
+    html+='</select></div>';
+    if(skipped){
+      html+='<div class="sync-empty" style="padding:8px">Skipped — positions will not be reviewed.</div>';
+    }else{
+      var target=choice.target;
+      var diff=_stBuildDiffForAccount(acct,target);
+      if(diff.length===0){
+        html+='<div class="sync-empty" style="padding:8px">No positions to sync from this account.</div>';
+      }else{
+        diff.forEach(function(r,i){
+          var defaultChecked=(r.action==='ADD'||r.action==='UPDATE');
+          if(defaultChecked)totalSelected++;
+          var rowKey=acct.id+'|'+i;
+          var rowCls='sync-row row-'+r.action.toLowerCase();
+          var detail='';
+          if(r.action==='ADD')detail='+'+r.proposed+' shares';
+          else if(r.action==='UPDATE')detail=r.current+' → '+r.proposed+' ('+(r.proposed-r.current>0?'+':'')+(r.proposed-r.current).toFixed(4).replace(/\.?0+$/,'')+')'+(r.multiLot?' [merges '+r.multiLot+' lots]':'');
+          else detail=r.current+' = '+r.proposed+' (no change)';
+          var val=r.proposed*(r.snapPrice||PR[r.ticker]||0);
+          html+='<div class="'+rowCls+'">';
+          html+=(r.action==='NOOP')?'<span></span>':('<input type="checkbox" class="sync-row-check" data-snap-id="'+acct.id+'" data-row-idx="'+i+'"'+(defaultChecked?' checked':'')+' onchange="onSyncRowToggle()">');
+          html+='<span class="sync-action-tag act-'+r.action.toLowerCase()+'">'+r.action+'</span>';
+          html+='<span class="sync-row-ticker">'+r.ticker+'</span>';
+          html+='<span class="sync-row-detail">'+detail+'</span>';
+          html+='<span class="sync-row-value">'+(val>0?fm(val):'—')+'</span>';
+          html+='</div>';
+        });
+      }
+    }
+    html+='</div>';
+  });
+  body.innerHTML=html;
+  updateSyncApplyCount();
+}
+function onSyncMapChange(snapId,val,selEl){
+  if(!stSyncSession)return;
+  if(val==='__skip__'){stSyncSession.choices[snapId]={action:'skip'}}
+  else if(val.indexOf('__create__:')===0){stSyncSession.choices[snapId]={action:'create',target:val.slice('__create__:'.length)}}
+  else if(val.indexOf('__map__:')===0){stSyncSession.choices[snapId]={action:'map',target:val.slice('__map__:'.length)}}
+  renderSyncModal();
+}
+function onSyncRowToggle(){updateSyncApplyCount()}
+function updateSyncApplyCount(){
+  var btn=G('syncApplyBtn');if(!btn)return;
+  var n=document.querySelectorAll('.sync-row-check:checked').length;
+  btn.textContent='Apply Selected ('+n+')';
+  btn.disabled=(n===0);
+  btn.style.opacity=(n===0)?'0.5':'1';
+}
+function applySnapTradeSync(){
+  if(!stSyncSession)return;
+  // Persist mappings + create new accounts
+  var prefs=loadPrefs();
+  if(!prefs.snaptradeAccountMap)prefs.snaptradeAccountMap={};
+  if(!prefs.accounts)prefs.accounts=[];
+  Object.keys(stSyncSession.choices).forEach(function(snapId){
+    var c=stSyncSession.choices[snapId];
+    if(c.action==='skip'){delete prefs.snaptradeAccountMap[snapId];return}
+    if(c.action==='create'&&prefs.accounts.indexOf(c.target)<0)prefs.accounts.push(c.target);
+    prefs.snaptradeAccountMap[snapId]=c.target;
+  });
+  savePrefs(prefs);
+  // Apply checked diff rows
+  var applied=0;var addedCount=0;var updatedCount=0;
+  document.querySelectorAll('.sync-row-check:checked').forEach(function(cb){
+    var snapId=cb.dataset.snapId;
+    var rowIdx=parseInt(cb.dataset.rowIdx);
+    var acct=stApiState.accounts.find(function(a){return a.id===snapId});
+    if(!acct)return;
+    var choice=stSyncSession.choices[snapId];
+    if(!choice||choice.action==='skip')return;
+    var target=choice.target;
+    var diff=_stBuildDiffForAccount(acct,target);
+    var r=diff[rowIdx];
+    if(!r)return;
+    if(r.action==='ADD'){
+      if(!lots[r.ticker])lots[r.ticker]=[];
+      lots[r.ticker].push({s:r.proposed,b:r.account,added:new Date().toISOString()});
+      if(tks.indexOf(r.ticker)<0)tks.push(r.ticker);
+      logActivity('snaptrade.add','Added '+r.ticker+' '+r.proposed+' shares at '+r.account+' (from SnapTrade)');
+      addedCount++;applied++;
+    }else if(r.action==='UPDATE'){
+      var existingLots=(lots[r.ticker]||[]).filter(function(l){return l.b===r.account});
+      if(existingLots.length===1){
+        var lot=existingLots[0];
+        var oldS=lot.s;
+        lot.s=r.proposed;
+        logActivity('snaptrade.update','Updated '+r.ticker+' at '+r.account+': '+oldS+' → '+r.proposed+' shares (from SnapTrade)');
+        updatedCount++;applied++;
+      }else if(existingLots.length>1){
+        // Conservative: update first lot to the new total, zero out the rest
+        var lot1=existingLots[0];
+        var oldTotal=existingLots.reduce(function(s,l){return s+l.s},0);
+        lot1.s=r.proposed;
+        // Mark other lots at same account/ticker for removal
+        lots[r.ticker]=(lots[r.ticker]||[]).filter(function(l){return l===lot1||l.b!==r.account});
+        logActivity('snaptrade.update','Merged '+existingLots.length+' lots of '+r.ticker+' at '+r.account+': '+oldTotal+' → '+r.proposed+' shares (from SnapTrade)');
+        updatedCount++;applied++;
+      }
+    }
+  });
+  computeFromLots();
+  save();render();
+  closeSyncModal();
+  if(applied===0){showToast('No changes selected — mappings saved','warn');return}
+  showToast('Applied '+addedCount+' add'+(addedCount!==1?'s':'')+', '+updatedCount+' update'+(updatedCount!==1?'s':''));
+  logActivity('snaptrade.sync','Sync applied: '+addedCount+' added, '+updatedCount+' updated');
+}
+
 async function snapTradeDisconnect(){
   if(!confirm('Disconnect from SnapTrade?\n\nThis clears your local registration. To fully revoke a brokerage, do that on the brokerage side too.\n\nContinue?'))return;
   stApiState.userSecret='';
@@ -2492,6 +2731,7 @@ function renderSnapTradeCard(){
   }else{
     html+='<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-primary" onclick="snapTradeConnect()">+ Connect Another</button>';
     html+='<button class="btn btn-outline" onclick="snapTradeRefresh()">&#8635; Refresh</button>';
+    if(accts>0)html+='<button class="btn btn-outline" onclick="startSnapTradeSync()" style="color:var(--accent2);border-color:var(--accent2)">📥 Sync</button>';
     html+='<button class="btn btn-outline" onclick="sTab(\'brokers\')">View Brokers Tab</button>';
     html+='<button class="btn btn-outline" onclick="snapTradeDisconnect()" style="color:var(--red);border-color:var(--red-dim)">Disconnect</button></div>';
     var summary=accts+' connected account'+(accts!==1?'s':'');

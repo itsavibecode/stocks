@@ -1,10 +1,17 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.2**
+**Current Version: v0.7.3**
 
 ---
 
 ## Changelog
+
+### v0.7.3 — 2026-04-29
+- **SnapTrade Phase 3 — Sync to Portfolio with diff/approval UI.** Click "Sync" on the Brokers tab (or Settings → SnapTrade card) to open a per-row review modal. Each SnapTrade-reported position becomes an ADD / UPDATE / NOOP entry against your existing portfolio. Per-row checkboxes default ADD/UPDATE checked, NOOP excluded. Click "Apply Selected" to commit only the rows you approved.
+- **Account name mapping (first-run, persisted).** The first time SnapTrade reports a brokerage account, you map it: skip, create new portfolio account with auto-suggested name (e.g. "M1 Finance - Roth IRA"), or pick from your existing accounts. The mapping persists in `prefs.snaptradeAccountMap` so future syncs default to the same target without re-prompting.
+- **Multi-lot consolidation handling.** If you've manually added multiple lots at the same broker for the same ticker (e.g. DRIP-added entries), Sync proposes to merge them into a single lot at the SnapTrade-reported total. Logged transparently as "Merged N lots."
+- **Activity log integration.** Every Sync action writes its own entry — `snaptrade.add`, `snaptrade.update`, `snaptrade.sync` summary — so you can audit what changed and when.
+- **Past months in payout chart now visibly muted.** Past months get a desaturated gray bar at 55% opacity, muted text on the month label and amount; future months keep the bright accent gradient, current month keeps the highlight + ▶ arrow. Easier eye-scan for "what's done vs coming."
 
 ### v0.7.2 — 2026-04-29
 - **Activity Log** — every state-changing action while signed in is now logged to a new "Activity Log" card in Settings. Captures portfolio mutations (add/remove/lots), account add/rename/delete, API key set/clear (never the value), SnapTrade events (register/connect/refresh/disconnect), auth (sign-in/out/forget-my-data), import/export, and local-data reset. Filter dropdown by category; "Export CSV" downloads the full log; "Clear Log" wipes both local and Firestore copies. Capped at 500 entries with auto-trim.
