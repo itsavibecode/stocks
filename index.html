@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.6.3</title>
+<title>Portfolio Command Center v0.6.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -292,7 +292,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.6.3</div>
+        <div class="logo-ver">v0.6.4</div>
       </div>
     </div>
     <div class="header-actions">
@@ -428,6 +428,11 @@ body.text-xl .sc .scv{font-size:24px}
     <div style="max-width:600px">
       <h3 style="font-size:16px;font-weight:700;margin-bottom:14px">&#9881; Settings</h3>
 
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px" id="acctCard">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128100; Your Account</div>
+        <div id="acctCardBody"></div>
+      </div>
+
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
@@ -535,7 +540,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.6.3 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.6.4 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -562,7 +567,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.6.3";
+var VERSION = "0.6.4";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -622,6 +627,56 @@ function updateAuthUI() {
     el.innerHTML = '<span class="local-badge">LOCAL ONLY</span><span>Sign in to sync across devices</span>';
     act.innerHTML = '<button class="auth-btn google" onclick="signInGoogle()"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in with Google</button>';
   }
+  renderAccountCard();
+}
+
+// Settings → Your Account card. Surfaces every piece of user data we have
+// from the Google sign-in (so it's not a black box) plus a forget-me action.
+function renderAccountCard(){
+  var body=document.getElementById('acctCardBody');if(!body)return;
+  if(!currentUser){
+    body.innerHTML='<div style="font-size:11.5px;color:var(--muted);line-height:1.7">Not signed in. Your portfolio lives in this browser only. Sign in with Google (top of page) to sync across devices.</div>';
+    return;
+  }
+  var u=currentUser;
+  var providerId=(u.providerData&&u.providerData[0]&&u.providerData[0].providerId)||'unknown';
+  var meta=u.metadata||{};
+  var creation=meta.creationTime?new Date(meta.creationTime).toLocaleString():'—';
+  var lastSignIn=meta.lastSignInTime?new Date(meta.lastSignInTime).toLocaleString():'—';
+  var uidShort=u.uid?u.uid.slice(0,8)+'…':'—';
+  var rows=[
+    ['Display name',u.displayName||'—'],
+    ['Email',u.email||'—'],
+    ['Email verified',u.emailVerified?'Yes':'No'],
+    ['Provider',providerId.replace('.com','')],
+    ['User ID',uidShort+' <button onclick="navigator.clipboard.writeText(\''+u.uid+'\').then(function(){showToast(\'UID copied\')})" style="background:none;border:none;color:var(--accent);font-size:10px;cursor:pointer;padding:0;margin-left:6px">copy full</button>'],
+    ['Account created',creation],
+    ['Last sign-in',lastSignIn]
+  ];
+  var html='<div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">';
+  if(u.photoURL)html+='<img src="'+u.photoURL+'" alt="" style="width:54px;height:54px;border-radius:50%;border:1px solid var(--border)">';
+  html+='<div style="flex:1"><div style="font-weight:700;font-size:13px">'+(u.displayName||u.email||'Signed in')+'</div><div class="muted" style="font-size:10.5px;margin-top:2px">All data we store is shown below — nothing more is collected.</div></div></div>';
+  html+='<div style="display:grid;grid-template-columns:120px 1fr;gap:5px 12px;font-size:11px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px">';
+  rows.forEach(function(r){
+    html+='<div class="muted" style="font-size:10.5px">'+r[0]+'</div><div style="font-family:var(--mono);font-size:10.5px;word-break:break-all">'+r[1]+'</div>';
+  });
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-outline" onclick="signOut()" style="font-size:10px">Sign Out</button>';
+  html+='<button class="btn btn-outline" onclick="forgetMyData()" style="font-size:10px;color:var(--red);border-color:var(--red-dim)">Forget my data (delete cloud doc)</button></div>';
+  html+='<p style="font-size:10px;color:var(--muted);margin-top:8px">"Forget my data" deletes your portfolio document from Firestore. Local data in this browser stays. To revoke our app from your Google account entirely, visit <a href="https://myaccount.google.com/permissions" target="_blank" style="color:var(--accent)">myaccount.google.com/permissions</a>.</p>';
+  body.innerHTML=html;
+}
+
+function forgetMyData(){
+  if(!currentUser||!db){showToast('Not signed in','warn');return}
+  if(!confirm('Delete your portfolio document from the cloud?\n\nThis removes tickers, lots, prefs, and the news/price cache from Firestore. Your local browser data stays. You will be signed out.\n\nContinue?'))return;
+  db.collection('portfolios').doc(currentUser.uid).delete().then(function(){
+    showToast('Cloud doc deleted. Signing out...');
+    setTimeout(function(){signOut()},1200);
+  }).catch(function(e){
+    console.error('Delete error:',e);
+    showToast('Delete failed — see console','warn');
+  });
 }
 
 if (firebaseReady) {

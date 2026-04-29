@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.6.3**
+**Current Version: v0.6.4**
 
 ---
 
 ## Changelog
+
+### v0.6.4 — 2026-04-28
+- **"Your Account" card in Settings** — surfaces every piece of data we have on file from Google sign-in: display name, email, email-verified status, provider, user ID (with copy-full button), account creation timestamp, and last sign-in timestamp. Sits at the top of the Settings tab so it's not buried.
+- **Forget my data** button — deletes your Firestore portfolio doc (tickers, lots, prefs, cache) and signs you out. Your local browser data stays. Includes a link to Google Account permissions for users who want to revoke the app entirely.
 
 ### v0.6.3 — 2026-04-27
 - **Monthly payout bar chart** on the Payout Log tab — aggregates per-stock pay dates by month (last 12 months with data) and shows them as horizontal bars. Current month is highlighted; future months use a different gradient. Sits above the existing month-by-month grid.
