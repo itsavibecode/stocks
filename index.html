@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.14</title>
+<title>Portfolio Command Center v0.7.15</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.14</div>
+        <div class="logo-ver">v0.7.15</div>
       </div>
     </div>
     <div class="header-actions">
@@ -450,10 +450,10 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
     <div class="table-wrap dt"><table id="tN"><thead><tr>
       <th data-col="ticker" onclick="ds('tN','ticker')">Ticker <span class="sa">&#9660;</span></th>
+      <th data-col="date" onclick="ds('tN','date')" class="sorted">Date <span class="sa">&#9660;</span></th>
       <th data-col="price" onclick="ds('tN','price')">Price <span class="sa">&#9660;</span></th>
       <th data-col="title" onclick="ds('tN','title')">Headline <span class="sa">&#9660;</span></th>
       <th data-col="source" onclick="ds('tN','source')">Source <span class="sa">&#9660;</span></th>
-      <th data-col="date" onclick="ds('tN','date')" class="sorted">Date <span class="sa">&#9660;</span></th>
     </tr></thead><tbody id="bN"></tbody></table></div>
     <div class="mc" id="mN"></div>
   </div>
@@ -743,7 +743,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.14 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.15 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -774,7 +774,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.14";
+var VERSION = "0.7.15";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -2053,7 +2053,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
