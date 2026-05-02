@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.5**
+**Current Version: v0.7.6**
 
 ---
 
 ## Changelog
+
+### v0.7.6 — 2026-04-29
+- **Portfolio Snapshot panel at the top of the All tab** — finally an actual at-a-glance view that earns the "Command Center" name. Four stat boxes (Portfolio Value, Annual Dividend, YTD Received this calendar year, sector count) plus two horizontal-bar charts: Sector Allocation (top 5 + Other rollup) and Top Holdings (top 5 by position value). Sectors and holdings each show the % of total portfolio with a hover tooltip showing the dollar amount. Empty state when no shares are set yet. Two-column layout on desktop, stacked on mobile.
 
 ### v0.7.5 — 2026-04-29
 - **Two more backup price providers** — Settings → Backup API Keys now has fields for **Polygon.io** (5 calls/min free, returns previous-day close) and **Twelve Data** (800 calls/day free, real-time price). Same drop-in pattern as AlphaVantage and Tiingo. Each with its own save/clear button and status line; "N configured" count pill on the card title now goes up to 4.
