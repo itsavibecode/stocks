@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.8</title>
+<title>Portfolio Command Center v0.7.9</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -390,7 +390,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.8</div>
+        <div class="logo-ver">v0.7.9</div>
       </div>
     </div>
     <div class="header-actions">
@@ -711,7 +711,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.8 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.9 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -738,7 +738,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.8";
+var VERSION = "0.7.9";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1943,6 +1943,52 @@ function render(){
       savePrefs(prefs);
     };
   }
+  if (typeof _renderTaxOutlookHTML !== 'function') {
+    window._renderTaxOutlookHTML = function(annualIncome) {
+      // Aggregate dividend income by tax bucket
+      var buckets = {};
+      var divTickers = tks.filter(isDiv);
+      divTickers.forEach(function(t) {
+        var s = sh[t] || 0;
+        if (s <= 0) return;
+        var d = DV[t];
+        if (!d || !d.a) return;
+        var inc = d.a * s;
+        var b = taxBucket(t);
+        // Mixed ETFs: split 50/50 between qualified and nonqualified
+        if (b === 'mixed') {
+          buckets['qualified'] = (buckets['qualified'] || 0) + inc * 0.5;
+          buckets['nonqualified'] = (buckets['nonqualified'] || 0) + inc * 0.5;
+        } else {
+          buckets[b] = (buckets[b] || 0) + inc;
+        }
+      });
+      var total = Object.keys(buckets).reduce(function(s, k){ return s + buckets[k]; }, 0);
+      if (total === 0) {
+        return '<div class="snap-history" style="margin-top:14px"><div class="snap-history-title">🧾 Tax Outlook</div><div class="snap-empty">Set shares on dividend stocks to see estimated income by tax treatment.</div></div>';
+      }
+      var html = '<div class="snap-history" style="margin-top:14px">';
+      html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub">Annual dividend income by tax treatment · ' + fm(total) + ' total</span></div>';
+      html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Estimates based on common classifications — your actual 1099-DIV may vary. Hold &gt;60 days for qualified treatment on most US stocks.</div>';
+      var maxAmt = Math.max.apply(null, Object.keys(buckets).map(function(k){return buckets[k]}).concat([1]));
+      TAX_BUCKET_ORDER.forEach(function(k) {
+        var amt = buckets[k];
+        if (!amt || amt <= 0) return;
+        var info = TAX_BUCKETS[k];
+        var pct = total > 0 ? (amt / total * 100) : 0;
+        var w = maxAmt > 0 ? (amt / maxAmt * 100) : 0;
+        var tip = (info.label + ' — ' + info.hint).replace(/"/g, '&quot;');
+        html += '<div style="display:grid;grid-template-columns:170px 1fr 130px;gap:10px;align-items:center;padding:5px 6px;border-radius:5px;font-size:11px;margin-bottom:2px" title="' + tip + '">';
+        html += '<span style="font-size:10.5px;color:' + info.color + ';font-weight:600">' + info.label + '</span>';
+        html += '<div class="snap-bar-bg" style="height:14px"><div class="snap-bar" style="width:' + w.toFixed(1) + '%;background:' + info.color + ';opacity:.85"></div></div>';
+        html += '<span class="mono" style="font-size:10.5px;text-align:right">' + fm(amt) + ' <span class="muted" style="font-size:9.5px">(' + pct.toFixed(1) + '%)</span></span>';
+        html += '</div>';
+      });
+      html += '<div style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5">Hover a row for the tax-treatment note. Individual ticker tax tags appear in the Dividends tab deep-dive panels with more detail. Not tax advice.</div>';
+      html += '</div>';
+      return html;
+    };
+  }
   if (typeof _renderHistoryChartHTML !== 'function') {
     window._renderHistoryChartHTML = function(currentValue) {
       var prefs = loadPrefs();
@@ -2098,6 +2144,8 @@ function render(){
       sH+='<div class="snap-row" title="'+h.tk+': '+fm(h.val)+' ('+pct.toFixed(1)+'%)"><span class="snap-row-label">'+h.tk+'</span><div class="snap-bar-bg"><div class="snap-bar b-hold" style="width:'+w.toFixed(1)+'%"></div></div><span class="snap-amt">'+pct.toFixed(1)+'%</span></div>';
     });
     sH+='</div></div>';
+    // Tax Outlook panel
+    sH+=_renderTaxOutlookHTML(annualIncome);
     // Portfolio history line chart
     sH+=_renderHistoryChartHTML(totalValue);
     sH+='</div>';
@@ -2209,6 +2257,41 @@ function taxHTML(t){
   if(!info)return'';
   return' <span class="tax-tag">\u26a0 '+info.tag+'<span class="tax-tip">'+info.form+': '+info.note+'</span></span>';
 }
+
+// Tax bucket classification \u2014 maps each ticker to one of:
+// qualified, nonqualified, reit, foreign, collectible, k1, mixed
+// Used by the Tax Outlook panel to estimate annual income by tax treatment.
+function taxBucket(t){
+  var info=TAX_INFO[t];
+  if(info){
+    var tag=(info.tag||'').toLowerCase();
+    if(tag.indexOf('reit')>=0)return 'reit';
+    if(tag.indexOf('foreign')>=0)return 'foreign';
+    if(tag.indexOf('k-1')>=0)return 'k1';
+    if(tag.indexOf('28%')>=0)return 'collectible';
+    if(tag.indexOf('etf mix')>=0)return 'mixed';
+    if(tag.indexOf('non-qualified')>=0||tag.indexOf('caution')>=0)return 'nonqualified';
+  }
+  // Default: most US stocks held >60 days are qualified-eligible
+  // ETFs in our KNOWN_ETFS list that are bond-focused \u2192 likely ordinary income
+  var d=DV[t];if(d){
+    var sc=(d.sc||'').toLowerCase();
+    if(sc.indexOf('reit')>=0||sc.indexOf('real estate')>=0)return 'reit';
+    if(sc.indexOf('bond')>=0||sc.indexOf('treasury')>=0||sc.indexOf('tips')>=0)return 'nonqualified';
+  }
+  return 'qualified';
+}
+// Display info per bucket \u2014 order, label, color, taxRate hint
+var TAX_BUCKETS={
+  qualified:    {label:'Qualified Dividends',     color:'var(--green)',     hint:'Long-term cap gains rates (0% / 15% / 20%) \u2014 most favorable'},
+  nonqualified: {label:'Non-Qualified Ordinary',  color:'var(--yellow)',    hint:'Taxed as regular income at your marginal bracket'},
+  reit:         {label:'REIT Distributions',      color:'var(--accent)',    hint:'Mostly non-qualified ordinary income; 199A QBI deduction may apply'},
+  foreign:      {label:'Foreign Dividends',       color:'var(--accent2)',   hint:'Foreign tax withheld \u2014 file Form 1116 for FTC; qualified if treaty country'},
+  mixed:        {label:'ETF Mix (split)',         color:'var(--purple)',    hint:'ETFs with mixed qualified/non-qualified distributions \u2014 split 50/50 here'},
+  collectible:  {label:'Collectibles (28%)',      color:'var(--orange)',    hint:'Precious metals trusts \u2014 taxed at 28% max collectibles rate'},
+  k1:           {label:'K-1 Partnerships',        color:'var(--red)',       hint:'Issues Schedule K-1, not 1099 \u2014 complex tax filing required'}
+};
+var TAX_BUCKET_ORDER=['qualified','nonqualified','reit','foreign','mixed','collectible','k1'];
 // Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load.
 // `small` produces a 22\u00d722 inline-friendly version for table cells / list items.
 var LOGO_DEV_TOKEN="pk_X-1ZO13GSgeOoUrIuJ6GMQ";

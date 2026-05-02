@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.8**
+**Current Version: v0.7.9**
 
 ---
 
 ## Changelog
+
+### v0.7.9 — 2026-04-29
+- **Tax Outlook panel on the All tab** — estimates your annual dividend income broken down by tax treatment: Qualified Dividends, Non-Qualified Ordinary, REIT Distributions, Foreign Dividends, ETF Mix (split 50/50), Collectibles (28%), and K-1 Partnerships. Each bucket gets a color-coded horizontal bar with $ amount and % of total dividend income. Hover a row for the tax-treatment note. Classification logic uses the existing `TAX_INFO` table when available (REIT/Foreign Tax/K-1/etc.) and falls back to sector-based heuristics (REIT sector, bond/treasury → ordinary).
+- Disclaimer baked in: "Estimates based on common classifications — your actual 1099-DIV may vary. Hold >60 days for qualified treatment on most US stocks. Not tax advice."
 
 ### v0.7.8 — 2026-04-29
 - **Portfolio history snapshots + line chart on All tab.** Once per day after sign-in, the app records `{date, totalValue, annualIncome}` to `prefs.history` (Firestore-synced, capped at 730 days). The Portfolio Snapshot panel grew a "Portfolio Value Over Time" SVG line chart — area + line plot with min/mid/max Y labels, first-and-last date X labels, change-since-start summary in the title bar (green for up, red for down). Hover anywhere on the chart for a tooltip showing the exact date and value at that point.
