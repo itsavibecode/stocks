@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.6**
+**Current Version: v0.7.7**
 
 ---
 
 ## Changelog
+
+### v0.7.7 — 2026-04-29 — UX polish bundle
+- **News status now shows which provider(s) answered.** After a fetch completes, the status line aggregates per-ticker provider attribution as e.g. "● Live — 9:14:21 PM — Finnhub 21 · Tiingo 2." Makes it easy to see when fallbacks are kicking in.
+- **Activity Log got a search box.** Type to filter the audit trail by type or detail text. Combines with the existing category dropdown.
+- **+Add modal pre-selects your most recently used account.** Saves a tap when adding multiple positions to the same broker. Tracked in `prefs.lastUsedBroker`, updated on every successful add.
 
 ### v0.7.6 — 2026-04-29
 - **Portfolio Snapshot panel at the top of the All tab** — finally an actual at-a-glance view that earns the "Command Center" name. Four stat boxes (Portfolio Value, Annual Dividend, YTD Received this calendar year, sector count) plus two horizontal-bar charts: Sector Allocation (top 5 + Other rollup) and Top Holdings (top 5 by position value). Sectors and holdings each show the % of total portfolio with a hover tooltip showing the dollar amount. Empty state when no shares are set yet. Two-column layout on desktop, stacked on mobile.
