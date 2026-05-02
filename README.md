@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.10**
+**Current Version: v0.7.11**
 
 ---
 
 ## Changelog
+
+### v0.7.11 — 2026-04-29
+- **Cost basis + unrealized P/L tracking.** Lots got a new optional `p` field (entry price per share). The +Add modal grew an "Entry $/sh (optional)" input alongside the shares + account fields. Each Holdings-by-Lot row in the deep-dive panel now shows a click-to-edit Entry $ column and an Unrealized column with `+/−$ amount` and `+/−%` (green for gain, red for loss). Hover the unrealized cell for the cost-basis breakdown.
+- **Per-ticker totals at the bottom of the lot table** show shares · current value · cost basis · unrealized P/L when at least one lot has an entry price set.
+- **Two new stats in the All-tab Portfolio Snapshot** when any lot has an entry price set: "Cost Basis (tracked)" and "Unrealized P/L" with $ amount and %. Only counts lots where you've explicitly entered the entry price — graceful degradation for users who haven't added cost basis yet.
 
 ### v0.7.10 — 2026-04-29
 - **Dividend reminders.** New "Dividend Reminders" card in Settings — toggle on/off plus configurable lead time for both ex-date and pay-date (default 1 day, max 14). When enabled, each sign-in scans dividend tickers with shares set, fires a toast + chime + activity-log entry for any upcoming ex-date or pay-date within the lead window. Each unique reminder fires once per occurrence — refreshing the page won't re-trigger.

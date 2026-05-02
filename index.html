@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.10</title>
+<title>Portfolio Command Center v0.7.11</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -390,7 +390,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.10</div>
+        <div class="logo-ver">v0.7.11</div>
       </div>
     </div>
     <div class="header-actions">
@@ -731,19 +731,23 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.10 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.11 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal" onclick="event.stopPropagation()">
     <h3>Add Ticker</h3>
     <input class="mi" type="text" id="mIn" placeholder="Ticker e.g. NVDA" onkeydown="if(event.key==='Enter')addT()">
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <div style="flex:1">
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:90px">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Shares (optional)</div>
         <input class="mi" type="number" id="mShares" placeholder="0" min="0" step="any" style="margin-bottom:0">
       </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:90px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Entry $/sh (optional)</div>
+        <input class="mi" type="number" id="mEntryPrice" placeholder="0.00" min="0" step="any" style="margin-bottom:0">
+      </div>
+      <div style="flex:1;min-width:140px">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Account (optional)</div>
         <div id="mBrokerWrap"></div>
       </div>
@@ -758,7 +762,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.10";
+var VERSION = "0.7.11";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1630,14 +1634,28 @@ function computeFromLots(){
   });
 }
 function getLots(t){return lots[t]&&lots[t].length?lots[t]:[{s:0,b:''}]}
-function setLot(t,idx,shares,broker){
+function setLot(t,idx,shares,broker,entryPrice){
   if(!lots[t])lots[t]=[{s:0,b:''}];
   while(lots[t].length<=idx)lots[t].push({s:0,b:''});
   if(shares!==undefined)lots[t][idx].s=shares;
   if(broker!==undefined)lots[t][idx].b=broker;
+  if(entryPrice!==undefined){
+    if(entryPrice>0)lots[t][idx].p=entryPrice;
+    else delete lots[t][idx].p;
+  }
   // Clean up empty trailing lots (but keep at least one)
-  while(lots[t].length>1){var last=lots[t][lots[t].length-1];if(!last.s&&!last.b)lots[t].pop();else break}
+  while(lots[t].length>1){var last=lots[t][lots[t].length-1];if(!last.s&&!last.b&&!last.p)lots[t].pop();else break}
   computeFromLots();
+}
+// Inline edit lot entry price from the detail panel
+function eLotP(t,idx,el){
+  event.stopPropagation();
+  var lt=getLots(t);
+  var v=lt[idx]&&lt[idx].p?lt[idx].p:0;
+  var i=document.createElement('input');i.type='number';i.className='si';i.style.width='65px';i.value=v||'';i.placeholder='0.00';i.step='any';i.min='0';
+  el.replaceWith(i);i.focus();i.select();
+  var dn=function(){setLot(t,idx,undefined,undefined,parseFloat(i.value)||0);save();render()};
+  i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}};
 }
 function addLot(t){
   if(!lots[t])lots[t]=[{s:0,b:'',added:new Date().toISOString()}];
@@ -1766,25 +1784,48 @@ function eLotBText(t,idx,el,cur){
 // Build lots HTML for the detail panel
 function lotsHTML(t){
   var lt=getLots(t);
+  var price=PR[t]||0;
   var h='<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:4px"><div style="display:flex;align-items:center;gap:6px"><button class="btn btn-outline" onclick="event.stopPropagation();refreshStock(\''+t+'\')" style="font-size:9px;padding:3px 7px" title="Refresh '+t+' data">&#8635;</button><span style="font-weight:700;font-size:12px">\ud83d\udcca Holdings by Lot</span></div><button class="btn btn-outline" onclick="event.stopPropagation();addLot(\''+t+'\')" style="font-size:10px;padding:4px 10px">+ Add Lot</button></div>';
-  h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto auto;gap:4px 10px;align-items:center;font-size:11px">';
-  h+='<div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">#</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Account</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Added</div><div></div>';
+  // Grid: # | Shares | Account | Entry$ | P/L | Added | (\u00d7)
+  h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto auto auto auto;gap:4px 10px;align-items:center;font-size:11px">';
+  h+='<div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">#</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Account</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Entry $</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;text-align:right">Unrealized</div><div class="muted" style="font-size:9px;text-transform:uppercase;letter-spacing:.5px">Added</div><div></div>';
+  var totalCost=0,totalCurrentForPL=0,anyPriceSet=false;
   lt.forEach(function(lot,i){
-    var val=(PR[t]||0)*lot.s;
     var addedStr=lot.added?new Date(lot.added).toLocaleDateString():new Date('2026-04-16').toLocaleDateString();
+    var entry=lot.p||0;
+    var lotCost=entry*lot.s;
+    var lotCurrent=price*lot.s;
+    var lotPL=entry>0?(lotCurrent-lotCost):0;
+    var plPct=entry>0&&lotCost>0?(lotPL/lotCost*100):0;
+    if(entry>0){anyPriceSet=true;totalCost+=lotCost;totalCurrentForPL+=lotCurrent}
+    var plCls=lotPL>=0?'green':'red';
     h+='<div class="mono muted" style="font-size:10px">'+(i+1)+'</div>';
     h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s?fmSh(lot.s):'edit')+'</span>';
     h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.b||'set')+'</span>';
+    h+='<span class="sd'+(entry>0?' hv':'')+'" onclick="eLotP(\''+t+'\','+i+',this)" style="justify-self:start;font-family:var(--mono);font-size:10.5px">'+(entry>0?fm(entry):'set')+'</span>';
+    if(entry>0&&lot.s>0){
+      h+='<div class="mono '+plCls+'" style="text-align:right;font-size:10.5px" title="Cost basis: '+fm(lotCost)+' \u00b7 Current: '+fm(lotCurrent)+'">'+(lotPL>=0?'+':'')+fm(lotPL)+' <span class="muted" style="font-size:9.5px">('+(plPct>=0?'+':'')+plPct.toFixed(1)+'%)</span></div>';
+    }else{
+      h+='<div class="muted" style="text-align:right;font-size:10px">\u2014</div>';
+    }
     h+='<div class="muted" style="font-size:10px">'+addedStr+'</div>';
     h+=(lt.length>1?'<button class="rb" onclick="event.stopPropagation();removeLot(\''+t+'\','+i+')" style="font-size:9px">&#10005;</button>':'<div></div>');
   });
   h+='</div>';
   var totalS=sh[t]||0;
-  if(totalS>0&&lt.length>1){
-    h+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;gap:16px;flex-wrap:wrap">';
-    h+='<span class="muted">Total:</span> <span class="mono fw7">'+fmSh(totalS)+' shares</span>';
-    h+='<span class="mono accent2">'+fm((PR[t]||0)*totalS)+'</span>';
+  if(totalS>0){
+    var totalCurrent=price*totalS;
+    var totalPL=totalCurrentForPL-totalCost;
+    var totalPLPct=totalCost>0?(totalPL/totalCost*100):0;
+    var totalPLCls=totalPL>=0?'green':'red';
+    h+='<div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--border);font-size:11px;display:flex;gap:16px;flex-wrap:wrap;align-items:baseline">';
+    h+='<span class="muted">Total:</span><span class="mono fw7">'+fmSh(totalS)+' shares</span>';
+    h+='<span class="mono accent2">'+fm(totalCurrent)+'</span>';
+    if(anyPriceSet){
+      h+='<span class="muted" style="font-size:10px">cost '+fm(totalCost)+'</span>';
+      h+='<span class="mono fw7 '+totalPLCls+'">'+(totalPL>=0?'+':'')+fm(totalPL)+' <span style="font-size:10px">('+(totalPLPct>=0?'+':'')+totalPLPct.toFixed(2)+'%)</span></span>';
+    }
     h+='</div>';
   }
   h+='</div>';
@@ -2226,6 +2267,7 @@ function render(){
       return;
     }
     var totalValue=0,ytdIncome=0,annualIncome=0;
+    var totalCost=0,totalCurrentWithBasis=0,anyBasisSet=false;
     var sectorTotals={},holdingValues=[];
     var thisYear=new Date().toISOString().slice(0,4);
     tks.forEach(function(t){
@@ -2234,6 +2276,14 @@ function render(){
       var value=price*s;
       totalValue+=value;
       if(s>0&&value>0)holdingValues.push({tk:t,val:value});
+      // Cost basis aggregation across lots that have entry prices set
+      (getLots(t)||[]).forEach(function(lot){
+        if(lot.p>0&&lot.s>0){
+          totalCost+=lot.p*lot.s;
+          totalCurrentWithBasis+=price*lot.s;
+          anyBasisSet=true;
+        }
+      });
       var d=DV[t];
       if(d){
         var sec=(d.sc||'Unknown')||'Unknown';
@@ -2258,6 +2308,14 @@ function render(){
     sH+='<div class="snap-stat"><div class="snap-stat-label">Portfolio Value</div><div class="snap-stat-val accent">'+fm(totalValue)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">Annual Dividend</div><div class="snap-stat-val green">'+fm(annualIncome)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">YTD Received ('+thisYear+')</div><div class="snap-stat-val green">'+fm(ytdIncome)+'</div></div>';
+    if(anyBasisSet){
+      var unrealizedPL=totalCurrentWithBasis-totalCost;
+      var unrealizedPct=totalCost>0?(unrealizedPL/totalCost*100):0;
+      var plCls=unrealizedPL>=0?'green':'red';
+      var plPrefix=unrealizedPL>=0?'+':'';
+      sH+='<div class="snap-stat"><div class="snap-stat-label">Cost Basis (tracked)</div><div class="snap-stat-val purple">'+fm(totalCost)+'</div></div>';
+      sH+='<div class="snap-stat" title="Based on lots where you set an Entry $/sh"><div class="snap-stat-label">Unrealized P/L</div><div class="snap-stat-val '+plCls+'">'+plPrefix+fm(unrealizedPL)+' <span style="font-size:11px;font-weight:500">('+plPrefix+unrealizedPct.toFixed(2)+'%)</span></div></div>';
+    }
     sH+='<div class="snap-stat"><div class="snap-stat-label">Sectors</div><div class="snap-stat-val purple">'+sectorEntries.length+'</div></div>';
     sH+='</div><div class="snap-charts">';
     // Sector allocation
@@ -2601,6 +2659,7 @@ function openMod(){
   G('mod').style.display='';
   G('mIn').value='';
   G('mShares').value='';
+  var ep=G('mEntryPrice');if(ep)ep.value='';
   rebuildBrokerSelect();
   rCh();
   setTimeout(function(){G('mIn').focus()},100);
@@ -2630,6 +2689,8 @@ function addT(){
   var t=G('mIn').value.trim().toUpperCase();
   if(!t)return;
   var sharesVal=parseFloat(G('mShares').value)||0;
+  var entryPriceEl=G('mEntryPrice');
+  var entryPriceVal=entryPriceEl?(parseFloat(entryPriceEl.value)||0):0;
   var brokerVal='';
   var selEl=G('mBrokerSel');
   var inpEl=G('mBrokerInp');
@@ -2641,7 +2702,7 @@ function addT(){
   if(tks.indexOf(t)<0){
     // Brand new ticker
     tks.push(t);
-    lots[t]=[{s:sharesVal,b:brokerVal,added:now}];
+    lots[t]=[{s:sharesVal,b:brokerVal,added:now,p:entryPriceVal||undefined}];
     computeFromLots();
     save();render();rCh();
     if(FINNHUB_KEY)fetchProfile(t);
@@ -2668,7 +2729,7 @@ function addT(){
     } else if(brokerVal||sharesVal){
       // Add as new lot at different account
       if(!lots[t])lots[t]=[];
-      lots[t].push({s:sharesVal,b:brokerVal,added:now});
+      lots[t].push({s:sharesVal,b:brokerVal,added:now,p:entryPriceVal||undefined});
       computeFromLots();
       save();render();rCh();
       if(brokerVal){var p=loadPrefs();p.lastUsedBroker=brokerVal;savePrefs(p)}
