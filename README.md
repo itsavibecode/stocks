@@ -1,10 +1,16 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.13**
+**Current Version: v0.7.14**
 
 ---
 
 ## Changelog
+
+### v0.7.14 — 2026-04-29
+- **Tax tooltips no longer get clipped.** The tax-tag tooltip (e.g. RGR's "⚠ Non-Qualified") was being cut off by the `.table-wrap{overflow-x:auto}` container and rendering under other elements. Switched to `position:fixed` with a JS positioner that anchors the tooltip via `getBoundingClientRect()` clamped to the viewport. Z-index bumped to 1100 so it sits above tabs and modals. Tooltip now also wraps long text (no more `nowrap`) and has a `max-width:280px`.
+- **Rating badges have explainer tooltips.** Hover a rating badge (King, Aristocrat, Strong, Caution, etc.) in any Dividends row or deep-dive panel for a plain-English description of what the rating means. New `RATING_INFO` table covers all 16 rating values. Same fixed-position tooltip system as the tax tags.
+- **Payout chart bars show contributing tickers inline** — the list of tickers paying out each month now appears as a faint inline label inside the bar itself (previously hover-only via title attribute). Hover still reveals the per-ticker dollar breakdown for full detail.
+- **Tax Outlook bars show contributing tickers inline too** — same pattern: each bucket bar lists the tickers that contribute to it as a faint label inside the bar.
 
 ### v0.7.13 — 2026-04-29
 - **Days-until countdown badges** next to every pay-date and ex-date in the Dividends table and the dividend deep-dive panel. Color-coded: `today` green, `in Nd` (≤7) light green, `in Nd` (≤30) accent blue, `in Nd` (>30) muted gray, `Nd ago` dim gray for past dates.

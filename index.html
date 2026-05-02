@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.13</title>
+<title>Portfolio Command Center v0.7.14</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -122,6 +122,8 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pct-bar.future{background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.85}
 .pct-bar.past{background:linear-gradient(90deg,#5a6e8a,#2a3548);opacity:.55}
 .pct-bar.empty{background:transparent;min-width:0;opacity:1}
+.pct-bar-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;font-family:var(--mono);font-size:9px;font-weight:500;color:rgba(255,255,255,.55);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px;z-index:1}
+.pct-row.past .pct-bar-label{color:rgba(255,255,255,.35)}
 .pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
 .pct-amt.past{color:var(--muted);font-weight:500}
@@ -348,9 +350,10 @@ body.text-xl .sc .scv{font-size:24px}
 .news-recent td:first-child{border-left:3px solid var(--accent)}
 
 /* TAX TOOLTIP */
-.tax-tag{display:inline-flex;align-items:center;gap:3px;background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;cursor:help;position:relative}
-.tax-tag .tax-tip{display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:var(--card3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:10px;font-weight:400;white-space:nowrap;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.3)}
-.tax-tag:hover .tax-tip{display:block}
+.tax-tag{display:inline-flex;align-items:center;gap:3px;background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;cursor:help}
+.tax-tag .tax-tip,.info-tag .info-tip{display:none;position:fixed;background:var(--card3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:10.5px;font-weight:400;line-height:1.4;max-width:280px;z-index:1100;box-shadow:0 6px 16px rgba(0,0,0,.45);pointer-events:none}
+.tax-tag:hover .tax-tip,.info-tag:hover .info-tip{display:block}
+.info-tag{cursor:help;display:inline-block}
 
 /* PAYOUT LOG */
 .pl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
@@ -399,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.13</div>
+        <div class="logo-ver">v0.7.14</div>
       </div>
     </div>
     <div class="header-actions">
@@ -740,7 +743,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.13 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.14 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -771,7 +774,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.13";
+var VERSION = "0.7.14";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1763,7 +1766,73 @@ function refreshStock(ticker){
   fetchPriceForTicker(ticker).then(function(p){if(p){livePrices[ticker]=p;try{localStorage.setItem('pf_prices',JSON.stringify(livePrices))}catch(e){}}});
   fetchNewsForTicker(ticker).then(function(a){if(a.length){liveNews[ticker]=a;try{localStorage.setItem('pf_news',JSON.stringify(liveNews))}catch(e){}render()}});
 }
-function rc(r){return{King:'badge-gold',Aristocrat:'badge-gold',Excellent:'badge-green',Strong:'badge-green','ETF - Strong':'badge-green',Good:'badge-accent','REIT - Good':'badge-accent',Stable:'badge-accent',Moderate:'badge-yellow',Variable:'badge-yellow',Caution:'badge-red',New:'badge-purple'}[r]||''}
+function rc(r){return{King:'badge-gold',Aristocrat:'badge-gold',Excellent:'badge-green',Strong:'badge-green','ETF - Strong':'badge-green',Good:'badge-accent','REIT - Good':'badge-accent',Stable:'badge-accent',Moderate:'badge-yellow',Variable:'badge-yellow',Caution:'badge-red',New:'badge-purple','High Yield':'badge-green','Low Yield':'badge-yellow',None:'badge-purple','ETF':'badge-accent','Aristocrat':'badge-gold'}[r]||''}
+// Rating tooltips — what each label means in plain English
+var RATING_INFO={
+  'King':'Dividend King — 50+ consecutive years of dividend increases. The most exclusive tier.',
+  'Aristocrat':'Dividend Aristocrat — 25-49 consecutive years of dividend increases. S&P 500 member.',
+  'Excellent':'Excellent — strong yield (4%+), low payout ratio, and consistent growth track record.',
+  'Strong':'Strong — solid dividend coverage, healthy payout ratio under ~60%, modest growth.',
+  'ETF - Strong':'ETF Strong — diversified dividend ETF with multi-year track record (e.g., SCHD, VIG).',
+  'Good':'Good — reliable yield in the 2-4% range, decent payout coverage.',
+  'REIT - Good':'REIT Good — solid real estate income with reasonable AFFO coverage.',
+  'Stable':'Stable — pays consistently but limited dividend growth or yield.',
+  'Moderate':'Moderate — yield 2-4% with average dividend safety. Watch payout ratio.',
+  'Variable':'Variable — special / non-recurring dividends mixed with regular ones. Income unpredictable.',
+  'Caution':'Caution — high payout ratio (typically >80%), possible dividend cut risk.',
+  'New':'New — recently started paying dividends; not enough history to score.',
+  'High Yield':'High Yield — yield 4%+. Verify sustainability via payout ratio and growth history.',
+  'Low Yield':'Low Yield — yield under 2%. Often paired with strong growth potential.',
+  'None':'None — does not currently pay a dividend.',
+  'ETF':'ETF — exchange-traded fund. Distributions vary by fund type and underlying holdings.'
+};
+function ratingTooltip(rt){
+  var info=RATING_INFO[rt];if(!info)return rb(rt);
+  var safe=info.replace(/"/g,'&quot;');
+  return '<span class="info-tag" data-tip-text="'+safe+'">'+rb(rt)+'<span class="info-tip">'+safe+'</span></span>';
+}
+// Position any `.tax-tag .tax-tip` (or other fixed-position tooltips) above the tag,
+// clamped to the viewport so it never gets cut off by overflow:auto containers.
+function positionFixedTip(tag, tipSelector){
+  var tip = tag.querySelector(tipSelector || '.tax-tip');
+  if (!tip) return;
+  // Make tip measurable without flashing it visible
+  var prevDisplay = tip.style.display;
+  var prevVis = tip.style.visibility;
+  tip.style.visibility = 'hidden';
+  tip.style.display = 'block';
+  var tagRect = tag.getBoundingClientRect();
+  var tipW = tip.offsetWidth;
+  var tipH = tip.offsetHeight;
+  // Restore (CSS :hover takes over for the actual show)
+  tip.style.display = prevDisplay;
+  tip.style.visibility = prevVis;
+  // Default: above the tag, centered. If no room above, flip below.
+  var top = tagRect.top - tipH - 8;
+  if (top < 6) top = tagRect.bottom + 8;
+  // Center horizontally on tag, clamped to viewport
+  var left = tagRect.left + tagRect.width/2 - tipW/2;
+  left = Math.max(6, Math.min(left, window.innerWidth - tipW - 6));
+  tip.style.top = top + 'px';
+  tip.style.left = left + 'px';
+}
+// Single-shot positioning when the cursor enters a tag. mouseover bubbles so we delegate at document level.
+document.addEventListener('mouseover', function(e){
+  var tag = e.target.closest && e.target.closest('.tax-tag, .info-tag');
+  if (!tag) return;
+  // Only position once per enter — don't recompute on every pixel of mouse movement
+  if (tag.__tipPositioned) return;
+  tag.__tipPositioned = true;
+  positionFixedTip(tag, tag.classList.contains('info-tag') ? '.info-tip' : '.tax-tip');
+});
+document.addEventListener('mouseout', function(e){
+  var tag = e.target.closest && e.target.closest('.tax-tag, .info-tag');
+  if (!tag) return;
+  // Only reset when actually leaving the tag (not moving to a child)
+  if (tag.contains(e.relatedTarget)) return;
+  tag.__tipPositioned = false;
+});
+
 // Days until a YYYY-MM-DD date (positive=future, negative=past, null if invalid)
 function daysUntil(dateStr){
   if(!dateStr||dateStr==='N/A')return null;
@@ -2002,7 +2071,7 @@ function render(){
   h='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nextTot=d.np*s,rid='d_'+t;
     var pdDays=daysUntil(d.pd);
     var imminent=(pdDays!==null&&pdDays>=0&&pdDays<=7&&s>0);
-    h+='<tr class="dr'+(imminent?' imminent-payout':'')+'" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+taxHTML(t)+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+daysBadge(d.pd)+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+daysBadge(d.ex)+'</div></td><td><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
+    h+='<tr class="dr'+(imminent?' imminent-payout':'')+'" onclick="tog(\''+rid+'\')"><td class="mono fw7">'+t+taxHTML(t)+'</td><td class="mono">'+fm(PR[t]||0)+'</td><td class="mono '+(d.y>=4?'green':d.y>=2?'accent2':'')+'">'+d.y+'%</td><td class="mono">$'+d.a+'</td><td class="mono green">$'+d.np+'</td><td class="mono fw7 '+(nextTot>0?'green':'muted')+'">'+(nextTot>0?fm(nextTot):'\u2014')+'</td><td><div class="mono" style="font-size:10.5px">'+d.pd+daysBadge(d.pd)+'</div><div class="muted" style="font-size:9.5px">Ex: '+d.ex+daysBadge(d.ex)+'</div></td><td><span class="info-tag"><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span><span class="info-tip">'+(RATING_INFO[d.rt]||rb(d.rt))+'</span></span></td><td>'+sCl(t)+'</td><td>'+bCl(t)+'</td><td class="mono fw7 '+(inc>0?'green':'muted')+'">'+(inc>0?fm(inc):'\u2014')+'</td></tr>';
     h+='<tr class="xr" id="'+rid+'"><td colspan="11"><div class="xp">';
     h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div style="display:flex;gap:10px;align-items:flex-start">'+logoHTML(t)+'<div><span style="font-size:16px;font-weight:700;font-family:var(--mono)">'+t+'</span> <span class="badge '+rc(d.rt)+'" style="margin-left:6px">'+rb(d.rt)+'</span>'+taxHTML(t)+'<div class="muted" style="font-size:10.5px;margin-top:1px">'+d.sc+' \u00b7 '+d.f+(bk[t]?' \u00b7 '+bk[t]:'')+'</div></div></div><div style="text-align:right"><div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--green)">'+d.y+'%</div><div class="muted" style="font-size:9px;text-transform:uppercase">Yield</div></div></div>';
     h+='<div class="dg">';
@@ -2018,7 +2087,7 @@ function render(){
     h+='<span class="muted" style="font-size:9.5px">(global toggle in Settings)</span></div>';
     h+=taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bD').innerHTML=h;
-  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
+  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="info-tag"><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span><span class="info-tip">'+(RATING_INFO[d.rt]||rb(d.rt))+'</span></span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mD').innerHTML=mc;
 
   // GROWTH
@@ -2073,9 +2142,11 @@ function render(){
     if(m.amt<=0)barCls=(barCls?barCls+' ':'')+'empty';
     var amtCls=m.amt<=0?'zero':(isPast?'past':'');
     var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
+    // Inline label of contributing tickers (faint), preserved hover tooltip with $ amounts per ticker
+    var tkLabel=tkPairs.map(function(p){return p[0]}).join(' · ');
     var tip=m.label+' '+curYear+' — '+fm(m.amt)+(tkPairs.length?'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n'):' (no scheduled payouts)');
     var tipAttr=tip.replace(/"/g,'&quot;');
-    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+barCls+'" style="width:'+pct.toFixed(1)+'%"></div></div><span class="pct-amt '+amtCls+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
+    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+barCls+'" style="width:'+pct.toFixed(1)+'%"></div>'+(tkLabel?'<span class="pct-bar-label">'+tkLabel+'</span>':'')+'</div><span class="pct-amt '+amtCls+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
   });
   G('pChart').innerHTML=chartH;
   // Cards: future months (current month onwards) shown by default; past months in a collapsed <details>
@@ -2148,9 +2219,15 @@ function render(){
   }
   if (typeof _renderTaxOutlookHTML !== 'function') {
     window._renderTaxOutlookHTML = function(annualIncome) {
-      // Aggregate dividend income by tax bucket
+      // Aggregate dividend income by tax bucket + track contributing tickers per bucket
       var buckets = {};
+      var bucketTks = {}; // bucket -> { ticker: amount }
       var divTickers = tks.filter(isDiv);
+      var addToBucket = function(b, t, amt) {
+        buckets[b] = (buckets[b] || 0) + amt;
+        if (!bucketTks[b]) bucketTks[b] = {};
+        bucketTks[b][t] = (bucketTks[b][t] || 0) + amt;
+      };
       divTickers.forEach(function(t) {
         var s = sh[t] || 0;
         if (s <= 0) return;
@@ -2160,10 +2237,10 @@ function render(){
         var b = taxBucket(t);
         // Mixed ETFs: split 50/50 between qualified and nonqualified
         if (b === 'mixed') {
-          buckets['qualified'] = (buckets['qualified'] || 0) + inc * 0.5;
-          buckets['nonqualified'] = (buckets['nonqualified'] || 0) + inc * 0.5;
+          addToBucket('qualified', t, inc * 0.5);
+          addToBucket('nonqualified', t, inc * 0.5);
         } else {
-          buckets[b] = (buckets[b] || 0) + inc;
+          addToBucket(b, t, inc);
         }
       });
       var total = Object.keys(buckets).reduce(function(s, k){ return s + buckets[k]; }, 0);
@@ -2180,10 +2257,13 @@ function render(){
         var info = TAX_BUCKETS[k];
         var pct = total > 0 ? (amt / total * 100) : 0;
         var w = maxAmt > 0 ? (amt / maxAmt * 100) : 0;
+        // Tickers contributing to this bucket, sorted by amount desc
+        var tkPairs = Object.keys(bucketTks[k] || {}).map(function(t){return [t, bucketTks[k][t]]}).sort(function(a,b){return b[1]-a[1]});
+        var tkLabel = tkPairs.map(function(p){return p[0]}).join(' · ');
         var tip = (info.label + ' — ' + info.hint).replace(/"/g, '&quot;');
         html += '<div style="display:grid;grid-template-columns:170px 1fr 130px;gap:10px;align-items:center;padding:5px 6px;border-radius:5px;font-size:11px;margin-bottom:2px" title="' + tip + '">';
         html += '<span style="font-size:10.5px;color:' + info.color + ';font-weight:600">' + info.label + '</span>';
-        html += '<div class="snap-bar-bg" style="height:14px"><div class="snap-bar" style="width:' + w.toFixed(1) + '%;background:' + info.color + ';opacity:.85"></div></div>';
+        html += '<div class="snap-bar-bg" style="height:14px;position:relative"><div class="snap-bar" style="width:' + w.toFixed(1) + '%;background:' + info.color + ';opacity:.85"></div>' + (tkLabel ? '<span class="pct-bar-label">' + tkLabel + '</span>' : '') + '</div>';
         html += '<span class="mono" style="font-size:10.5px;text-align:right">' + fm(amt) + ' <span class="muted" style="font-size:9.5px">(' + pct.toFixed(1) + '%)</span></span>';
         html += '</div>';
       });
