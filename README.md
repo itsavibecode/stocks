@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.16**
+**Current Version: v0.7.17**
 
 ---
 
 ## Changelog
+
+### v0.7.17 — 2026-04-29
+- **Last-refresh timestamp under every refresh-style button** — extended the v0.7.16 label to also appear under the News tab's "Refresh News" button (tracks `newsLastFetched`) and the Brokers tab's "Refresh" button (tracks `stApiState.lastFetched`). Each label updates from the data source most relevant to its button. Same monospace mini-label format as the Recheck buttons.
+- **Bar-chart inline ticker labels are now readable.** The faint labels inside payout-chart and Tax Outlook bars were too washed-out at 55% opacity / 9px. Bumped to 92% opacity, 10.5px, weight 600, plus a 0/1/2 text-shadow for contrast against any bar gradient color. Past-month bars stay slightly muted (65%) to preserve the "this is past" cue.
 
 ### v0.7.16 — 2026-04-29
 - **Last-refresh timestamp under each Recheck button.** Small monospace "Last refresh: HH:MM:SS" line appears under the Recheck Stocks button on the Dividends tab and the Recheck button on the Growth tab. Updates whenever a recheck completes or the price-fetch loop finishes — whichever is more recent. Persists across sessions in `pf_last_recheck` localStorage so you see the prior session's last refresh time on page open.

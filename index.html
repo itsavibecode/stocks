@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.16</title>
+<title>Portfolio Command Center v0.7.17</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -122,8 +122,8 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pct-bar.future{background:linear-gradient(90deg,var(--accent),var(--accent2));opacity:.85}
 .pct-bar.past{background:linear-gradient(90deg,#5a6e8a,#2a3548);opacity:.55}
 .pct-bar.empty{background:transparent;min-width:0;opacity:1}
-.pct-bar-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;font-family:var(--mono);font-size:9px;font-weight:500;color:rgba(255,255,255,.55);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px;z-index:1}
-.pct-row.past .pct-bar-label{color:rgba(255,255,255,.35)}
+.pct-bar-label{position:absolute;inset:0;display:flex;align-items:center;padding:0 8px;font-family:var(--mono);font-size:10.5px;font-weight:600;color:rgba(255,255,255,.92);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.4px;z-index:1;text-shadow:0 1px 2px rgba(0,0,0,.7),0 0 4px rgba(0,0,0,.4)}
+.pct-row.past .pct-bar-label{color:rgba(255,255,255,.65);text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .pct-amt{font-family:var(--mono);font-weight:600;text-align:right;color:var(--text)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
 .pct-amt.past{color:var(--muted);font-weight:500}
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.16</div>
+        <div class="logo-ver">v0.7.17</div>
       </div>
     </div>
     <div class="header-actions">
@@ -446,7 +446,10 @@ body.text-xl .sc .scv{font-size:24px}
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
       <input class="search-bar" type="text" placeholder="Search news..." id="nQ" oninput="render()">
       <span class="news-status" id="newsStatus"></span>
-      <button class="btn btn-outline" onclick="fetchAllNews()" style="font-size:10px;padding:5px 10px">&#8635; Refresh News</button>
+      <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px">
+        <button class="btn btn-outline" onclick="fetchAllNews()" style="font-size:10px;padding:5px 10px">&#8635; Refresh News</button>
+        <span id="nRefreshTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
+      </div>
     </div>
     <div class="table-wrap dt"><table id="tN"><thead><tr>
       <th data-col="ticker" onclick="ds('tN','ticker')">Ticker <span class="sa">&#9660;</span></th>
@@ -512,8 +515,11 @@ body.text-xl .sc .scv{font-size:24px}
         <div style="font-weight:700;font-size:14px">Connected Brokerages</div>
         <div class="muted" style="font-size:11px">Read-only view of positions reported by SnapTrade. Manage connections in <a onclick="sTab('settings')" style="color:var(--accent);cursor:pointer">Settings</a>.</div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline" onclick="snapTradeRefresh()" style="font-size:10px">&#8635; Refresh</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px">
+          <button class="btn btn-outline" onclick="snapTradeRefresh()" style="font-size:10px">&#8635; Refresh</button>
+          <span id="bRefreshTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
+        </div>
         <button class="btn btn-primary" onclick="startSnapTradeSync()" style="font-size:10px">&#128229; Sync to Portfolio</button>
         <button class="btn btn-outline" onclick="snapTradeFetchTransactions()" style="font-size:10px">&#128176; Fetch Transactions</button>
       </div>
@@ -749,7 +755,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.16 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.17 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -780,7 +786,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.16";
+var VERSION = "0.7.17";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1736,19 +1742,24 @@ var isDiv=function(t){return DV[t]&&DV[t].y>0};
 // ═════════════════════════════════════════════════
 var lastRecheckTime=0;
 try{lastRecheckTime=parseInt(localStorage.getItem('pf_last_recheck')||'0')||0}catch(e){}
+function _fmtRefreshTime(ts){
+  if(!ts)return '';
+  var d=new Date(ts);
+  var hh=String(d.getHours()).padStart(2,'0');
+  var mm=String(d.getMinutes()).padStart(2,'0');
+  var ss=String(d.getSeconds()).padStart(2,'0');
+  return 'Last refresh: '+hh+':'+mm+':'+ss;
+}
 function updateRecheckTimeUI(){
-  var label='';
-  // Use whichever is most recent: explicit recheck OR price fetch (both are "stock refreshes")
-  var ts=Math.max(lastRecheckTime,pricesLastFetched||0);
-  if(ts){
-    var d=new Date(ts);
-    var hh=String(d.getHours()).padStart(2,'0');
-    var mm=String(d.getMinutes()).padStart(2,'0');
-    var ss=String(d.getSeconds()).padStart(2,'0');
-    label='Last refresh: '+hh+':'+mm+':'+ss;
-  }
-  var d1=G('dRecheckTime');if(d1)d1.textContent=label;
-  var g1=G('gRecheckTime');if(g1)g1.textContent=label;
+  // Stock data (recheck or price fetch — whichever is more recent)
+  var stockTs=Math.max(lastRecheckTime,pricesLastFetched||0);
+  var stockLabel=_fmtRefreshTime(stockTs);
+  var d1=G('dRecheckTime');if(d1)d1.textContent=stockLabel;
+  var g1=G('gRecheckTime');if(g1)g1.textContent=stockLabel;
+  // News data
+  var n1=G('nRefreshTime');if(n1)n1.textContent=_fmtRefreshTime(newsLastFetched);
+  // Brokers (SnapTrade)
+  var b1=G('bRefreshTime');if(b1)b1.textContent=_fmtRefreshTime(stApiState.lastFetched);
 }
 function recheckMissingData(){
   if(!FINNHUB_KEY)return;
