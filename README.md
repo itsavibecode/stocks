@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.4**
+**Current Version: v0.7.5**
 
 ---
 
 ## Changelog
+
+### v0.7.5 — 2026-04-29
+- **Two more backup price providers** — Settings → Backup API Keys now has fields for **Polygon.io** (5 calls/min free, returns previous-day close) and **Twelve Data** (800 calls/day free, real-time price). Same drop-in pattern as AlphaVantage and Tiingo. Each with its own save/clear button and status line; "N configured" count pill on the card title now goes up to 4.
+- **Quote chain extended:** Finnhub → AlphaVantage → Tiingo → Polygon → Twelve Data. First provider to return a price wins. News chain stays Finnhub → AlphaVantage → Tiingo (Polygon and Twelve Data don't expose news on their free tiers — neither does Barchart at usable price points, and Dividend.com has no public API at all).
 
 ### v0.7.4 — 2026-04-29
 - **SnapTrade Phase 4 — Auto-sync toggle + DRIP visibility.** Final piece of the SnapTrade roadmap.
