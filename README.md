@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.12**
+**Current Version: v0.7.13**
 
 ---
 
 ## Changelog
+
+### v0.7.13 — 2026-04-29
+- **Days-until countdown badges** next to every pay-date and ex-date in the Dividends table and the dividend deep-dive panel. Color-coded: `today` green, `in Nd` (≤7) light green, `in Nd` (≤30) accent blue, `in Nd` (>30) muted gray, `Nd ago` dim gray for past dates.
+- **Imminent-payout row highlight** — Dividend rows with a pay-date within the next 7 days *and* shares set get a subtle 3px green left border, so checks-incoming-soon are visually obvious.
 
 ### v0.7.12 — 2026-04-29
 - **Account Allocation chart** on the Snapshot panel — slots between Sector Allocation and Top Holdings. Shows top 5 accounts by current value with "Other (N)" rollup, same horizontal-bar pattern as the other two. Three-column grid on wide desktops, two-column on tablet, single-column on mobile.
