@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.9**
+**Current Version: v0.7.10**
 
 ---
 
 ## Changelog
+
+### v0.7.10 — 2026-04-29
+- **Dividend reminders.** New "Dividend Reminders" card in Settings — toggle on/off plus configurable lead time for both ex-date and pay-date (default 1 day, max 14). When enabled, each sign-in scans dividend tickers with shares set, fires a toast + chime + activity-log entry for any upcoming ex-date or pay-date within the lead window. Each unique reminder fires once per occurrence — refreshing the page won't re-trigger.
+- **Per-ticker opt-out.** Each Dividends deep-dive panel got a "🔔 Reminders for X: On/Off" toggle so you can silence individual stocks without disabling globally.
+- **Auto-pruned reminder history** in `prefs.notifiedReminders`: entries older than 60 days are dropped, total capped at 200.
 
 ### v0.7.9 — 2026-04-29
 - **Tax Outlook panel on the All tab** — estimates your annual dividend income broken down by tax treatment: Qualified Dividends, Non-Qualified Ordinary, REIT Distributions, Foreign Dividends, ETF Mix (split 50/50), Collectibles (28%), and K-1 Partnerships. Each bucket gets a color-coded horizontal bar with $ amount and % of total dividend income. Hover a row for the tax-treatment note. Classification logic uses the existing `TAX_INFO` table when available (REIT/Foreign Tax/K-1/etc.) and falls back to sector-based heuristics (REIT sector, bond/treasury → ordinary).

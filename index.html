@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.9</title>
+<title>Portfolio Command Center v0.7.10</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -390,7 +390,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.9</div>
+        <div class="logo-ver">v0.7.10</div>
       </div>
     </div>
     <div class="header-actions">
@@ -558,6 +558,26 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; Dividend Reminders</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast + chime when an ex-date or pay-date is approaching. Each reminder fires once per occurrence — refreshing the page won't re-trigger.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:10px">
+          <input type="checkbox" id="sRemEnabled" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:14px;height:14px">
+          <span>Enable dividend reminders</span>
+        </label>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>ex-date</strong></div>
+            <input class="mi" type="number" id="sRemDaysEx" min="0" max="14" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>pay-date</strong></div>
+            <input class="mi" type="number" id="sRemDaysPay" min="0" max="14" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+          </div>
+        </div>
+        <div id="remStatus" style="font-size:10.5px;color:var(--muted);margin-top:8px"></div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
         <div id="settingsAcctList"></div>
@@ -711,7 +731,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.9 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.10 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -738,7 +758,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.9";
+var VERSION = "0.7.10";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -842,6 +862,111 @@ function renderAccountCard(){
 }
 
 // ═════════════════════════════════════════════════
+// DIVIDEND REMINDERS — ex-date and pay-date proximity alerts
+// ═════════════════════════════════════════════════
+function saveReminderPrefs(){
+  var p=loadPrefs();
+  var en=G('sRemEnabled');var ex=G('sRemDaysEx');var pd=G('sRemDaysPay');
+  if(en)p.remEnabled=!!en.checked;
+  if(ex)p.remDaysEx=Math.max(0,Math.min(14,parseInt(ex.value)||1));
+  if(pd)p.remDaysPay=Math.max(0,Math.min(14,parseInt(pd.value)||1));
+  savePrefs(p);
+  updateReminderStatus();
+}
+function loadReminderPrefsUI(){
+  var p=loadPrefs();
+  var en=G('sRemEnabled');if(en)en.checked=!!p.remEnabled;
+  var ex=G('sRemDaysEx');if(ex)ex.value=(p.remDaysEx==null?1:p.remDaysEx);
+  var pd=G('sRemDaysPay');if(pd)pd.value=(p.remDaysPay==null?1:p.remDaysPay);
+  updateReminderStatus();
+}
+function updateReminderStatus(){
+  var el=G('remStatus');if(!el)return;
+  var p=loadPrefs();
+  if(!p.remEnabled){el.innerHTML='<span class="muted">Disabled — toggle on to activate.</span>';return}
+  var optedOut=Object.keys(p.remOptOut||{}).length;
+  el.innerHTML='<span style="color:var(--green)">✓ Enabled</span>'+(optedOut?' <span class="muted">· '+optedOut+' ticker'+(optedOut!==1?'s':'')+' opted out (toggle in dividend deep-dive)</span>':'');
+}
+function isReminderOptedIn(ticker){
+  var p=loadPrefs();
+  return !(p.remOptOut&&p.remOptOut[ticker]);
+}
+function toggleReminderForTicker(ticker){
+  var p=loadPrefs();
+  if(!p.remOptOut)p.remOptOut={};
+  if(p.remOptOut[ticker]){delete p.remOptOut[ticker];showToast('Reminders enabled for '+ticker)}
+  else{p.remOptOut[ticker]=1;showToast('Reminders disabled for '+ticker)}
+  savePrefs(p);
+  render();
+  updateReminderStatus();
+}
+// Run once per signed-in load: scan dividend tickers, fire any reminders
+// for ex-dates/pay-dates within the threshold that haven't been notified yet.
+function runReminderCheck(){
+  var p=loadPrefs();
+  if(!p.remEnabled)return;
+  var daysEx=p.remDaysEx==null?1:p.remDaysEx;
+  var daysPay=p.remDaysPay==null?1:p.remDaysPay;
+  var notified=p.notifiedReminders||{};
+  var todayMs=Date.now();
+  var fired=[];
+  tks.forEach(function(t){
+    if(!isDiv(t))return;
+    var s=sh[t]||0;if(s<=0)return;
+    if(!isReminderOptedIn(t))return;
+    var d=DV[t];if(!d)return;
+    // Ex-date check
+    if(d.ex&&d.ex!=='N/A'){
+      var exMs=new Date(d.ex+'T12:00:00').getTime();
+      if(!isNaN(exMs)){
+        var daysToEx=Math.ceil((exMs-todayMs)/86400000);
+        if(daysToEx>=0&&daysToEx<=daysEx){
+          var key=t+'-ex-'+d.ex;
+          if(!notified[key]){
+            var msg=t+' ex-date '+(daysToEx===0?'today':'in '+daysToEx+' day'+(daysToEx!==1?'s':''))+' ('+d.ex+') — buy by today to receive next dividend';
+            showToast(msg);playNotifSound();
+            logActivity('reminder.exdate',msg);
+            notified[key]=todayMs;
+            fired.push(key);
+          }
+        }
+      }
+    }
+    // Pay-date check
+    if(d.pd&&d.pd!=='N/A'){
+      var pdMs=new Date(d.pd+'T12:00:00').getTime();
+      if(!isNaN(pdMs)){
+        var daysToPay=Math.ceil((pdMs-todayMs)/86400000);
+        if(daysToPay>=0&&daysToPay<=daysPay){
+          var key=t+'-pay-'+d.pd;
+          if(!notified[key]){
+            var amount=d.np*s;
+            var msg=t+' pay-date '+(daysToPay===0?'today':'in '+daysToPay+' day'+(daysToPay!==1?'s':''))+' ('+d.pd+') — '+(amount>0?fm(amount)+' incoming':'~$'+d.np+'/sh');
+            showToast(msg);playNotifSound();
+            logActivity('reminder.paydate',msg);
+            notified[key]=todayMs;
+            fired.push(key);
+          }
+        }
+      }
+    }
+  });
+  // Prune notified entries older than 60 days (so future cycles can re-notify)
+  var sixtyAgo=todayMs-60*86400000;
+  Object.keys(notified).forEach(function(k){if(notified[k]<sixtyAgo)delete notified[k]});
+  // Cap at 200 most-recent
+  var keys=Object.keys(notified);
+  if(keys.length>200){
+    keys.sort(function(a,b){return notified[a]-notified[b]});
+    keys.slice(0,keys.length-200).forEach(function(k){delete notified[k]});
+  }
+  if(fired.length>0){
+    p.notifiedReminders=notified;
+    savePrefs(p);
+  }
+}
+
+// ═════════════════════════════════════════════════
 // ACTIVITY LOG — render / export / clear
 // ═════════════════════════════════════════════════
 function renderActivityCard(){
@@ -935,6 +1060,10 @@ if (firebaseReady) {
             if (DV[t] && isDiv(t)) annualIncome += (DV[t].a||0) * s;
           });
           if (totalValue > 0) _recordPortfolioSnapshot(totalValue, annualIncome);
+        }
+        // Reminder check — fires toasts for upcoming ex-dates / pay-dates
+        if (typeof runReminderCheck === 'function') {
+          try { runReminderCheck(); } catch (e) { console.error('Reminder check error:', e); }
         }
       });
       if (becameSignedIn) logActivity('auth.signin', 'Signed in as '+(user.email||user.displayName||user.uid));
@@ -1813,6 +1942,11 @@ function render(){
     h+='</div>';
     if(d.yr>=25)h+='<div class="db" style="background:#fcd34d10;border:1px solid #fcd34d20;color:var(--gold)">\ud83d\udc51 '+(d.yr>=50?'Dividend King':'Aristocrat')+' \u2014 '+d.yr+' yrs of increases</div>';
     if(d.pr>80&&d.pr>0)h+='<div class="db" style="background:var(--red-dim);border:1px solid #f8717125;color:var(--red)">\u26a0 High payout ('+d.pr+'%)</div>';
+    // Per-ticker reminder toggle
+    var remOptIn=isReminderOptedIn(t);
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10.5px;color:var(--muted)"><span>\ud83d\udd14 Reminders for '+t+':</span>';
+    h+='<button class="btn btn-outline" onclick="event.stopPropagation();toggleReminderForTicker(\''+t+'\')" style="font-size:9.5px;padding:3px 8px">'+(remOptIn?'On':'Off')+'</button>';
+    h+='<span class="muted" style="font-size:9.5px">(global toggle in Settings)</span></div>';
     h+=taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bD').innerHTML=h;
   mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
@@ -2659,6 +2793,7 @@ function loadPrefUI(){
   var tdEl=G('sTdKey');if(tdEl)tdEl.value=prefs.twelvedataKey||'';
   loadApiKey();
   updateApiKeyStatus();
+  if(typeof loadReminderPrefsUI==='function')loadReminderPrefsUI();
 }
 
 // ═════════════════════════════════════════════════
