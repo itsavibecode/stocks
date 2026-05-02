@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.7**
+**Current Version: v0.7.8**
 
 ---
 
 ## Changelog
+
+### v0.7.8 — 2026-04-29
+- **Portfolio history snapshots + line chart on All tab.** Once per day after sign-in, the app records `{date, totalValue, annualIncome}` to `prefs.history` (Firestore-synced, capped at 730 days). The Portfolio Snapshot panel grew a "Portfolio Value Over Time" SVG line chart — area + line plot with min/mid/max Y labels, first-and-last date X labels, change-since-start summary in the title bar (green for up, red for down). Hover anywhere on the chart for a tooltip showing the exact date and value at that point.
+- Empty state when only one snapshot exists ("History starts accumulating from today...") so day-1 users see a clear message rather than a broken chart.
 
 ### v0.7.7 — 2026-04-29 — UX polish bundle
 - **News status now shows which provider(s) answered.** After a fetch completes, the status line aggregates per-ticker provider attribution as e.g. "● Live — 9:14:21 PM — Finnhub 21 · Tiingo 2." Makes it easy to see when fallbacks are kicking in.
