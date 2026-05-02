@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.15</title>
+<title>Portfolio Command Center v0.7.16</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.15</div>
+        <div class="logo-ver">v0.7.16</div>
       </div>
     </div>
     <div class="header-actions">
@@ -463,7 +463,10 @@ body.text-xl .sc .scv{font-size:24px}
     <div class="sg" id="dS"></div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <input class="search-bar" type="text" placeholder="Search dividends by ticker, account, or rating..." id="divQ" oninput="render()" style="margin-bottom:0">
-      <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px;flex-shrink:0">&#8635; Recheck Stocks</button>
+      <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px;flex-shrink:0">
+        <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px">&#8635; Recheck Stocks</button>
+        <span id="dRecheckTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
+      </div>
     </div>
     <div class="table-wrap dt"><table id="tD"><thead><tr>
       <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
@@ -485,7 +488,10 @@ body.text-xl .sc .scv{font-size:24px}
   <div class="tab-content" id="content-growth">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
       <input class="search-bar" type="text" placeholder="Search growth stocks by ticker, sector, or account..." id="growthQ" oninput="render()" style="margin-bottom:0">
-      <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px;flex-shrink:0">&#8635; Recheck</button>
+      <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px;flex-shrink:0">
+        <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px">&#8635; Recheck</button>
+        <span id="gRecheckTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
+      </div>
     </div>
     <div class="table-wrap dt"><table id="tG"><thead><tr>
       <th data-col="ticker" onclick="ds('tG','ticker')">Ticker <span class="sa">&#9660;</span></th>
@@ -743,7 +749,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.15 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.16 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -774,7 +780,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.15";
+var VERSION = "0.7.16";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1579,6 +1585,7 @@ function fetchAllPrices() {
       try { localStorage.setItem('pf_prices', JSON.stringify(livePrices)); localStorage.setItem('pf_prices_ts', ''+pricesLastFetched); } catch(e){}
       saveCacheToCloud();
       if (st) st.innerHTML = '<span class="news-live">&#9679; Prices live &mdash; ' + new Date().toLocaleTimeString() + '</span>';
+      if (typeof updateRecheckTimeUI === 'function') updateRecheckTimeUI();
       render();
       return;
     }
@@ -1727,6 +1734,22 @@ var isDiv=function(t){return DV[t]&&DV[t].y>0};
 // ═════════════════════════════════════════════════
 // AUTO-FIX: recheck stocks with missing sector or dividend data
 // ═════════════════════════════════════════════════
+var lastRecheckTime=0;
+try{lastRecheckTime=parseInt(localStorage.getItem('pf_last_recheck')||'0')||0}catch(e){}
+function updateRecheckTimeUI(){
+  var label='';
+  // Use whichever is most recent: explicit recheck OR price fetch (both are "stock refreshes")
+  var ts=Math.max(lastRecheckTime,pricesLastFetched||0);
+  if(ts){
+    var d=new Date(ts);
+    var hh=String(d.getHours()).padStart(2,'0');
+    var mm=String(d.getMinutes()).padStart(2,'0');
+    var ss=String(d.getSeconds()).padStart(2,'0');
+    label='Last refresh: '+hh+':'+mm+':'+ss;
+  }
+  var d1=G('dRecheckTime');if(d1)d1.textContent=label;
+  var g1=G('gRecheckTime');if(g1)g1.textContent=label;
+}
 function recheckMissingData(){
   if(!FINNHUB_KEY)return;
   // Priority 1: no DV entry at all or no sector
@@ -1748,7 +1771,10 @@ function recheckMissingData(){
   function next(){
     if(idx>=queue.length){
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      lastRecheckTime=Date.now();
+      try{localStorage.setItem('pf_last_recheck',''+lastRecheckTime)}catch(e){}
       render();
+      updateRecheckTimeUI();
       showToast('Recheck complete \u2014 '+queue.length+' stocks checked');
       return;
     }
@@ -3693,6 +3719,7 @@ loadPrefUI();
 renderSnapTradeCard();
 renderBrokersTab();
 renderActivityCard();
+updateRecheckTimeUI();
 
 // Set baseline news count for notifications
 prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});

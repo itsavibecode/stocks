@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.15**
+**Current Version: v0.7.16**
 
 ---
 
 ## Changelog
+
+### v0.7.16 — 2026-04-29
+- **Last-refresh timestamp under each Recheck button.** Small monospace "Last refresh: HH:MM:SS" line appears under the Recheck Stocks button on the Dividends tab and the Recheck button on the Growth tab. Updates whenever a recheck completes or the price-fetch loop finishes — whichever is more recent. Persists across sessions in `pf_last_recheck` localStorage so you see the prior session's last refresh time on page open.
 
 ### v0.7.15 — 2026-04-29
 - **News column reorder.** Moved the Date column to sit between Ticker and Price (was previously at the far right). Order is now: Ticker · Date · Price · Headline · Source. Date sort still defaults active.
