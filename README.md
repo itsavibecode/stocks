@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.11**
+**Current Version: v0.7.12**
 
 ---
 
 ## Changelog
+
+### v0.7.12 — 2026-04-29
+- **Account Allocation chart** on the Snapshot panel — slots between Sector Allocation and Top Holdings. Shows top 5 accounts by current value with "Other (N)" rollup, same horizontal-bar pattern as the other two. Three-column grid on wide desktops, two-column on tablet, single-column on mobile.
+- **Yield on Cost stat** — annual dividend income on tracked lots ÷ cost basis. Surfaces when at least one lot has an entry price set; sits next to Cost Basis and Unrealized P/L. Yield on cost gets more interesting than current yield once your basis is below market.
+- **Stat box "Sectors / Accounts" combined** to show both counts in one box (e.g. "5 / 3").
 
 ### v0.7.11 — 2026-04-29
 - **Cost basis + unrealized P/L tracking.** Lots got a new optional `p` field (entry price per share). The +Add modal grew an "Entry $/sh (optional)" input alongside the shares + account fields. Each Holdings-by-Lot row in the deep-dive panel now shows a click-to-edit Entry $ column and an Unrealized column with `+/−$ amount` and `+/−%` (green for gain, red for loss). Hover the unrealized cell for the cost-basis breakdown.
