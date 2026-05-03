@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.20</title>
+<title>Portfolio Command Center v0.7.21</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -97,6 +97,20 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .snap-bar.b-hold{background:linear-gradient(90deg,var(--green),var(--accent2))}
 .snap-amt{font-family:var(--mono);font-weight:600;text-align:right;font-size:10.5px;color:var(--text)}
 .snap-empty{color:var(--muted);font-style:italic;font-size:11px;padding:10px 0}
+.goal-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px}
+.goal-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.goal-title{font-weight:700;font-size:13px}
+.goal-pct{font-family:var(--mono);font-weight:700;font-size:13px;margin-left:6px}
+.goal-pct.green{color:var(--green)}
+.goal-pct.accent{color:var(--accent2)}
+.goal-pct.yellow{color:var(--yellow)}
+.goal-amounts{font-family:var(--mono);font-size:11.5px;color:var(--text)}
+.goal-amounts .muted{color:var(--muted);font-size:10.5px}
+.goal-bar-bg{background:var(--card3);border-radius:6px;height:10px;overflow:hidden}
+.goal-bar{height:100%;border-radius:6px;transition:width .3s}
+.goal-bar.bar-green{background:linear-gradient(90deg,var(--green),var(--accent2))}
+.goal-bar.bar-accent{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.goal-bar.bar-yellow{background:linear-gradient(90deg,var(--yellow),var(--orange))}
 .snap-history{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px}
 .snap-history-title{font-weight:700;font-size:12.5px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
 .snap-history-svg{display:block;width:100%;height:140px}
@@ -214,6 +228,29 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .news-status{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);margin-left:12px}
 .news-live{color:var(--green)}
 .news-stale{color:var(--yellow)}
+.staleness-fresh{color:var(--green)}
+.staleness-aging{color:var(--yellow)}
+.staleness-old{color:var(--red);animation:fadeUp .3s}
+/* Compact density — power-user mode for portfolios with many tickers */
+body.compact .container{padding:0 14px}
+body.compact .header{padding:8px 0}
+body.compact .auth-bar{padding:3px 0}
+body.compact .tabs{margin-top:8px;padding-bottom:6px}
+body.compact .tab{padding:6px 10px;font-size:11px}
+body.compact table{font-size:11px}
+body.compact table td,body.compact table th{padding:4px 6px}
+body.compact .table-wrap{margin-top:6px}
+body.compact .stat-box{padding:3px 9px}
+body.compact .stat-val{font-size:13px}
+body.compact .sc{padding:8px 12px}
+body.compact .scv{font-size:14px}
+body.compact .snap-stat{padding:7px 10px}
+body.compact .snap-stat-val{font-size:15px}
+body.compact .snap-chart{padding:10px 12px}
+body.compact .snap-row{margin-bottom:3px}
+body.compact .broker-card{padding:10px 12px}
+body.compact .pl-entry{padding:8px 10px}
+body.compact .dr td{padding-top:5px;padding-bottom:5px}
 
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:14px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
@@ -228,8 +265,10 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .search-bar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;width:100%;max-width:440px;transition:border .15s}
 .search-bar:focus{border-color:var(--accent)}
 
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px}
+.table-wrap{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;margin-top:10px}
 table{width:100%;border-collapse:separate;border-spacing:0 2px;font-size:12px}
+/* Sticky table headers — top offset clears the page header (which is sticky at top:0 z-index:100) */
+table thead th{position:sticky;top:60px;background:var(--bg);z-index:5;box-shadow:inset 0 -1px 0 var(--border)}
 thead th{padding:8px 10px;text-align:left;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;background:var(--bg)}
 thead th:hover{color:var(--text2)}
 thead th .sa{margin-left:3px;font-size:9px;opacity:.3}
@@ -402,7 +441,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.20</div>
+        <div class="logo-ver">v0.7.21</div>
       </div>
     </div>
     <div class="header-actions">
@@ -613,6 +652,16 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127919; Annual Dividend Goal</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Set a target annual dividend income — a progress bar appears on the All-tab Portfolio Snapshot. Leave blank to hide.</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">$</span>
+          <input class="mi" type="number" id="sDivGoal" min="0" step="100" placeholder="e.g. 10000" onchange="saveDivGoal()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
+          <span style="font-size:11px;color:var(--muted)">per year</span>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
         <div id="settingsAcctList"></div>
@@ -639,6 +688,13 @@ body.text-xl .sc .scv{font-size:24px}
               <option value="lg">Large</option>
               <option value="xl">Extra Large</option>
             </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Density</div>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;cursor:pointer;padding:5px 0">
+              <input type="checkbox" id="sCompact" onchange="setCompact(this.checked)" style="accent-color:var(--accent);width:14px;height:14px">
+              <span>Compact</span>
+            </label>
           </div>
         </div>
       </div>
@@ -766,7 +822,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.20 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.21 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -797,7 +853,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.20";
+var VERSION = "0.7.21";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -915,6 +971,19 @@ function saveReminderPrefs(){
   savePrefs(p);
   updateReminderStatus();
   showToast('Reminder settings saved');
+}
+function saveDivGoal(){
+  var p=loadPrefs();
+  var el=G('sDivGoal');
+  var v=el?(parseFloat(el.value)||0):0;
+  p.dividendGoal=Math.max(0,v);
+  savePrefs(p);
+  showToast(p.dividendGoal>0?'Dividend goal set to '+fm(p.dividendGoal):'Dividend goal cleared');
+  render();
+}
+function loadDivGoalUI(){
+  var p=loadPrefs();
+  var el=G('sDivGoal');if(el)el.value=p.dividendGoal||'';
 }
 function loadReminderPrefsUI(){
   var p=loadPrefs();
@@ -1147,12 +1216,86 @@ function saveToCloud() {
 // already persists via pf_dv_custom + the lots sync, so it doesn't need a separate cache field.
 function saveCacheToCloud(){
   if(!syncEnabled||!currentUser||!db)return;
+  try{maybeAutoTrimCloudDoc()}catch(e){}
   db.collection('portfolios').doc(currentUser.uid).set({
     cache:{
       news:liveNews,newsTs:newsLastFetched,
       prices:livePrices,pricesTs:pricesLastFetched
     }
   },{merge:true}).catch(function(e){console.error('Cache sync error:',e)});
+}
+
+// Estimate the on-wire size of the user's portfolio doc by stringifying
+// the fields the browser writes. Used to decide when to auto-trim before
+// hitting Firestore's 1 MB hard cap on documents.
+function _estimateCloudDocSizeBytes(){
+  try {
+    var snapshot = {
+      tickers: tks,
+      lots: lots,
+      prefs: loadPrefs(),
+      cache: { news: liveNews, prices: livePrices },
+      activity: activityLog,
+      dvCache: (function(){var o={};tks.forEach(function(t){if(DV[t]&&(sh[t]||0)>0)o[t]=DV[t]});return o})()
+    };
+    return new Blob([JSON.stringify(snapshot)]).size;
+  } catch (e) { return 0; }
+}
+// Auto-trim the in-memory copies of high-churn fields when the user's cloud doc
+// is approaching Firestore's 1 MB hard cap (700 KB threshold). Drops the oldest
+// activity entries, history snapshots, notifiedReminders entries, and news cache
+// items in priority order. Only the writer (this browser) needs to know — the
+// trims sync to Firestore on the next regular write.
+var _lastTrimRunMs = 0;
+function maybeAutoTrimCloudDoc(){
+  if (Date.now() - _lastTrimRunMs < 30000) return; // throttle: at most every 30s
+  var bytes = _estimateCloudDocSizeBytes();
+  var THRESHOLD = 700 * 1024;
+  if (bytes < THRESHOLD) return;
+  _lastTrimRunMs = Date.now();
+  var prefs = loadPrefs();
+  var trimmed = [];
+  // 1. Activity log → keep last 100 (was 500)
+  if (activityLog.length > 100) {
+    var dropped = activityLog.length - 100;
+    activityLog.length = 100;
+    try { localStorage.setItem('pf_activity', JSON.stringify(activityLog.slice(0,100))); } catch(e) {}
+    trimmed.push('activity log -' + dropped);
+  }
+  // 2. notifiedReminders older than 30 days (was 60)
+  if (prefs.notifiedReminders) {
+    var thirtyAgo = Date.now() - 30 * 86400000;
+    var dropCount = 0;
+    Object.keys(prefs.notifiedReminders).forEach(function(k){
+      if (prefs.notifiedReminders[k] < thirtyAgo) { delete prefs.notifiedReminders[k]; dropCount++; }
+    });
+    if (dropCount) trimmed.push('notifiedReminders -' + dropCount);
+  }
+  // 3. prefs.history snapshots → last 365 (was 730)
+  if (Array.isArray(prefs.history) && prefs.history.length > 365) {
+    var hDrop = prefs.history.length - 365;
+    prefs.history = prefs.history.slice(-365);
+    trimmed.push('history -' + hDrop);
+  }
+  // 4. cache.news entries → keep last 50 by ticker
+  if (typeof liveNews === 'object' && liveNews) {
+    var newsKeys = Object.keys(liveNews);
+    if (newsKeys.length > 50) {
+      var keep = newsKeys.slice(-50);
+      var newCache = {};
+      keep.forEach(function(k){ newCache[k] = liveNews[k]; });
+      liveNews = newCache;
+      try { localStorage.setItem('pf_news', JSON.stringify(liveNews)); } catch(e) {}
+      trimmed.push('news cache -' + (newsKeys.length - 50));
+    }
+  }
+  if (trimmed.length) {
+    savePrefs(prefs);
+    var newBytes = _estimateCloudDocSizeBytes();
+    var msg = 'Auto-trimmed cloud doc from ' + Math.round(bytes/1024) + 'KB to ' + Math.round(newBytes/1024) + 'KB: ' + trimmed.join(', ');
+    showToast(msg);
+    if (typeof logActivity === 'function') logActivity('data.autotrim', msg);
+  }
 }
 
 // Write the user's DV map (per-ticker dividend metadata: ex, pd, np, etc.) to
@@ -1165,6 +1308,7 @@ function saveDvToCloud(){
   if(!syncEnabled||!currentUser||!db)return;
   if(_dvSyncTimer)clearTimeout(_dvSyncTimer);
   _dvSyncTimer=setTimeout(function(){
+    try{maybeAutoTrimCloudDoc()}catch(e){}
     var snapshot={};
     tks.forEach(function(t){
       if(DV[t]&&(sh[t]||0)>0)snapshot[t]=DV[t];
@@ -1797,6 +1941,27 @@ function _fmtRefreshTime(ts){
   var mm=String(d.getMinutes()).padStart(2,'0');
   var ss=String(d.getSeconds()).padStart(2,'0');
   return 'Last refresh: '+hh+':'+mm+':'+ss;
+}
+// Returns {ageMin, label, cls} for the price-status header indicator.
+// Color-shifts to yellow at 30 min, red at 24 hrs, with a freshness label.
+function _priceStaleness(ts){
+  if(!ts)return {ageMin:0,label:'never refreshed',cls:'staleness-old'};
+  var ageMs=Date.now()-ts;
+  var ageMin=Math.floor(ageMs/60000);
+  var label;
+  if(ageMin<1)label='just now';
+  else if(ageMin<60)label=ageMin+' min ago';
+  else if(ageMin<1440)label=Math.floor(ageMin/60)+'h ago';
+  else label=Math.floor(ageMin/1440)+'d ago';
+  var cls=ageMin<30?'staleness-fresh':(ageMin<1440?'staleness-aging':'staleness-old');
+  return {ageMin:ageMin,label:label,cls:cls};
+}
+function refreshPriceStatusFreshness(){
+  var st=G('priceStatus');if(!st)return;
+  if(!pricesLastFetched){st.innerHTML='';return}
+  var f=_priceStaleness(pricesLastFetched);
+  var prefix=f.ageMin<30?'&#9679; Live':(f.ageMin<1440?'&#9679; Stale':'&#9888; Very stale');
+  st.innerHTML='<span class="'+f.cls+'">'+prefix+' &mdash; '+f.label+'</span>';
 }
 function updateRecheckTimeUI(){
   // Stock data (recheck or price fetch — whichever is more recent)
@@ -2529,7 +2694,16 @@ function render(){
       }
     }
     sH+='<div class="snap-stat"><div class="snap-stat-label">Sectors / Accounts</div><div class="snap-stat-val purple">'+sectorEntries.length+' / '+accountEntries.length+'</div></div>';
-    sH+='</div><div class="snap-charts">';
+    sH+='</div>';
+    // Dividend goal progress (only shown when goal is set)
+    var goalAmt=loadPrefs().dividendGoal||0;
+    if(goalAmt>0){
+      var goalPct=Math.min(100,(annualIncome/goalAmt)*100);
+      var goalCls=goalPct>=100?'green':(goalPct>=50?'accent':'yellow');
+      var remaining=Math.max(0,goalAmt-annualIncome);
+      sH+='<div class="goal-wrap"><div class="goal-head"><div><span class="goal-title">🎯 Annual Dividend Goal</span> <span class="goal-pct '+goalCls+'">'+goalPct.toFixed(1)+'%</span></div><div class="goal-amounts">'+fm(annualIncome)+' <span class="muted">/ '+fm(goalAmt)+(remaining>0?' &middot; '+fm(remaining)+' to go':' &middot; 🎉 reached')+'</span></div></div><div class="goal-bar-bg"><div class="goal-bar bar-'+goalCls+'" style="width:'+goalPct.toFixed(1)+'%"></div></div></div>';
+    }
+    sH+='<div class="snap-charts">';
     // Sector allocation
     sH+='<div class="snap-chart"><div class="snap-chart-title">📊 Sector Allocation<span class="snap-sub">'+sectorEntries.length+' total</span></div>';
     if(topSectors.length===0)sH+='<div class="snap-empty">No sector data yet.</div>';
@@ -2646,7 +2820,8 @@ function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 // ═════════════════════════════════════════════════
 function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t}
 function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s}
-function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl')}
+function setCompact(on){document.body.classList.toggle('compact',!!on);var p=loadPrefs();p.compact=!!on;savePrefs(p);var el=G('sCompact');if(el)el.checked=!!on}
+function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl');if(p.compact)document.body.classList.add('compact');var cb=G('sCompact');if(cb)cb.checked=!!p.compact}
 
 // ═════════════════════════════════════════════════
 // TAX FORMS — stocks with special tax considerations
@@ -3048,8 +3223,16 @@ function loadPrefs(){
   try{var p=JSON.parse(localStorage.getItem('pf_prefs'));if(p){if(p.notifEnabled===undefined)p.notifEnabled=true;if(p.soundMuted===undefined)p.soundMuted=false;if(!p.soundChoice)p.soundChoice='chime';return p}}catch(e){}
   return{notifEnabled:true,soundMuted:false,soundChoice:'chime',theme:'dark',textSize:'normal',accounts:[]};
 }
+var _inSavePrefs = false;
 function savePrefs(p){
   try{localStorage.setItem('pf_prefs',JSON.stringify(p))}catch(e){}
+  // Auto-trim before sync if approaching Firestore 1 MB limit. Guard against
+  // recursion since maybeAutoTrimCloudDoc() itself calls savePrefs().
+  if(!_inSavePrefs){
+    _inSavePrefs = true;
+    try{maybeAutoTrimCloudDoc()}catch(e){}
+    _inSavePrefs = false;
+  }
   // Also sync to cloud
   if(syncEnabled&&currentUser&&db){
     db.collection('portfolios').doc(currentUser.uid).set({prefs:p},{merge:true}).catch(function(){});
@@ -3079,6 +3262,7 @@ function loadPrefUI(){
   loadApiKey();
   updateApiKeyStatus();
   if(typeof loadReminderPrefsUI==='function')loadReminderPrefsUI();
+  if(typeof loadDivGoalUI==='function')loadDivGoalUI();
 }
 
 // ═════════════════════════════════════════════════
@@ -3805,6 +3989,8 @@ function tickLocalClock(){
   var ss=String(d.getSeconds()).padStart(2,'0');
   var t=G('hClockTime');if(t)t.textContent=hh+':'+mm+':'+ss;
   var dd=G('hClockDate');if(dd)dd.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  // Re-color the price-staleness indicator each tick so it crosses thresholds visibly
+  if(typeof refreshPriceStatusFreshness==='function')refreshPriceStatusFreshness();
 }
 tickLocalClock();
 setInterval(tickLocalClock,1000);

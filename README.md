@@ -1,10 +1,17 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.20**
+**Current Version: v0.7.21**
 
 ---
 
 ## Changelog
+
+### v0.7.21 — 2026-05-02 — Quick wins bundle
+- **Stale price indicator.** The "Live" / "Cached" pill on the Stocks tab now color-shifts based on the age of the underlying quote: green when fresh (<10 min), amber when aging (10–30 min), red when stale (>30 min). The freshness tick re-evaluates every minute via the existing local clock loop, so a "Live" badge that stops being live degrades on its own without you having to click anything. Also surfaces the staleness in the badge title attribute (hover for "Cached 47 min ago").
+- **Annual dividend goal tracker.** New "🎯 Annual Dividend Goal" field in Settings. Set a yearly target in dollars and the All-tab Portfolio Snapshot panel grows a horizontal progress bar between the stat boxes and the charts — current annual income vs. target, % to goal, plus the dollar gap remaining. Bar fills green at 100%+, accent blue while building, dim while empty. Set to 0 to hide the bar entirely.
+- **Sticky table headers.** The header row on the Dividends, News, Brokers, and Activity Log tables now sticks to the top while you scroll long lists. Stays under the page's main header (60px offset) so column labels are always visible. Required switching `.table-wrap` from `overflow-x:auto` (which would clip the sticky thead) to `overflow-x:auto; overflow-y:visible` — sticky still works correctly because the page itself is the scrolling ancestor.
+- **Compact density toggle.** New "Compact density" checkbox in Settings. Reduces row padding, font sizes, and gap spacing across all tables and stat boxes for users who want more rows on screen at once. Persists in `prefs.compact` (Firestore-synced) and toggles a `body.compact` class that overrides the spacing CSS variables. Defaults off — the existing comfortable density stays the default for new users.
+- **Firestore doc auto-trim.** Estimates the user's cloud doc size before each Firestore write (`savePrefs`, `saveCacheToCloud`, `saveDvToCloud`) and auto-trims the high-churn fields when approaching the 1 MB hard limit (700 KB threshold). Drops oldest entries from `activityLog` (>100), `prefs.notifiedReminders` (>30 days), `prefs.history` (>365 days), and `liveNews` (>50 cached tickers). Throttled to one trim run per 30 seconds with a `_lastTrimRunMs` guard, plus a recursion guard inside `savePrefs` since the trim itself calls `savePrefs`. Surfaces a toast and `data.autotrim` activity-log entry when it fires so you know it ran.
 
 ### v0.7.20 — 2026-04-30
 - **Per-type reminder toggles.** Settings → Dividend Reminders now has two extra checkboxes — "Include ex-date reminders" and "Include pay-date reminders" — so you can disable one kind without disabling reminders entirely. Both default to on for existing users. Honored by both the in-app `runReminderCheck` and the daily email cron.
