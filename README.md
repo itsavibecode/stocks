@@ -1,10 +1,17 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.21**
+**Current Version: v0.7.22**
 
 ---
 
 ## Changelog
+
+### v0.7.22 — 2026-05-03 — Realized gains, taxes, CSV export
+- **Sell workflow.** Every lot row in the deep-dive panel grew a "Sell" button. Clicking opens a modal pre-filled with the lot's shares + the current quote — adjust shares-to-sell, sell price, sell date, and (optionally) entry date, and the live estimate panel shows realized gain/loss with long-term vs short-term classification (>365 days held). Confirming records the sale to a new top-level `realized[]` array, decrements the source lot's shares (or removes it if all sold), and logs `portfolio.sell` with the gain.
+- **Realized P/L panel** on the All-tab Snapshot. Shows YTD realized + all-time realized + LT/ST split + per-account breakdown bars (color-coded green/red, sized by absolute gain). Recent-sales table lists the last 8 sales with their term badge. Each row has a delete button to remove a mistakenly recorded sale (does not restore shares).
+- **Tax Estimate.** Settings → Tax Estimate card with federal marginal bracket dropdown (10/12/22/24/32/35/37%) + state income tax % input. Federal LT cap-gains rate is derived: 0% if ≤12% bracket, 20% at 37%, otherwise 15%. Both panels surface the projection — Tax Outlook shows estimated annual tax on dividends (qualified at LT rate, REIT/foreign/non-qualified at ordinary, collectibles capped at 28%); Realized P/L shows YTD tax on realized gains. After-tax annual income line on Tax Outlook. Live LT/ST preview next to the inputs in Settings. Disclaimer: wash sales, NIIT, AMT, FTC offsets not modeled — not tax advice.
+- **CSV exports.** Dividends tab grew an "Export CSV" button next to Recheck Stocks — dumps every payment from `DV[t].h` × current shares into one row each (date, ticker, account, per-share, shares, total, tax bucket). Realized sales also exportable as CSV (one row per sale with all columns Schedule D wants — date sold, proceeds, cost basis, gain/loss, holding days, LT/ST term). Both buttons mirrored in Settings → Export Data along with the existing JSON portfolio backup. UTF-8 BOM prefix so Excel opens them cleanly without a Unicode prompt.
+- **SnapTrade SELL auto-detect.** Brokers tab → Fetch Transactions now also surfaces a "📤 Sales (last 90 days)" panel that lists every detected SELL/SOLD/SALE/negative-units TRADE activity. Each row shows IMPORTED or PENDING status, with one-click "Import" per row plus "Import All to Realized P/L" to bulk-import. Importer matches against existing lots to pull entry price + entry date when possible (falls back to no-cost-basis records), de-dupes by ticker+date+shares, and decrements the matched lot's shares. Logs `snaptrade.sell.import` for each.
 
 ### v0.7.21 — 2026-05-02 — Quick wins bundle
 - **Stale price indicator.** The "Live" / "Cached" pill on the Stocks tab now color-shifts based on the age of the underlying quote: green when fresh (<10 min), amber when aging (10–30 min), red when stale (>30 min). The freshness tick re-evaluates every minute via the existing local clock loop, so a "Live" badge that stops being live degrades on its own without you having to click anything. Also surfaces the staleness in the badge title attribute (hover for "Cached 47 min ago").

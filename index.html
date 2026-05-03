@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.21</title>
+<title>Portfolio Command Center v0.7.22</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -73,8 +73,10 @@ input,button,select{font-family:inherit}
 .snap-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px}
 .snap-stat-val{font-size:18px;font-weight:700;font-family:var(--mono)}
 .snap-stat-val.green{color:var(--green)}
+.snap-stat-val.red{color:var(--red)}
 .snap-stat-val.accent{color:var(--accent2)}
 .snap-stat-val.purple{color:var(--purple)}
+.snap-stat-val.yellow{color:var(--yellow)}
 .snap-charts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:1080px){.snap-charts{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.snap-charts{grid-template-columns:1fr}}
@@ -441,7 +443,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.21</div>
+        <div class="logo-ver">v0.7.22</div>
       </div>
     </div>
     <div class="header-actions">
@@ -509,6 +511,7 @@ body.text-xl .sc .scv{font-size:24px}
         <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px">&#8635; Recheck Stocks</button>
         <span id="dRecheckTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
       </div>
+      <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:10px;padding:5px 10px;flex-shrink:0" title="Export dividend payment history to CSV (compatible with Excel + Google Sheets)">&#128190; Export CSV</button>
     </div>
     <div class="table-wrap dt"><table id="tD"><thead><tr>
       <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
@@ -564,6 +567,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
     </div>
     <div id="bBrokers"></div>
+    <div id="bSellsPanel"></div>
     <div id="bDripPanel"></div>
   </div>
 
@@ -658,6 +662,41 @@ body.text-xl .sc .scv{font-size:24px}
           <span style="font-size:13px;color:var(--muted)">$</span>
           <input class="mi" type="number" id="sDivGoal" min="0" step="100" placeholder="e.g. 10000" onchange="saveDivGoal()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
           <span style="font-size:11px;color:var(--muted)">per year</span>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#129534; Tax Estimate</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Used for the projected-tax line in Tax Outlook + Realized P/L panels. Federal long-term cap-gains rate is derived from your bracket (0% if &le;12%, 20% at 37%, otherwise 15%). Wash sales, NIIT, AMT, and offsets are not modeled. Not tax advice.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Federal marginal bracket</div>
+            <select class="mi" id="sTaxBracket" onchange="saveTaxPrefs()" style="width:170px;margin:0;padding:6px 10px;font-size:12px">
+              <option value="">(not set)</option>
+              <option value="10">10%</option>
+              <option value="12">12%</option>
+              <option value="22">22%</option>
+              <option value="24">24%</option>
+              <option value="32">32%</option>
+              <option value="35">35%</option>
+              <option value="37">37%</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">State income tax rate (%)</div>
+            <input class="mi" type="number" id="sStateRate" min="0" max="20" step="0.1" placeholder="e.g. 5.0 (or 0)" onchange="saveTaxPrefs()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
+          </div>
+          <div id="sTaxLtPreview" style="font-size:11px;color:var(--muted);padding-bottom:6px"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export Data</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Download your portfolio history as CSV for taxes, spreadsheets, or backup.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="exportRealizedCSV()" style="font-size:11.5px">&#129534; Realized Sales CSV</button>
+          <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:11.5px">&#128176; Dividend History CSV</button>
+          <button class="btn btn-outline" onclick="exportPortfolio()" style="font-size:11.5px">&#128190; Full Portfolio JSON</button>
         </div>
       </div>
 
@@ -822,7 +861,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.21 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.22 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -849,11 +888,46 @@ body.text-xl .sc .scv{font-size:24px}
   </div>
 </div>
 
+<!-- Sell Lot modal — opens from the Sell button on each lot row in the deep-dive panel.
+     Calculates realized gain/loss using the lot's entry price + filled-in sell price/date. -->
+<div class="modal-overlay" id="sellMod" style="display:none" onclick="if(event.target===this)closeSellModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 style="margin-bottom:6px">Sell Lot — <span id="sellModTk" class="mono"></span></h3>
+    <div id="sellModSub" style="font-size:11px;color:var(--muted);margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:120px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Shares to sell</div>
+        <input class="mi" type="number" id="sellShares" placeholder="0" min="0.0001" step="any" style="margin-bottom:0" oninput="updateSellEstimate()">
+      </div>
+      <div style="flex:1;min-width:120px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Sell price $/sh</div>
+        <input class="mi" type="number" id="sellPrice" placeholder="0.00" min="0" step="any" style="margin-bottom:0" oninput="updateSellEstimate()">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Sell date</div>
+        <input class="mi" type="date" id="sellDate" style="margin-bottom:0" oninput="updateSellEstimate()">
+      </div>
+      <div style="flex:1;min-width:140px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Entry date <span style="color:var(--muted);font-weight:400">(optional)</span></div>
+        <input class="mi" type="date" id="sellEntryDate" style="margin-bottom:0" oninput="updateSellEstimate()">
+      </div>
+    </div>
+    <div id="sellEst" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.6"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="closeSellModal()" style="flex:1;justify-content:center">Cancel</button>
+      <button class="btn btn-primary" id="sellConfirmBtn" onclick="confirmSell()" style="flex:2;justify-content:center">Record Sale</button>
+    </div>
+    <div style="margin-top:10px;font-size:10.5px;color:var(--muted);line-height:1.5">Recording a sale moves the shares from this lot into the Realized P/L history. Holding period &gt; 365 days gets the long-term capital-gains rate when entry date is set.</div>
+  </div>
+</div>
+
 <script>
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.21";
+var VERSION = "0.7.22";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -984,6 +1058,31 @@ function saveDivGoal(){
 function loadDivGoalUI(){
   var p=loadPrefs();
   var el=G('sDivGoal');if(el)el.value=p.dividendGoal||'';
+}
+function saveTaxPrefs(){
+  var p=loadPrefs();
+  var b=G('sTaxBracket'),s=G('sStateRate');
+  p.taxBracket = b && b.value!=='' ? parseFloat(b.value) : null;
+  p.stateRate = s && s.value!=='' ? Math.max(0,parseFloat(s.value)||0) : 0;
+  savePrefs(p);
+  updateTaxLtPreview();
+  render();
+}
+function loadTaxPrefsUI(){
+  var p=loadPrefs();
+  var b=G('sTaxBracket');if(b)b.value=(p.taxBracket==null?'':String(p.taxBracket));
+  var s=G('sStateRate');if(s)s.value=(p.stateRate==null||p.stateRate===0?'':p.stateRate);
+  updateTaxLtPreview();
+}
+function updateTaxLtPreview(){
+  var el=G('sTaxLtPreview');if(!el)return;
+  var p=loadPrefs();
+  var br=parseFloat(p.taxBracket);
+  if(!br){ el.innerHTML='<span style="color:var(--muted)">Set bracket to see derived rates</span>'; return; }
+  var lt = (br<=12) ? 0 : (br>=37 ? 20 : 15);
+  var st = br;
+  var sr = parseFloat(p.stateRate)||0;
+  el.innerHTML='<span class="mono">LT: '+lt+'%'+(sr?' + '+sr+'% state':'')+' &middot; ST: '+st+'%'+(sr?' + '+sr+'% state':'')+'</span>';
 }
 function loadReminderPrefsUI(){
   var p=loadPrefs();
@@ -1205,8 +1304,8 @@ function saveToCloud() {
   var ind = document.getElementById('syncInd');
   if (ind) ind.innerHTML = '<span class="sync-spinner"></span> Syncing...';
   db.collection('portfolios').doc(currentUser.uid).set({
-    tickers: tks, lots: lots, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function(){
+    tickers: tks, lots: lots, realized: realized, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge: true}).then(function(){
     if (ind) ind.innerHTML = '<span class="sync-dot"></span> Synced';
   }).catch(function(e){ console.error("Cloud save error:", e); if(ind) ind.innerHTML = '<span style="color:var(--red)">Sync error</span>'; });
 }
@@ -1233,6 +1332,7 @@ function _estimateCloudDocSizeBytes(){
     var snapshot = {
       tickers: tks,
       lots: lots,
+      realized: realized,
       prefs: loadPrefs(),
       cache: { news: liveNews, prices: livePrices },
       activity: activityLog,
@@ -1328,6 +1428,7 @@ function loadFromCloud() {
     if (doc.exists) {
       var d = doc.data();
       if (d.tickers) tks = d.tickers;
+      if (Array.isArray(d.realized)) realized = d.realized;
       if (d.lots) { lots = d.lots; computeFromLots(); }
       else {
         if (d.shares || d.brokers) {
@@ -1839,6 +1940,11 @@ function getNews(t){ return (liveNews[t] && liveNews[t].length) ? liveNews[t] : 
 // sh[ticker] and bk[ticker] are computed from lots for backward compat
 // ═════════════════════════════════════════════════
 var tks,lots={},ss={},svTO;
+// realized[] = chronological list of completed sales. Each entry:
+//   { id, ticker, account, shares, entryPrice, sellPrice, entryDate, sellDate,
+//     holdingDays, longTerm, proceeds, cost, gain, source: 'manual'|'snaptrade' }
+// Persisted to localStorage (pf_realized) and Firestore (top-level "realized" field).
+var realized=[];
 // Computed views
 var sh={},bk={};
 function computeFromLots(){
@@ -1889,6 +1995,7 @@ function removeLot(t,idx){
 }
 function load(){
   try{tks=JSON.parse(localStorage.getItem('pf_t'))||DT.slice()}catch(e){tks=DT.slice()}
+  loadRealizedLocal();
   // Try loading lots first (new format)
   try{
     var raw=localStorage.getItem('pf_lots');
@@ -1916,10 +2023,14 @@ function saveLocal(){
   try{
     localStorage.setItem('pf_t',JSON.stringify(tks));
     localStorage.setItem('pf_lots',JSON.stringify(lots));
+    localStorage.setItem('pf_realized',JSON.stringify(realized));
     // Also write old format for any fallback
     localStorage.setItem('pf_s',JSON.stringify(sh));
     localStorage.setItem('pf_b',JSON.stringify(bk));
   }catch(e){}
+}
+function loadRealizedLocal(){
+  try{var r=JSON.parse(localStorage.getItem('pf_realized'));if(Array.isArray(r))realized=r}catch(e){}
 }
 function save(){saveLocal();saveToCloud();clearTimeout(svTO);var t=document.getElementById('svt');t.classList.add('show');svTO=setTimeout(function(){t.classList.remove('show')},1200)}
 
@@ -2127,6 +2238,144 @@ function eLotBText(t,idx,el,cur){
   var dn=function(){setLot(t,idx,undefined,i.value.trim());save();render()};
   i.onblur=dn;i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();dn()}};
 }
+
+// ═════════════════════════════════════════════════
+// SELL WORKFLOW — record a realized sale, decrement shares from the source lot,
+// append the sale to realized[] for tax + per-broker breakdown.
+// ═════════════════════════════════════════════════
+var _sellCtx = null; // {ticker, lotIdx} captured when modal opens
+function sellLotPrompt(t, idx){
+  event && event.stopPropagation && event.stopPropagation();
+  var lt = getLots(t);
+  var lot = lt[idx];
+  if(!lot || !lot.s || lot.s<=0){ showToast('No shares in this lot to sell','error'); return; }
+  _sellCtx = { ticker:t, lotIdx:idx, lot:lot };
+  G('sellModTk').textContent = t + (lot.b ? ' · '+lot.b : '');
+  var sub = fmSh(lot.s) + ' share' + (lot.s===1?'':'s') + ' available';
+  if(lot.p>0) sub += ' · entry $' + lot.p.toFixed(2) + '/sh';
+  if(lot.added) sub += ' · added ' + new Date(lot.added).toLocaleDateString();
+  G('sellModSub').textContent = sub;
+  G('sellShares').value = lot.s;
+  G('sellShares').max = lot.s;
+  var cur = PR[t]||0;
+  G('sellPrice').value = cur ? cur.toFixed(2) : '';
+  G('sellDate').value = new Date().toISOString().slice(0,10);
+  G('sellEntryDate').value = lot.added ? lot.added.slice(0,10) : '';
+  G('sellMod').style.display = 'flex';
+  updateSellEstimate();
+  setTimeout(function(){G('sellShares').focus();G('sellShares').select()},80);
+}
+function closeSellModal(){
+  G('sellMod').style.display = 'none';
+  _sellCtx = null;
+}
+function updateSellEstimate(){
+  if(!_sellCtx) return;
+  var t = _sellCtx.ticker, lot = _sellCtx.lot;
+  var shares = parseFloat(G('sellShares').value)||0;
+  var sellPrice = parseFloat(G('sellPrice').value)||0;
+  var sellDate = G('sellDate').value || new Date().toISOString().slice(0,10);
+  var entryDate = G('sellEntryDate').value || (lot.added ? lot.added.slice(0,10) : '');
+  var entryPrice = lot.p||0;
+  var box = G('sellEst');
+  if(shares<=0||sellPrice<=0){ box.innerHTML = '<span class="muted">Enter shares and sell price to see the estimate.</span>'; return; }
+  if(shares>lot.s){ box.innerHTML = '<span style="color:var(--red)">Cannot sell more than '+fmSh(lot.s)+' shares from this lot.</span>'; return; }
+  var proceeds = shares * sellPrice;
+  var cost = shares * entryPrice;
+  var hasBasis = entryPrice>0;
+  var gain = hasBasis ? (proceeds - cost) : 0;
+  var pct = hasBasis && cost>0 ? (gain/cost*100) : 0;
+  var holdingDays = 0;
+  var longTerm = false;
+  if(entryDate){
+    var dEntry = new Date(entryDate+'T12:00:00Z');
+    var dSell = new Date(sellDate+'T12:00:00Z');
+    holdingDays = Math.max(0, Math.round((dSell-dEntry)/86400000));
+    longTerm = holdingDays > 365;
+  }
+  var html = '<div style="display:flex;justify-content:space-between"><span class="muted">Proceeds</span><span class="mono">'+fm(proceeds)+'</span></div>';
+  if(hasBasis){
+    html += '<div style="display:flex;justify-content:space-between"><span class="muted">Cost basis</span><span class="mono">'+fm(cost)+'</span></div>';
+    var gCls = gain>=0?'green':'red', sign = gain>=0?'+':'';
+    html += '<div style="display:flex;justify-content:space-between;font-weight:700"><span>Realized gain</span><span class="mono '+gCls+'">'+sign+fm(gain)+' <span style="font-size:10.5px;font-weight:500">('+sign+pct.toFixed(2)+'%)</span></span></div>';
+  } else {
+    html += '<div style="font-size:10.5px;color:var(--muted);margin-top:4px">No entry price on this lot — gain/loss won\'t be tracked. Set Entry $ first if you want capital-gains math.</div>';
+  }
+  if(entryDate){
+    var ltLbl = longTerm ? '<span style="color:var(--green);font-weight:700">Long-term</span> (LT cap-gains rate)' : '<span style="color:var(--yellow);font-weight:700">Short-term</span> (taxed as ordinary income)';
+    html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px"><span class="muted">Holding period</span><span>'+holdingDays+'d &middot; '+ltLbl+'</span></div>';
+  } else {
+    html += '<div style="font-size:10.5px;color:var(--muted);margin-top:4px">No entry date — holding period unknown. Set entry date for LT/ST classification.</div>';
+  }
+  box.innerHTML = html;
+}
+function confirmSell(){
+  if(!_sellCtx) return;
+  var t = _sellCtx.ticker, idx = _sellCtx.lotIdx, lot = _sellCtx.lot;
+  var shares = parseFloat(G('sellShares').value)||0;
+  var sellPrice = parseFloat(G('sellPrice').value)||0;
+  var sellDate = G('sellDate').value || new Date().toISOString().slice(0,10);
+  var entryDate = G('sellEntryDate').value || (lot.added ? lot.added.slice(0,10) : '');
+  var entryPrice = lot.p||0;
+  if(shares<=0){ showToast('Enter shares > 0','error'); return; }
+  if(shares>lot.s+0.0001){ showToast('Cannot sell more than the lot has','error'); return; }
+  if(sellPrice<=0){ showToast('Enter sell price > 0','error'); return; }
+  var holdingDays = 0, longTerm = false;
+  if(entryDate){
+    var dE = new Date(entryDate+'T12:00:00Z');
+    var dS = new Date(sellDate+'T12:00:00Z');
+    holdingDays = Math.max(0, Math.round((dS-dE)/86400000));
+    longTerm = holdingDays > 365;
+  }
+  var proceeds = shares*sellPrice;
+  var cost = entryPrice>0 ? shares*entryPrice : 0;
+  var gain = entryPrice>0 ? (proceeds-cost) : 0;
+  var rec = {
+    id: 'r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
+    ticker: t,
+    account: lot.b||'',
+    shares: shares,
+    entryPrice: entryPrice||null,
+    sellPrice: sellPrice,
+    entryDate: entryDate||null,
+    sellDate: sellDate,
+    holdingDays: holdingDays,
+    longTerm: longTerm,
+    proceeds: proceeds,
+    cost: cost,
+    gain: gain,
+    source: 'manual',
+    recordedAt: new Date().toISOString()
+  };
+  realized.push(rec);
+  // Decrement shares from the source lot. If fully sold, remove the lot
+  // (unless it's the only lot; then leave it at 0 so the ticker stays).
+  var remaining = lot.s - shares;
+  if(remaining < 0.0001){
+    if(lots[t].length>1){
+      lots[t].splice(idx,1);
+    } else {
+      lot.s = 0; // keep lot row, zero shares
+    }
+  } else {
+    lot.s = remaining;
+  }
+  computeFromLots();
+  closeSellModal();
+  save();render();
+  var gainSign = gain>=0?'+':'';
+  var gainStr = entryPrice>0 ? ' ('+gainSign+fm(gain)+')' : '';
+  showToast('Sold '+fmSh(shares)+' '+t+' @ '+fm(sellPrice)+gainStr);
+  logActivity('portfolio.sell', 'Sold '+fmSh(shares)+' '+t+(lot.b?' from '+lot.b:'')+' @ '+fm(sellPrice)+gainStr+(longTerm?' [LT]':holdingDays?' [ST]':''));
+}
+// Remove a realized record (e.g., user logged a sale by mistake).
+// Does NOT restore shares to a lot — just deletes the history entry.
+function removeRealized(id){
+  if(!confirm('Delete this sale from history? Shares are not restored.'))return;
+  realized = realized.filter(function(r){return r.id!==id});
+  save();render();
+  logActivity('portfolio.sell.remove','Removed sale record');
+}
 // Build lots HTML for the detail panel
 function lotsHTML(t){
   var lt=getLots(t);
@@ -2156,7 +2405,15 @@ function lotsHTML(t){
       h+='<div class="muted" style="text-align:right;font-size:10px">\u2014</div>';
     }
     h+='<div class="muted" style="font-size:10px">'+addedStr+'</div>';
-    h+=(lt.length>1?'<button class="rb" onclick="event.stopPropagation();removeLot(\''+t+'\','+i+')" style="font-size:9px">&#10005;</button>':'<div></div>');
+    var actions = '<div style="display:flex;gap:4px;justify-content:flex-end">';
+    if(lot.s>0){
+      actions += '<button class="btn btn-outline" onclick="event.stopPropagation();sellLotPrompt(\''+t+'\','+i+')" style="font-size:9px;padding:2px 7px" title="Record a sale of shares from this lot">Sell</button>';
+    }
+    if(lt.length>1){
+      actions += '<button class="rb" onclick="event.stopPropagation();removeLot(\''+t+'\','+i+')" style="font-size:9px" title="Delete this lot row">&#10005;</button>';
+    }
+    actions += '</div>';
+    h += actions;
   });
   h+='</div>';
   var totalS=sh[t]||0;
@@ -2518,7 +2775,131 @@ function render(){
         html += '<span class="mono" style="font-size:10.5px;text-align:right">' + fm(amt) + ' <span class="muted" style="font-size:9.5px">(' + pct.toFixed(1) + '%)</span></span>';
         html += '</div>';
       });
+      // Estimated tax on annual dividend income (uses prefs.taxBracket + prefs.stateRate)
+      var taxPrefs = loadPrefs();
+      var bracket = parseFloat(taxPrefs.taxBracket)||0;
+      var stateRate = parseFloat(taxPrefs.stateRate)||0;
+      if (bracket > 0) {
+        var ltRate = (bracket<=12) ? 0 : (bracket>=37 ? 20 : 15);
+        var stRate = bracket;
+        // Qualified dividends taxed at LT cap-gains; everything else at ordinary
+        // Mixed buckets are split 50/50 in addToBucket already
+        var taxQualified = (buckets.qualified||0) * (ltRate+stateRate)/100;
+        var taxOrdinary = ((buckets.nonqualified||0) + (buckets.reit||0) + (buckets.foreign||0) + (buckets.partnership||0)) * (stRate+stateRate)/100;
+        var taxCollectibles = (buckets.collectibles||0) * (Math.min(28,stRate)+stateRate)/100;
+        var taxTotal = taxQualified + taxOrdinary + taxCollectibles;
+        var afterTax = total - taxTotal;
+        html += '<div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;border-left:3px solid var(--yellow);font-size:11px;line-height:1.6">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><span style="font-weight:700">&#129534; Estimated annual tax on dividends</span><span class="mono" style="color:var(--yellow);font-weight:700">'+fm(taxTotal)+'</span></div>';
+        html += '<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px"><span>After-tax annual income</span><span class="mono" style="color:var(--green)">'+fm(afterTax)+'</span></div>';
+        html += '<div style="font-size:10px;color:var(--muted);margin-top:4px">Bracket '+bracket+'% &middot; LT '+ltRate+'%'+(stateRate?' &middot; state '+stateRate+'%':'')+'</div>';
+        html += '</div>';
+      } else {
+        html += '<div style="margin-top:8px;font-size:10.5px;color:var(--muted)">Set your tax bracket in Settings &rarr; Tax Estimate to see projected tax on this income.</div>';
+      }
       html += '<div style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5">Hover a row for the tax-treatment note. Individual ticker tax tags appear in the Dividends tab deep-dive panels with more detail. Not tax advice.</div>';
+      html += '</div>';
+      return html;
+    };
+  }
+  // Realized P/L panel — built from the realized[] log of completed sales.
+  // Shows YTD + all-time totals, LT vs ST split, per-broker breakdown, recent sales table.
+  // Tax estimate at the bottom uses prefs.taxBracket + prefs.stateRate.
+  if (typeof _renderRealizedHTML !== 'function') {
+    window._renderRealizedHTML = function() {
+      if (!realized || realized.length === 0) return '';
+      var prefs = loadPrefs();
+      var thisYear = new Date().toISOString().slice(0,4);
+      var totalLT=0,totalST=0,totalGain=0,ytdLT=0,ytdST=0,ytdGain=0,totalProceeds=0,ytdProceeds=0;
+      var byBroker = {}; // acct -> {gain, lt, st, count}
+      realized.forEach(function(r){
+        var g = r.gain||0;
+        var isYtd = (r.sellDate||'').indexOf(thisYear)===0;
+        totalGain += g; totalProceeds += (r.proceeds||0);
+        if(r.longTerm) totalLT += g; else if(r.entryPrice) totalST += g;
+        if(isYtd){
+          ytdGain += g; ytdProceeds += (r.proceeds||0);
+          if(r.longTerm) ytdLT += g; else if(r.entryPrice) ytdST += g;
+        }
+        var acct = r.account || 'Unassigned';
+        if(!byBroker[acct]) byBroker[acct] = {gain:0, lt:0, st:0, count:0, proceeds:0};
+        byBroker[acct].gain += g;
+        byBroker[acct].proceeds += (r.proceeds||0);
+        byBroker[acct].count++;
+        if(r.longTerm) byBroker[acct].lt += g; else if(r.entryPrice) byBroker[acct].st += g;
+      });
+      // Tax estimate — federal LT cap-gains rate from bracket + state rate on everything
+      var bracket = parseFloat(prefs.taxBracket)||0;
+      var stateRate = parseFloat(prefs.stateRate)||0;
+      var ltRate = (bracket<=12) ? 0 : (bracket>=37 ? 20 : 15);
+      var stRate = bracket;
+      var taxLT = Math.max(0,ytdLT) * (ltRate+stateRate)/100;
+      var taxST = Math.max(0,ytdST) * (stRate+stateRate)/100;
+      var taxTotal = taxLT + taxST;
+      var html = '<div class="snap-history" style="margin-top:14px">';
+      var ytdSign = ytdGain>=0?'+':'', allSign = totalGain>=0?'+':'';
+      var ytdCls = ytdGain>=0?'green':'red', allCls = totalGain>=0?'green':'red';
+      html += '<div class="snap-history-title"><span>💰 Realized P/L</span><span class="snap-sub">'+realized.length+' sale'+(realized.length!==1?'s':'')+' total &middot; '+(thisYear)+' YTD '+ytdSign+fm(ytdGain)+'</span></div>';
+      // 4-stat row
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">';
+      html += '<div class="snap-stat" style="padding:8px 12px"><div class="snap-stat-label">YTD Realized</div><div class="snap-stat-val '+ytdCls+'">'+ytdSign+fm(ytdGain)+'</div></div>';
+      html += '<div class="snap-stat" style="padding:8px 12px"><div class="snap-stat-label">All-Time Realized</div><div class="snap-stat-val '+allCls+'">'+allSign+fm(totalGain)+'</div></div>';
+      html += '<div class="snap-stat" style="padding:8px 12px" title="Long-term: held >365 days, lower tax rate"><div class="snap-stat-label">LT Gains (YTD)</div><div class="snap-stat-val '+(ytdLT>=0?'green':'red')+'">'+(ytdLT>=0?'+':'')+fm(ytdLT)+'</div></div>';
+      html += '<div class="snap-stat" style="padding:8px 12px" title="Short-term: held ≤365 days, taxed as ordinary income"><div class="snap-stat-label">ST Gains (YTD)</div><div class="snap-stat-val '+(ytdST>=0?'green':'red')+'">'+(ytdST>=0?'+':'')+fm(ytdST)+'</div></div>';
+      html += '</div>';
+      // Per-broker breakdown
+      var brokerKeys = Object.keys(byBroker).sort(function(a,b){return Math.abs(byBroker[b].gain)-Math.abs(byBroker[a].gain)});
+      if (brokerKeys.length > 1) {
+        var maxAbs = Math.max.apply(null, brokerKeys.map(function(k){return Math.abs(byBroker[k].gain)}).concat([1]));
+        html += '<div style="font-size:11px;font-weight:700;margin-bottom:6px">By Account</div>';
+        brokerKeys.forEach(function(k){
+          var b = byBroker[k];
+          var w = Math.abs(b.gain)/maxAbs*100;
+          var cls = b.gain>=0?'green':'red', sign = b.gain>=0?'+':'';
+          var col = b.gain>=0 ? 'var(--green)' : 'var(--red)';
+          html += '<div style="display:grid;grid-template-columns:140px 1fr 130px;gap:10px;align-items:center;padding:4px 6px;font-size:11px">';
+          html += '<span style="font-size:10.5px;font-weight:600">'+k+'</span>';
+          html += '<div class="snap-bar-bg" style="height:12px"><div class="snap-bar" style="width:'+w.toFixed(1)+'%;background:'+col+';opacity:.85"></div></div>';
+          html += '<span class="mono '+cls+'" style="text-align:right;font-size:10.5px">'+sign+fm(b.gain)+' <span class="muted" style="font-size:9.5px">('+b.count+')</span></span>';
+          html += '</div>';
+        });
+      }
+      // Recent sales — last 8
+      var recent = realized.slice().sort(function(a,b){return (b.sellDate||'').localeCompare(a.sellDate||'')}).slice(0,8);
+      html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:11px;font-weight:700">Recent Sales</span>';
+      html += '<button class="btn btn-outline" onclick="exportRealizedCSV()" style="font-size:9.5px;padding:3px 8px">Export CSV</button></div>';
+      html += '<div style="display:grid;grid-template-columns:auto auto auto auto auto auto auto auto;gap:3px 10px;font-size:10.5px;align-items:center">';
+      html += '<div class="muted" style="font-size:9px;text-transform:uppercase">Date</div><div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Account</div><div class="muted" style="font-size:9px;text-transform:uppercase;text-align:right">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase;text-align:right">Sell $</div><div class="muted" style="font-size:9px;text-transform:uppercase;text-align:right">Gain</div><div class="muted" style="font-size:9px;text-transform:uppercase">Type</div><div></div>';
+      recent.forEach(function(r){
+        var gCls = r.gain>=0?'green':'red', gSign = r.gain>=0?'+':'';
+        var hasBasis = r.entryPrice && r.entryPrice>0;
+        var typeBadge = hasBasis ? (r.longTerm?'<span class="badge badge-green" style="font-size:8px">LT</span>':'<span class="badge badge-yellow" style="font-size:8px">ST</span>') : '<span class="badge" style="font-size:8px;background:var(--bg);color:var(--muted)">—</span>';
+        html += '<span class="muted" style="font-size:10px">'+(r.sellDate||'')+'</span>';
+        html += '<span class="mono fw7">'+r.ticker+'</span>';
+        html += '<span style="font-size:10px;color:var(--purple)">'+(r.account||'—')+'</span>';
+        html += '<span class="mono" style="text-align:right">'+fmSh(r.shares)+'</span>';
+        html += '<span class="mono" style="text-align:right">'+fm(r.sellPrice)+'</span>';
+        html += '<span class="mono '+gCls+'" style="text-align:right">'+(hasBasis?gSign+fm(r.gain):'<span class="muted">—</span>')+'</span>';
+        html += '<span>'+typeBadge+'</span>';
+        html += '<button class="rb" onclick="removeRealized(\''+r.id+'\')" style="font-size:9px" title="Delete this sale record">&#10005;</button>';
+      });
+      html += '</div>';
+      // Tax estimate footer
+      if (bracket > 0) {
+        html += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);font-size:10.5px;line-height:1.6">';
+        html += '<div style="font-weight:700;margin-bottom:4px">Estimated tax (YTD realized)</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px 16px">';
+        html += '<span class="muted">Long-term @ '+ltRate+'%'+(stateRate?' + '+stateRate+'% state':'')+': <span class="mono" style="color:var(--accent2)">'+fm(taxLT)+'</span></span>';
+        html += '<span class="muted">Short-term @ '+stRate+'%'+(stateRate?' + '+stateRate+'% state':'')+': <span class="mono" style="color:var(--accent2)">'+fm(taxST)+'</span></span>';
+        html += '<span style="font-weight:700">Total estimated tax: <span class="mono" style="color:var(--yellow)">'+fm(taxTotal)+'</span></span>';
+        html += '</div>';
+        html += '<div style="font-size:10px;color:var(--muted);margin-top:6px">Set in Settings → Tax Estimate. Federal cap-gains: 0% if marginal ≤12%, 20% at 37%, otherwise 15%. State rate applied flat to gains. Wash sales, NIIT, AMT, and offsets not modeled. Not tax advice.</div>';
+        html += '</div>';
+      } else {
+        html += '<div style="margin-top:10px;font-size:10px;color:var(--muted)">Set your federal tax bracket in Settings → Tax Estimate to see projected tax on these realized gains.</div>';
+      }
+      html += '</div>';
       html += '</div>';
       return html;
     };
@@ -2622,7 +3003,9 @@ function render(){
   (function(){
     var snap=G('snapshotPanel');if(!snap)return;
     if(tks.length===0||tks.every(function(t){return(sh[t]||0)===0})){
-      snap.innerHTML='<div class="snap-wrap"><div class="snap-empty">Add shares to a ticker to see your portfolio snapshot.</div></div>';
+      // No live shares — but if there are realized sales, still show the realized panel
+      var realizedHTML = (realized && realized.length>0) ? _renderRealizedHTML() : '';
+      snap.innerHTML='<div class="snap-wrap"><div class="snap-empty">Add shares to a ticker to see your portfolio snapshot.</div>'+realizedHTML+'</div>';
       return;
     }
     var totalValue=0,ytdIncome=0,annualIncome=0;
@@ -2733,6 +3116,8 @@ function render(){
     sH+='</div></div>';
     // Tax Outlook panel
     sH+=_renderTaxOutlookHTML(annualIncome);
+    // Realized P/L (only renders if any sales exist)
+    sH+=_renderRealizedHTML();
     // Portfolio history line chart
     sH+=_renderHistoryChartHTML(totalValue);
     sH+='</div>';
@@ -3263,6 +3648,7 @@ function loadPrefUI(){
   updateApiKeyStatus();
   if(typeof loadReminderPrefsUI==='function')loadReminderPrefsUI();
   if(typeof loadDivGoalUI==='function')loadDivGoalUI();
+  if(typeof loadTaxPrefsUI==='function')loadTaxPrefsUI();
 }
 
 // ═════════════════════════════════════════════════
@@ -3321,12 +3707,88 @@ function showApiErrors(){
 // ═════════════════════════════════════════════════
 // IMPORT / EXPORT
 // ═════════════════════════════════════════════════
+// Quote a CSV cell — wraps in double-quotes if it contains a comma, quote, or newline.
+function _csvCell(v){
+  var s = (v==null?'':String(v));
+  if(/[",\n]/.test(s)) return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function _downloadCSV(filename, rows){
+  var csv = rows.map(function(r){return r.map(_csvCell).join(',')}).join('\n');
+  var blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'}); // BOM for Excel
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  setTimeout(function(){URL.revokeObjectURL(url)}, 1000);
+}
+// Realized sales → CSV. One row per sale, columns match what TurboTax / Schedule D import wants.
+function exportRealizedCSV(){
+  if(!realized || realized.length===0){ showToast('No realized sales to export','error'); return; }
+  var rows = [['Date Sold','Ticker','Account','Shares','Sell Price','Proceeds','Entry Date','Entry Price','Cost Basis','Gain/Loss','Holding Days','Term','Source']];
+  realized.slice().sort(function(a,b){return (a.sellDate||'').localeCompare(b.sellDate||'')}).forEach(function(r){
+    rows.push([
+      r.sellDate||'',
+      r.ticker,
+      r.account||'',
+      r.shares,
+      (r.sellPrice||0).toFixed(4),
+      (r.proceeds||0).toFixed(2),
+      r.entryDate||'',
+      r.entryPrice?r.entryPrice.toFixed(4):'',
+      r.cost?r.cost.toFixed(2):'',
+      r.gain?r.gain.toFixed(2):(r.entryPrice?'0.00':''),
+      r.holdingDays||'',
+      r.entryPrice ? (r.longTerm?'LT':'ST') : '',
+      r.source||'manual'
+    ]);
+  });
+  _downloadCSV('realized-sales-'+new Date().toISOString().slice(0,10)+'.csv', rows);
+  showToast('Exported '+realized.length+' sales to CSV');
+  logActivity('data.export.realized','Exported '+realized.length+' realized sales');
+}
+// Dividend payment history → CSV. Pulled from DV[t].h (per-ticker payout array)
+// multiplied by current shares, since per-payment shares aren't tracked historically.
+function exportDividendCSV(){
+  var rows = [['Date','Ticker','Account','Per-Share','Shares','Total','Tax Bucket']];
+  var count = 0;
+  tks.forEach(function(t){
+    var d = DV[t]; if(!d || !d.h) return;
+    var s = sh[t]||0;
+    var bucket = (typeof taxBucket === 'function') ? taxBucket(t) : '';
+    d.h.forEach(function(p){
+      if(!p.d) return;
+      var perSh = p.a||0;
+      var total = perSh * s;
+      rows.push([
+        p.d,
+        t,
+        bk[t]||'',
+        perSh.toFixed(4),
+        s,
+        total.toFixed(2),
+        bucket
+      ]);
+      count++;
+    });
+  });
+  if(count===0){ showToast('No dividend history to export','error'); return; }
+  // Sort by date desc
+  var header = rows.shift();
+  rows.sort(function(a,b){return (b[0]||'').localeCompare(a[0]||'')});
+  rows.unshift(header);
+  _downloadCSV('dividends-'+new Date().toISOString().slice(0,10)+'.csv', rows);
+  showToast('Exported '+count+' dividend records');
+  logActivity('data.export.dividends','Exported '+count+' dividend records');
+}
+
 function exportPortfolio(){
   var data={
     version:VERSION,
     exported:new Date().toISOString(),
     tickers:tks,
     lots:lots,
+    realized:realized,
     prefs:loadPrefs(),
     customDV:getDVCustom()
   };
@@ -3348,6 +3810,7 @@ function importPortfolio(evt){
       if(!confirm('Import '+data.tickers.length+' tickers? This will REPLACE your current portfolio.'))return;
       tks=data.tickers;
       if(data.lots)lots=data.lots;
+      if(Array.isArray(data.realized))realized=data.realized;
       if(data.prefs)savePrefs(data.prefs);
       if(data.customDV){Object.keys(data.customDV).forEach(function(t){DV[t]=data.customDV[t]});try{localStorage.setItem('pf_dv_custom',JSON.stringify(data.customDV))}catch(e){}}
       computeFromLots();
@@ -3848,6 +4311,140 @@ function maybeRunAutoSync(){
   });
 }
 
+// SnapTrade SELL activity detection. Most brokers report sells as type='SELL'
+// (sometimes 'SOLD'); we also catch DIVIDEND with negative units (rare cleanup).
+function _stIsSellActivity(act){
+  var type=(act.type||'').toUpperCase();
+  if(type==='SELL'||type==='SOLD'||type==='SALE')return true;
+  // Trade with negative units = sell on some adapters
+  if(type==='TRADE' && (act.units||0)<0) return true;
+  return false;
+}
+// Symbol extractor matching the DRIP panel pattern (handles SnapTrade's
+// nested symbol object across broker adapters).
+function _stExtractSym(act){
+  if(act.symbol&&act.symbol.symbol&&act.symbol.symbol.symbol)return act.symbol.symbol.symbol;
+  if(act.symbol&&act.symbol.symbol&&typeof act.symbol.symbol==='string')return act.symbol.symbol;
+  if(typeof act.symbol==='string')return act.symbol;
+  return '';
+}
+// Import a single SnapTrade SELL activity into the realized[] log.
+// Tries to match against existing lots for entry price + entry date.
+function importSnapTradeSell(idx){
+  var act = stApiState.transactions.filter(_stIsSellActivity)[idx];
+  if(!act){ showToast('Sale not found','error'); return; }
+  var sym = _stExtractSym(act);
+  if(!sym){ showToast('Could not extract ticker from this sale','error'); return; }
+  var shares = Math.abs(act.units||0);
+  var sellPrice = act.price || (Math.abs(act.amount||0)/shares) || 0;
+  var sellDate = (act.trade_date||'').slice(0,10) || new Date().toISOString().slice(0,10);
+  // Try to find a matching lot to pull entry price/date from
+  var lt = lots[sym] || [];
+  var bestLot = null;
+  lt.forEach(function(lot){
+    if(lot.s>=shares-0.0001 && (!bestLot || (lot.p&&!bestLot.p))){bestLot=lot}
+  });
+  // Fallback: any lot with shares
+  if(!bestLot){ lt.forEach(function(lot){ if(lot.s>0 && !bestLot) bestLot=lot }); }
+  var entryPrice = bestLot && bestLot.p ? bestLot.p : null;
+  var entryDate = bestLot && bestLot.added ? bestLot.added.slice(0,10) : null;
+  var holdingDays = 0, longTerm = false;
+  if(entryDate){
+    var dE = new Date(entryDate+'T12:00:00Z');
+    var dS = new Date(sellDate+'T12:00:00Z');
+    holdingDays = Math.max(0, Math.round((dS-dE)/86400000));
+    longTerm = holdingDays > 365;
+  }
+  var proceeds = shares*sellPrice;
+  var cost = entryPrice ? shares*entryPrice : 0;
+  var gain = entryPrice ? (proceeds-cost) : 0;
+  // De-dupe: same ticker + sellDate + shares already imported
+  var dupe = realized.some(function(r){return r.ticker===sym && r.sellDate===sellDate && Math.abs(r.shares-shares)<0.0001 && r.source==='snaptrade'});
+  if(dupe){ showToast('This sale is already imported','error'); return; }
+  var rec = {
+    id:'r_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
+    ticker:sym,
+    account: bestLot && bestLot.b ? bestLot.b : '',
+    shares:shares,
+    entryPrice:entryPrice,
+    sellPrice:sellPrice,
+    entryDate:entryDate,
+    sellDate:sellDate,
+    holdingDays:holdingDays,
+    longTerm:longTerm,
+    proceeds:proceeds,
+    cost:cost,
+    gain:gain,
+    source:'snaptrade',
+    recordedAt:new Date().toISOString()
+  };
+  realized.push(rec);
+  // Decrement matching lot if found
+  if(bestLot && bestLot.s>0){
+    var rem = bestLot.s - shares;
+    if(rem<0.0001){
+      // Don't auto-remove, just zero — user can clean up manually
+      bestLot.s = 0;
+    } else {
+      bestLot.s = rem;
+    }
+    computeFromLots();
+  }
+  save();render();renderBrokersTab();
+  showToast('Imported sale: '+fmSh(shares)+' '+sym+' @ '+fm(sellPrice));
+  logActivity('snaptrade.sell.import','Imported SnapTrade sale: '+fmSh(shares)+' '+sym+' @ '+fm(sellPrice));
+}
+function importAllSnapTradeSells(){
+  var sells = stApiState.transactions.filter(_stIsSellActivity);
+  if(sells.length===0){ showToast('No sales to import','error'); return; }
+  if(!confirm('Import all '+sells.length+' SnapTrade sales into Realized P/L?\n\nDuplicates (same ticker+date+shares) are automatically skipped.\n\nLot entry price/date is matched when possible — sales without a matching lot will be recorded with no cost basis.'))return;
+  var before = realized.length;
+  for(var i=0; i<sells.length; i++){
+    try { importSnapTradeSell(i); } catch(e) {}
+  }
+  var added = realized.length - before;
+  showToast('Imported '+added+' of '+sells.length+' sales');
+}
+function renderSellsPanel(){
+  var el = G('bSellsPanel'); if(!el) return;
+  if(!stApiState.userSecret || stApiState.transactions.length===0){ el.innerHTML=''; return; }
+  var sells = stApiState.transactions.filter(_stIsSellActivity);
+  if(sells.length===0){ el.innerHTML=''; return; }
+  var sorted = sells.slice().sort(function(a,b){return (b.trade_date||'').localeCompare(a.trade_date||'')});
+  // Compute which are already imported
+  var importedKeys = {};
+  realized.forEach(function(r){ if(r.source==='snaptrade') importedKeys[r.ticker+'|'+r.sellDate+'|'+r.shares.toFixed(4)] = true; });
+  var unimported = sorted.filter(function(d){
+    var sym = _stExtractSym(d);
+    var date = (d.trade_date||'').slice(0,10);
+    var sh = Math.abs(d.units||0);
+    return !importedKeys[sym+'|'+date+'|'+sh.toFixed(4)];
+  });
+  var html = '<div class="broker-card"><div class="broker-header"><div><div class="broker-name">📤 Sales (last 90 days)</div><div class="broker-meta">'+sorted.length+' sale'+(sorted.length!==1?'s':'')+' detected · '+unimported.length+' not yet imported to Realized P/L</div></div>';
+  if(unimported.length>0){
+    html += '<button class="btn btn-primary" onclick="importAllSnapTradeSells()" style="font-size:11px;padding:5px 12px">Import All to Realized P/L</button>';
+  }
+  html += '</div>';
+  html += '<table class="broker-pos"><thead><tr><th>Date</th><th>Ticker</th><th>Shares</th><th>Price</th><th>Proceeds</th><th>Status</th><th></th></tr></thead><tbody>';
+  sorted.forEach(function(d, _idx){
+    var sym = _stExtractSym(d) || '?';
+    var date = (d.trade_date||'').slice(0,10);
+    var sh = Math.abs(d.units||0);
+    var price = d.price || 0;
+    var amt = Math.abs(d.amount||0);
+    var key = sym+'|'+date+'|'+sh.toFixed(4);
+    var imported = !!importedKeys[key];
+    // Get original index in unfiltered sells[] for the import handler
+    var origIdx = sells.indexOf(d);
+    html += '<tr><td class="mono" style="font-size:10.5px">'+date+'</td><td class="mono fw7">'+sym+'</td><td>'+sh.toFixed(4).replace(/\.?0+$/,'')+'</td><td>'+(price?fm(price):'—')+'</td><td>'+(amt?fm(amt):'—')+'</td>';
+    html += '<td>'+(imported?'<span class="badge badge-green" style="font-size:8px">IMPORTED</span>':'<span class="badge" style="font-size:8px;background:var(--bg);color:var(--muted)">PENDING</span>')+'</td>';
+    html += '<td>'+(imported?'':'<button class="btn btn-outline" onclick="importSnapTradeSell('+origIdx+')" style="font-size:9.5px;padding:3px 8px">Import</button>')+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
 function renderDripPanel(){
   var el=G('bDripPanel');if(!el)return;
   if(!stApiState.userSecret||stApiState.transactions.length===0){el.innerHTML='';return}
@@ -3878,6 +4475,7 @@ function renderDripPanel(){
 }
 
 function renderBrokersTab(){
+  renderSellsPanel();
   renderDripPanel();
   var el=G('bBrokers');if(!el)return;
   // Tab counter
