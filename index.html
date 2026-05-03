@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.19</title>
+<title>Portfolio Command Center v0.7.20</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.19</div>
+        <div class="logo-ver">v0.7.20</div>
       </div>
     </div>
     <div class="header-actions">
@@ -584,10 +584,20 @@ body.text-xl .sc .scv{font-size:24px}
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; Dividend Reminders</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast + chime when an ex-date or pay-date is approaching. Each reminder fires once per occurrence — refreshing the page won't re-trigger.</p>
-        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:8px">
           <input type="checkbox" id="sRemEnabled" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:14px;height:14px">
           <span>Enable dividend reminders</span>
         </label>
+        <div style="margin-left:22px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
+            <input type="checkbox" id="sRemIncludeEx" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
+            <span>Include <strong>ex-date</strong> reminders</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
+            <input type="checkbox" id="sRemIncludePay" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
+            <span>Include <strong>pay-date</strong> reminders</span>
+          </label>
+        </div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
           <div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>ex-date</strong></div>
@@ -599,6 +609,7 @@ body.text-xl .sc .scv{font-size:24px}
           </div>
         </div>
         <div id="remStatus" style="font-size:10.5px;color:var(--muted);margin-top:8px"></div>
+        <p style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">Settings auto-save when you change them — no Save button needed.</p>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
@@ -755,7 +766,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.19 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.20 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -786,7 +797,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.19";
+var VERSION = "0.7.20";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -895,9 +906,12 @@ function renderAccountCard(){
 function saveReminderPrefs(){
   var p=loadPrefs();
   var en=G('sRemEnabled');var ex=G('sRemDaysEx');var pd=G('sRemDaysPay');
+  var incEx=G('sRemIncludeEx');var incPd=G('sRemIncludePay');
   if(en)p.remEnabled=!!en.checked;
   if(ex)p.remDaysEx=Math.max(0,Math.min(60,parseInt(ex.value)||1));
   if(pd)p.remDaysPay=Math.max(0,Math.min(60,parseInt(pd.value)||1));
+  if(incEx)p.remIncludeEx=!!incEx.checked;
+  if(incPd)p.remIncludePay=!!incPd.checked;
   savePrefs(p);
   updateReminderStatus();
   showToast('Reminder settings saved');
@@ -907,6 +921,9 @@ function loadReminderPrefsUI(){
   var en=G('sRemEnabled');if(en)en.checked=!!p.remEnabled;
   var ex=G('sRemDaysEx');if(ex)ex.value=(p.remDaysEx==null?1:p.remDaysEx);
   var pd=G('sRemDaysPay');if(pd)pd.value=(p.remDaysPay==null?1:p.remDaysPay);
+  // Default both to true if undefined (existing users get both kinds of reminders)
+  var incEx=G('sRemIncludeEx');if(incEx)incEx.checked=(p.remIncludeEx!==false);
+  var incPd=G('sRemIncludePay');if(incPd)incPd.checked=(p.remIncludePay!==false);
   updateReminderStatus();
 }
 function updateReminderStatus(){
@@ -936,6 +953,8 @@ function runReminderCheck(){
   if(!p.remEnabled)return;
   var daysEx=p.remDaysEx==null?1:p.remDaysEx;
   var daysPay=p.remDaysPay==null?1:p.remDaysPay;
+  var includeEx=p.remIncludeEx!==false;
+  var includePay=p.remIncludePay!==false;
   var notified=p.notifiedReminders||{};
   var todayMs=Date.now();
   var fired=[];
@@ -945,14 +964,18 @@ function runReminderCheck(){
     if(!isReminderOptedIn(t))return;
     var d=DV[t];if(!d)return;
     // Ex-date check
-    if(d.ex&&d.ex!=='N/A'){
+    if(includeEx&&d.ex&&d.ex!=='N/A'){
       var exMs=new Date(d.ex+'T12:00:00').getTime();
       if(!isNaN(exMs)){
         var daysToEx=Math.ceil((exMs-todayMs)/86400000);
         if(daysToEx>=0&&daysToEx<=daysEx){
           var key=t+'-ex-'+d.ex;
           if(!notified[key]){
-            var msg=t+' ex-date '+(daysToEx===0?'today':'in '+daysToEx+' day'+(daysToEx!==1?'s':''))+' ('+d.ex+') — buy by today to receive next dividend';
+            // Calendar day before ex-date, walked back to Friday on weekends
+            var bdt=new Date(exMs-86400000);
+            while(bdt.getDay()===0||bdt.getDay()===6)bdt.setDate(bdt.getDate()-1);
+            var buyBy=bdt.toISOString().slice(0,10);
+            var msg=t+' ex-date '+(daysToEx===0?'today':'in '+daysToEx+' day'+(daysToEx!==1?'s':''))+' ('+d.ex+') — buy by close on '+buyBy+' to qualify';
             showToast(msg);playNotifSound();
             logActivity('reminder.exdate',msg);
             notified[key]=todayMs;
@@ -962,7 +985,7 @@ function runReminderCheck(){
       }
     }
     // Pay-date check
-    if(d.pd&&d.pd!=='N/A'){
+    if(includePay&&d.pd&&d.pd!=='N/A'){
       var pdMs=new Date(d.pd+'T12:00:00').getTime();
       if(!isNaN(pdMs)){
         var daysToPay=Math.ceil((pdMs-todayMs)/86400000);

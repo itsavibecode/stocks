@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.19**
+**Current Version: v0.7.20**
 
 ---
 
 ## Changelog
+
+### v0.7.20 — 2026-04-30
+- **Per-type reminder toggles.** Settings → Dividend Reminders now has two extra checkboxes — "Include ex-date reminders" and "Include pay-date reminders" — so you can disable one kind without disabling reminders entirely. Both default to on for existing users. Honored by both the in-app `runReminderCheck` and the daily email cron.
+- **In-app ex-date toast wording fixed.** Was "buy by today to receive next dividend" — now shows the actual trading-day-before date (skipping weekends) so the cutoff is unambiguous regardless of when you read the message.
+- **Inline Settings hint** confirms the panel auto-saves on change, no Save button needed (auto-save was added in v0.7.18 along with the "Reminder settings saved" toast).
 
 ### v0.7.19 — 2026-04-29
 - **Per-ticker dividend metadata (DV) now syncs to Firestore as `dvCache`.** Pay dates, ex-dates, yields, etc. for every ticker the user holds shares in. Powers the daily email-reminder cron in stocks-worker so it doesn't need to call Finnhub `/stock/dividend` itself (which is paid-tier and would also blow the Cloudflare Workers 50-subrequest free-tier limit). Writes are debounced 1.5s to avoid spam during recheck loops, and fire after each `pf_dv_custom` localStorage write plus once on auth-load completion.
