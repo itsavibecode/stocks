@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.23</title>
+<title>Portfolio Command Center v0.7.24</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -125,6 +125,35 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .snap-history-svg .hover-line{stroke:var(--accent);stroke-width:1;stroke-dasharray:3,3;opacity:0;pointer-events:none}
 .snap-history-svg .hover-dot{fill:var(--accent);opacity:0;pointer-events:none}
 .snap-history-tip{position:absolute;background:var(--card2);border:1px solid var(--accent);border-radius:6px;padding:5px 9px;font-size:10.5px;font-family:var(--mono);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .1s;z-index:10}
+/* Portfolio Value Over Time chart — labels are absolutely positioned HTML
+   (not SVG <text>) because the SVG uses preserveAspectRatio="none" to let
+   the line stretch, which would distort SVG text glyphs. Layout: SVG fills
+   the wrap, y-labels overlay on the left edge, x-labels along the bottom. */
+.snap-history-chart-wrap{position:relative;padding-left:64px;padding-bottom:18px}
+.snap-history-y{position:absolute;left:0;top:12px;bottom:30px;width:60px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+.snap-history-y .ylab{font-size:10px;font-family:var(--mono);color:var(--muted);text-align:right;line-height:1;white-space:nowrap}
+.snap-history-x{position:absolute;left:64px;right:12px;bottom:0;display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--muted);pointer-events:none}
+/* Tax Outlook 3:1 grid — chart on the left, tax sidebar on the right.
+   Stacks to one column at narrow widths (the chart card is already on a
+   wide-screen layout via snap-charts being 2-col on tablet, 3-col on desktop). */
+.tax-outlook-grid{display:grid;grid-template-columns:3fr 1fr;gap:14px;align-items:start}
+@media(max-width:760px){.tax-outlook-grid{grid-template-columns:1fr}}
+.tax-outlook-chart{min-width:0}
+.tax-outlook-side{min-width:0}
+.tax-side-card{background:var(--bg);border-radius:8px;border-left:3px solid var(--yellow);padding:12px 14px;display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box}
+.tax-side-empty{border-left-color:var(--accent);justify-content:center}
+.tax-side-empty-msg{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:4px}
+.tax-side-cta{margin-top:10px;font-size:11px;align-self:flex-start}
+.tax-side-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600}
+.tax-side-big{font-size:22px;font-weight:700;color:var(--yellow);font-family:var(--mono);line-height:1}
+.tax-side-rate{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.tax-side-breakdown{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:3px}
+.tax-side-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:var(--text2);gap:6px}
+.tax-side-row.tax-side-meta{color:var(--muted);font-size:9.5px;font-style:italic;margin-top:2px}
+.tax-side-after{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.tax-side-after-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.tax-side-after-val{font-size:14px;color:var(--green);font-weight:700;line-height:1.2;margin-top:2px}
+.tax-side-foot{font-size:9.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
 .payout-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0}
 .payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
 .payout-chart-title .pct-sub{font-size:10px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
@@ -458,7 +487,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.23</div>
+        <div class="logo-ver">v0.7.24</div>
       </div>
     </div>
     <div class="header-actions">
@@ -876,7 +905,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.23 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.24 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -942,7 +971,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.23";
+var VERSION = "0.7.24";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -2773,6 +2802,24 @@ function render(){
       var html = '<div class="snap-history" style="margin-top:14px">';
       html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub">Annual dividend income by tax treatment · ' + fm(total) + ' total</span></div>';
       html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Estimates based on common classifications — your actual 1099-DIV may vary. Hold &gt;60 days for qualified treatment on most US stocks.</div>';
+      // Compute tax estimate up-front so the sidebar can use it
+      var taxPrefs = loadPrefs();
+      var bracket = parseFloat(taxPrefs.taxBracket)||0;
+      var stateRate = parseFloat(taxPrefs.stateRate)||0;
+      var hasTax = bracket > 0;
+      var ltRate = hasTax ? ((bracket<=12) ? 0 : (bracket>=37 ? 20 : 15)) : 0;
+      var stRate = hasTax ? bracket : 0;
+      var taxQualified = hasTax ? ((buckets.qualified||0) * (ltRate+stateRate)/100) : 0;
+      var taxOrdinary = hasTax ? (((buckets.nonqualified||0) + (buckets.reit||0) + (buckets.foreign||0) + (buckets.partnership||0)) * (stRate+stateRate)/100) : 0;
+      var taxCollectibles = hasTax ? ((buckets.collectibles||0) * (Math.min(28,stRate)+stateRate)/100) : 0;
+      var taxTotal = taxQualified + taxOrdinary + taxCollectibles;
+      var afterTax = total - taxTotal;
+      var effectiveRate = total>0 ? (taxTotal/total*100) : 0;
+      // 3:1 split — chart on the left, tax sidebar on the right.
+      // Stacks to 1 column on narrow screens via the .tax-outlook-grid class.
+      html += '<div class="tax-outlook-grid">';
+      // ─── Left column: bar chart of buckets ───
+      html += '<div class="tax-outlook-chart">';
       var maxAmt = Math.max.apply(null, Object.keys(buckets).map(function(k){return buckets[k]}).concat([1]));
       TAX_BUCKET_ORDER.forEach(function(k) {
         var amt = buckets[k];
@@ -2780,38 +2827,43 @@ function render(){
         var info = TAX_BUCKETS[k];
         var pct = total > 0 ? (amt / total * 100) : 0;
         var w = maxAmt > 0 ? (amt / maxAmt * 100) : 0;
-        // Tickers contributing to this bucket, sorted by amount desc
         var tkPairs = Object.keys(bucketTks[k] || {}).map(function(t){return [t, bucketTks[k][t]]}).sort(function(a,b){return b[1]-a[1]});
         var tkLabel = tkPairs.map(function(p){return p[0]}).join(' · ');
         var tip = (info.label + ' — ' + info.hint).replace(/"/g, '&quot;');
-        html += '<div style="display:grid;grid-template-columns:170px 1fr 130px;gap:10px;align-items:center;padding:5px 6px;border-radius:5px;font-size:11px;margin-bottom:2px" title="' + tip + '">';
+        html += '<div style="display:grid;grid-template-columns:140px 1fr 110px;gap:8px;align-items:center;padding:5px 6px;border-radius:5px;font-size:11px;margin-bottom:2px" title="' + tip + '">';
         html += '<span style="font-size:10.5px;color:' + info.color + ';font-weight:600">' + info.label + '</span>';
         html += '<div class="snap-bar-bg" style="height:14px;position:relative"><div class="snap-bar" style="width:' + w.toFixed(1) + '%;background:' + info.color + ';opacity:.85"></div>' + (tkLabel ? '<span class="pct-bar-label">' + tkLabel + '</span>' : '') + '</div>';
         html += '<span class="mono" style="font-size:10.5px;text-align:right">' + fm(amt) + ' <span class="muted" style="font-size:9.5px">(' + pct.toFixed(1) + '%)</span></span>';
         html += '</div>';
       });
-      // Estimated tax on annual dividend income (uses prefs.taxBracket + prefs.stateRate)
-      var taxPrefs = loadPrefs();
-      var bracket = parseFloat(taxPrefs.taxBracket)||0;
-      var stateRate = parseFloat(taxPrefs.stateRate)||0;
-      if (bracket > 0) {
-        var ltRate = (bracket<=12) ? 0 : (bracket>=37 ? 20 : 15);
-        var stRate = bracket;
-        // Qualified dividends taxed at LT cap-gains; everything else at ordinary
-        // Mixed buckets are split 50/50 in addToBucket already
-        var taxQualified = (buckets.qualified||0) * (ltRate+stateRate)/100;
-        var taxOrdinary = ((buckets.nonqualified||0) + (buckets.reit||0) + (buckets.foreign||0) + (buckets.partnership||0)) * (stRate+stateRate)/100;
-        var taxCollectibles = (buckets.collectibles||0) * (Math.min(28,stRate)+stateRate)/100;
-        var taxTotal = taxQualified + taxOrdinary + taxCollectibles;
-        var afterTax = total - taxTotal;
-        html += '<div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;border-left:3px solid var(--yellow);font-size:11px;line-height:1.6">';
-        html += '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><span style="font-weight:700">&#129534; Estimated annual tax on dividends</span><span class="mono" style="color:var(--yellow);font-weight:700">'+fm(taxTotal)+'</span></div>';
-        html += '<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px"><span>After-tax annual income</span><span class="mono" style="color:var(--green)">'+fm(afterTax)+'</span></div>';
-        html += '<div style="font-size:10px;color:var(--muted);margin-top:4px">Bracket '+bracket+'% &middot; LT '+ltRate+'%'+(stateRate?' &middot; state '+stateRate+'%':'')+'</div>';
+      html += '</div>'; // end tax-outlook-chart
+      // ─── Right column: tax estimate sidebar ───
+      html += '<div class="tax-outlook-side">';
+      if (hasTax) {
+        html += '<div class="tax-side-card">';
+        html += '<div class="tax-side-label">&#129534; Est. Annual Tax</div>';
+        html += '<div class="tax-side-big">'+fm(taxTotal)+'</div>';
+        html += '<div class="tax-side-rate">'+effectiveRate.toFixed(1)+'% effective</div>';
+        // Mini breakdown by category
+        html += '<div class="tax-side-breakdown">';
+        if(taxQualified>0) html += '<div class="tax-side-row"><span>Qualified @ '+ltRate+'%</span><span class="mono">'+fm(taxQualified)+'</span></div>';
+        if(taxOrdinary>0) html += '<div class="tax-side-row"><span>Ordinary @ '+stRate+'%</span><span class="mono">'+fm(taxOrdinary)+'</span></div>';
+        if(taxCollectibles>0) html += '<div class="tax-side-row"><span>Collectibles @ '+Math.min(28,stRate)+'%</span><span class="mono">'+fm(taxCollectibles)+'</span></div>';
+        if(stateRate>0) html += '<div class="tax-side-row tax-side-meta"><span>incl. '+stateRate+'% state on all</span></div>';
+        html += '</div>';
+        // After-tax income highlight
+        html += '<div class="tax-side-after"><div class="tax-side-after-label">After-tax annual income</div><div class="tax-side-after-val mono">'+fm(afterTax)+'</div></div>';
+        html += '<div class="tax-side-foot">Bracket '+bracket+'%'+(stateRate?' + '+stateRate+'% state':'')+'</div>';
         html += '</div>';
       } else {
-        html += '<div style="margin-top:8px;font-size:10.5px;color:var(--muted)">Set your tax bracket in Settings &rarr; Tax Estimate to see projected tax on this income.</div>';
+        html += '<div class="tax-side-card tax-side-empty">';
+        html += '<div class="tax-side-label">&#129534; Tax Estimate</div>';
+        html += '<div class="tax-side-empty-msg">Set your tax bracket in Settings &rarr; Tax Estimate to project your annual tax on this income.</div>';
+        html += '<button class="btn btn-outline tax-side-cta" onclick="sTab(\'settings\');setTimeout(function(){var el=document.getElementById(\'sTaxBracket\');if(el){el.scrollIntoView({block:\'center\'});el.focus()}},80)">Configure &rarr;</button>';
+        html += '</div>';
       }
+      html += '</div>'; // end tax-outlook-side
+      html += '</div>'; // end tax-outlook-grid
       html += '<div style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border);line-height:1.5">Hover a row for the tax-treatment note. Individual ticker tax tags appear in the Dividends tab deep-dive panels with more detail. Not tax advice.</div>';
       html += '</div>';
       return html;
@@ -2930,7 +2982,11 @@ function render(){
       var minV = Math.min.apply(null, values);
       var maxV = Math.max.apply(null, values);
       var range = (maxV - minV) || 1;
-      var w = 800, ch = 140, padL = 50, padR = 12, padT = 12, padB = 22;
+      // Plot area math — note: the SVG no longer needs to reserve space for
+      // labels since they're rendered as HTML overlays in .snap-history-y /
+      // .snap-history-x. The wrap div pads 64px left + 18px bottom externally.
+      var w = 800, ch = 120;
+      var padT = 6, padB = 6, padL = 6, padR = 6;
       var plotW = w - padL - padR;
       var plotH = ch - padT - padB;
       var pts = hist.map(function(h, i) {
@@ -2940,7 +2996,6 @@ function render(){
       });
       var pathD = 'M' + pts.map(function(p){return p.x+','+p.y}).join(' L');
       var areaD = pathD + ' L' + pts[pts.length-1].x + ',' + (padT + plotH) + ' L' + pts[0].x + ',' + (padT + plotH) + ' Z';
-      // Y-axis labels (3 ticks: min, mid, max)
       var midV = (minV + maxV) / 2;
       var firstD = hist[0].d, lastD = hist[hist.length-1].d;
       var change = hist[hist.length-1].v - hist[0].v;
@@ -2950,28 +3005,32 @@ function render(){
       var dataAttr = JSON.stringify(pts).replace(/"/g, '&quot;');
       var html = '<div class="snap-history" style="position:relative">';
       html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span></span></div>';
+      html += '<div class="snap-history-chart-wrap">';
+      // Y-axis labels — HTML overlay (max top, mid middle, min bottom)
+      html += '<div class="snap-history-y">';
+      html += '<span class="ylab">' + fm(maxV) + '</span>';
+      html += '<span class="ylab">' + fm(midV) + '</span>';
+      html += '<span class="ylab">' + fm(minV) + '</span>';
+      html += '</div>';
+      // SVG plot area (line + area + gridlines + hover overlay only — no text)
       html += '<svg class="snap-history-svg" viewBox="0 0 ' + w + ' ' + ch + '" preserveAspectRatio="none" data-points="' + dataAttr + '" id="histSvg">';
       html += '<defs><linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="var(--accent2)"/><stop offset="100%" stop-color="var(--accent2)" stop-opacity="0"/></linearGradient></defs>';
-      // Y gridlines + labels
+      // Y gridlines (3 horizontal lines aligned with the y-labels)
       [0, 0.5, 1].forEach(function(t) {
         var y = padT + plotH * (1 - t);
-        var v = minV + range * t;
         html += '<line class="grid" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y + '" y2="' + y + '"/>';
-        html += '<text class="axis-label" x="' + (padL - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + fm(v) + '</text>';
       });
-      // X axis labels (first, last)
-      html += '<text class="axis-label" x="' + padL + '" y="' + (ch - 6) + '">' + firstD.slice(5) + '</text>';
-      html += '<text class="axis-label" x="' + (w - padR) + '" y="' + (ch - 6) + '" text-anchor="end">' + lastD.slice(5) + '</text>';
       // Area + line
       html += '<path class="area" d="' + areaD + '"/>';
       html += '<path class="line" d="' + pathD + '"/>';
-      // Endpoint dot
       var last = pts[pts.length - 1];
       html += '<circle class="dot" cx="' + last.x + '" cy="' + last.y + '" r="3"/>';
-      // Hover overlay (line + dot)
       html += '<line class="hover-line" id="histHoverLine" x1="0" x2="0" y1="' + padT + '" y2="' + (padT + plotH) + '"/>';
       html += '<circle class="hover-dot" id="histHoverDot" cx="0" cy="0" r="4"/>';
       html += '</svg>';
+      // X-axis labels — HTML overlay (first/last date)
+      html += '<div class="snap-history-x"><span>' + firstD.slice(5) + '</span><span>' + lastD.slice(5) + '</span></div>';
+      html += '</div>'; // end snap-history-chart-wrap
       html += '<div class="snap-history-tip" id="histTip"></div>';
       html += '</div>';
       return html;

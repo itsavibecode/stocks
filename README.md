@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.23**
+**Current Version: v0.7.24**
 
 ---
 
 ## Changelog
+
+### v0.7.24 — 2026-05-03 — Tax Outlook redesign + chart label fix
+- **Tax Outlook panel reorganized into a 3:1 grid.** The bucket bar chart now takes the left 75%; a dedicated "Estimated Annual Tax" sidebar fills the right 25%. The sidebar leads with the tax total in a big yellow number, the effective rate ("X.X% effective") below it, then a mini-breakdown by category (Qualified @ LT rate, Ordinary @ bracket, Collectibles capped at 28%), an after-tax annual income highlight in green, and the bracket footer at the bottom. When no bracket is set, the sidebar shows a "Configure →" CTA that jumps straight to Settings → Tax Estimate and focuses the dropdown. Stacks to a single column at narrow widths (≤760px).
+- **Portfolio Value Over Time chart labels fixed.** The Y-axis dollar values were being clipped at the left edge and looked vertically stretched because they were SVG `<text>` inside a `preserveAspectRatio="none"` SVG — that lets the line stretch nicely with the container width but distorts text glyphs and lets long labels render off the viewBox. Fix: moved all labels (Y-axis values + X-axis dates) out of the SVG into HTML overlays absolutely positioned around the chart wrap. The SVG now just renders the line, area fill, gridlines, and hover overlay (all of which look fine when stretched). Wrap padding-left:64px reserves space for full "$XX,XXX.XX" labels without clipping.
 
 ### v0.7.23 — 2026-05-03 — Sticky-thead fix
 - **Sticky table headers now stay visible.** v0.7.21 shipped sticky theads with `top:60px`, but the page header (`.header` is `position:sticky;top:0;z-index:100`) is actually 85–95px tall — and grows when stat boxes appear after sign-in. The thead was sticking 60px down, behind the page header (z-index:90 vs 100), so it disappeared from view as you scrolled. Two fixes: (1) sticky offset is now a CSS variable `--sticky-top` set dynamically from the live `.header` height by `syncStickyTop()` on load + resize + ResizeObserver (so it adapts when the header grows after sign-in or RSS panel toggles). (2) `.table-wrap` no longer sets `overflow-x:auto` at desktop wide widths — per CSS Overflow Module L3, mixing `overflow-x:auto` with `overflow-y:visible` promotes `overflow-y` to `auto`, making the wrap a scroll container and breaking sticky's binding to the page. Horizontal scroll is now scoped to a `(max-width:1100px) and (min-width:641px)` media query for narrow desktop, and on wider screens sticky binds correctly to the page scroll.
