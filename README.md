@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.22**
+**Current Version: v0.7.23**
 
 ---
 
 ## Changelog
+
+### v0.7.23 — 2026-05-03 — Sticky-thead fix
+- **Sticky table headers now stay visible.** v0.7.21 shipped sticky theads with `top:60px`, but the page header (`.header` is `position:sticky;top:0;z-index:100`) is actually 85–95px tall — and grows when stat boxes appear after sign-in. The thead was sticking 60px down, behind the page header (z-index:90 vs 100), so it disappeared from view as you scrolled. Two fixes: (1) sticky offset is now a CSS variable `--sticky-top` set dynamically from the live `.header` height by `syncStickyTop()` on load + resize + ResizeObserver (so it adapts when the header grows after sign-in or RSS panel toggles). (2) `.table-wrap` no longer sets `overflow-x:auto` at desktop wide widths — per CSS Overflow Module L3, mixing `overflow-x:auto` with `overflow-y:visible` promotes `overflow-y` to `auto`, making the wrap a scroll container and breaking sticky's binding to the page. Horizontal scroll is now scoped to a `(max-width:1100px) and (min-width:641px)` media query for narrow desktop, and on wider screens sticky binds correctly to the page scroll.
 
 ### v0.7.22 — 2026-05-03 — Realized gains, taxes, CSV export
 - **Sell workflow.** Every lot row in the deep-dive panel grew a "Sell" button. Clicking opens a modal pre-filled with the lot's shares + the current quote — adjust shares-to-sell, sell price, sell date, and (optionally) entry date, and the live estimate panel shows realized gain/loss with long-term vs short-term classification (>365 days held). Confirming records the sale to a new top-level `realized[]` array, decrements the source lot's shares (or removes it if all sold), and logs `portfolio.sell` with the gain.

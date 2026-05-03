@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.22</title>
+<title>Portfolio Command Center v0.7.23</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -267,10 +267,25 @@ body.compact .dr td{padding-top:5px;padding-bottom:5px}
 .search-bar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;width:100%;max-width:440px;transition:border .15s}
 .search-bar:focus{border-color:var(--accent)}
 
-.table-wrap{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;margin-top:10px}
+/* Default: no overflow — sticky thead binds to the page scroll context.
+   Per CSS Overflow Module L3, overflow-x:auto + overflow-y:visible computes
+   to overflow-x:auto + overflow-y:auto, which would make .table-wrap a
+   scroll container and break sticky. So we only enable horizontal scroll
+   at narrow widths via media query (and accept that sticky degrades there). */
+.table-wrap{margin-top:10px}
+@media (max-width:1100px) and (min-width:641px){
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
 table{width:100%;border-collapse:separate;border-spacing:0 2px;font-size:12px}
-/* Sticky table headers — top offset clears the page header (which is sticky at top:0 z-index:100) */
-table thead th{position:sticky;top:60px;background:var(--bg);z-index:5;box-shadow:inset 0 -1px 0 var(--border)}
+/* Sticky table headers — top offset clears the sticky page header.
+   --sticky-top is set dynamically by syncStickyTop() on load + resize since
+   the page header height varies (logo-block lines wrap on narrow widths,
+   header-actions wraps when stat boxes appear after sign-in). z-index 90
+   sits above table rows but below the page header (z-index 100), so the
+   thead slides under the header on scroll — but by then `top:--sticky-top`
+   has already pinned it just below the header, so it stays visible. */
+:root{--sticky-top:90px}
+table thead th{position:sticky;top:var(--sticky-top);background:var(--bg);z-index:90;box-shadow:inset 0 -1px 0 var(--border)}
 thead th{padding:8px 10px;text-align:left;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;background:var(--bg)}
 thead th:hover{color:var(--text2)}
 thead th .sa{margin-left:3px;font-size:9px;opacity:.3}
@@ -443,7 +458,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.22</div>
+        <div class="logo-ver">v0.7.23</div>
       </div>
     </div>
     <div class="header-actions">
@@ -861,7 +876,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.22 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.23 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -927,7 +942,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.22";
+var VERSION = "0.7.23";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -4592,6 +4607,29 @@ function tickLocalClock(){
 }
 tickLocalClock();
 setInterval(tickLocalClock,1000);
+
+// Keep the sticky-thead top offset in sync with the actual page-header height.
+// The page header (.header) is position:sticky;top:0;z-index:100. Its height
+// varies with content wrapping (stat boxes appear after sign-in, header-actions
+// can wrap on narrow widths). If thead's `top` is smaller than header height,
+// thead sits behind the header (z-index 90 < 100) and looks "stuck behind."
+function syncStickyTop(){
+  var h = document.querySelector('.header');
+  if(!h) return;
+  var px = Math.max(60, Math.ceil(h.getBoundingClientRect().height) + 2);
+  document.documentElement.style.setProperty('--sticky-top', px+'px');
+}
+syncStickyTop();
+window.addEventListener('resize', syncStickyTop);
+// Header height also changes when the user signs in (stat boxes show), the
+// portfolio loads (sub-line populates), or the RSS panel toggles. Watch the
+// header for size changes.
+if (typeof ResizeObserver !== 'undefined') {
+  try {
+    var _hdrEl = document.querySelector('.header');
+    if(_hdrEl) new ResizeObserver(syncStickyTop).observe(_hdrEl);
+  } catch(e) {}
+}
 
 // Fetch live prices on load if API key is set and cache is stale
 if (anyKeySet() && (Date.now() - pricesLastFetched > PRICE_CACHE_MS)) {
