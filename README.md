@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.18**
+**Current Version: v0.7.19**
 
 ---
 
 ## Changelog
+
+### v0.7.19 — 2026-04-29
+- **Per-ticker dividend metadata (DV) now syncs to Firestore as `dvCache`.** Pay dates, ex-dates, yields, etc. for every ticker the user holds shares in. Powers the daily email-reminder cron in stocks-worker so it doesn't need to call Finnhub `/stock/dividend` itself (which is paid-tier and would also blow the Cloudflare Workers 50-subrequest free-tier limit). Writes are debounced 1.5s to avoid spam during recheck loops, and fire after each `pf_dv_custom` localStorage write plus once on auth-load completion.
 
 ### v0.7.18 — 2026-04-29
 - **Reminder day windows raised from 14 to 60.** The "Days before ex-date" / "Days before pay-date" inputs in Settings → Dividend Reminders are now capped at 60 instead of 14, both in the HTML `max` attribute and the JS clamp. Saving now also flashes a "Reminder settings saved" toast so changes are visibly acknowledged.

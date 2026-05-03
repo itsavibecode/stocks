@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.18</title>
+<title>Portfolio Command Center v0.7.19</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.18</div>
+        <div class="logo-ver">v0.7.19</div>
       </div>
     </div>
     <div class="header-actions">
@@ -755,7 +755,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.18 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.19 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -786,7 +786,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.18";
+var VERSION = "0.7.19";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1094,6 +1094,9 @@ if (firebaseReady) {
         if (typeof runReminderCheck === 'function') {
           try { runReminderCheck(); } catch (e) { console.error('Reminder check error:', e); }
         }
+        // Push current DV snapshot to Firestore so the email-reminder cron has fresh
+        // pay/ex dates without needing to call Finnhub itself
+        if (typeof saveDvToCloud === 'function') saveDvToCloud();
       });
       if (becameSignedIn) logActivity('auth.signin', 'Signed in as '+(user.email||user.displayName||user.uid));
     }
@@ -1127,6 +1130,27 @@ function saveCacheToCloud(){
       prices:livePrices,pricesTs:pricesLastFetched
     }
   },{merge:true}).catch(function(e){console.error('Cache sync error:',e)});
+}
+
+// Write the user's DV map (per-ticker dividend metadata: ex, pd, np, etc.) to
+// Firestore so the daily reminder cron in stocks-worker can read it without
+// burning Finnhub /stock/dividend calls (which are paid-tier and would exceed
+// the Cloudflare Workers 50-subrequest free-tier limit).
+// Debounced so rapid recheck loops don't spam writes.
+var _dvSyncTimer = null;
+function saveDvToCloud(){
+  if(!syncEnabled||!currentUser||!db)return;
+  if(_dvSyncTimer)clearTimeout(_dvSyncTimer);
+  _dvSyncTimer=setTimeout(function(){
+    var snapshot={};
+    tks.forEach(function(t){
+      if(DV[t]&&(sh[t]||0)>0)snapshot[t]=DV[t];
+    });
+    db.collection('portfolios').doc(currentUser.uid).set(
+      {dvCache:snapshot,dvCacheTs:Date.now()},
+      {merge:true}
+    ).catch(function(e){console.error('DV cache sync error:',e)});
+  },1500);
 }
 
 function loadFromCloud() {
@@ -1783,6 +1807,7 @@ function recheckMissingData(){
   function next(){
     if(idx>=queue.length){
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      if(typeof saveDvToCloud==='function')saveDvToCloud();
       lastRecheckTime=Date.now();
       try{localStorage.setItem('pf_last_recheck',''+lastRecheckTime)}catch(e){}
       render();
@@ -2714,6 +2739,7 @@ function fetchProfile(ticker){
   if(COMMODITY_ETFS[ticker]){
     DV[ticker]={y:0,a:0,f:'N/A',ex:'N/A',pd:'N/A',np:0,yp:0,yr:0,pr:0,rt:'ETF',sc:COMMODITY_ETFS[ticker],g5:0,h:[]};
     try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      if(typeof saveDvToCloud==='function')saveDvToCloud();
     render();return;
   }
   // For known ETFs, set sector immediately so it's not blank, then still try Finnhub for dividend data
@@ -2810,11 +2836,13 @@ function fetchProfile(ticker){
         DV[ticker].h=divData.slice(-6).map(function(d){return{d:d.payDate||d.date,a:d.amount||0}});
       }
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      if(typeof saveDvToCloud==='function')saveDvToCloud();
       render();
     })
     .catch(function(e){
       logApiError('profile+metric+div',ticker,e.message||'Request failed');
       try{localStorage.setItem('pf_dv_custom',JSON.stringify(getDVCustom()))}catch(e){}
+      if(typeof saveDvToCloud==='function')saveDvToCloud();
       render();
     });
 }
