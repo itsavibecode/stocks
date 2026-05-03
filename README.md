@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.17**
+**Current Version: v0.7.18**
 
 ---
 
 ## Changelog
+
+### v0.7.18 — 2026-04-29
+- **Reminder day windows raised from 14 to 60.** The "Days before ex-date" / "Days before pay-date" inputs in Settings → Dividend Reminders are now capped at 60 instead of 14, both in the HTML `max` attribute and the JS clamp. Saving now also flashes a "Reminder settings saved" toast so changes are visibly acknowledged.
 
 ### v0.7.17 — 2026-04-29
 - **Last-refresh timestamp under every refresh-style button** — extended the v0.7.16 label to also appear under the News tab's "Refresh News" button (tracks `newsLastFetched`) and the Brokers tab's "Refresh" button (tracks `stApiState.lastFetched`). Each label updates from the data source most relevant to its button. Same monospace mini-label format as the Recheck buttons.

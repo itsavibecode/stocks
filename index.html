@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.17</title>
+<title>Portfolio Command Center v0.7.18</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -402,7 +402,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.17</div>
+        <div class="logo-ver">v0.7.18</div>
       </div>
     </div>
     <div class="header-actions">
@@ -591,11 +591,11 @@ body.text-xl .sc .scv{font-size:24px}
         <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
           <div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>ex-date</strong></div>
-            <input class="mi" type="number" id="sRemDaysEx" min="0" max="14" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+            <input class="mi" type="number" id="sRemDaysEx" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
           </div>
           <div>
             <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>pay-date</strong></div>
-            <input class="mi" type="number" id="sRemDaysPay" min="0" max="14" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+            <input class="mi" type="number" id="sRemDaysPay" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
           </div>
         </div>
         <div id="remStatus" style="font-size:10.5px;color:var(--muted);margin-top:8px"></div>
@@ -755,7 +755,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.17 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.18 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -786,7 +786,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.17";
+var VERSION = "0.7.18";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -896,10 +896,11 @@ function saveReminderPrefs(){
   var p=loadPrefs();
   var en=G('sRemEnabled');var ex=G('sRemDaysEx');var pd=G('sRemDaysPay');
   if(en)p.remEnabled=!!en.checked;
-  if(ex)p.remDaysEx=Math.max(0,Math.min(14,parseInt(ex.value)||1));
-  if(pd)p.remDaysPay=Math.max(0,Math.min(14,parseInt(pd.value)||1));
+  if(ex)p.remDaysEx=Math.max(0,Math.min(60,parseInt(ex.value)||1));
+  if(pd)p.remDaysPay=Math.max(0,Math.min(60,parseInt(pd.value)||1));
   savePrefs(p);
   updateReminderStatus();
+  showToast('Reminder settings saved');
 }
 function loadReminderPrefsUI(){
   var p=loadPrefs();
