@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.28</title>
+<title>Portfolio Command Center v0.7.29</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -497,7 +497,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.28</div>
+        <div class="logo-ver">v0.7.29</div>
       </div>
     </div>
     <div class="header-actions">
@@ -915,7 +915,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.28 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.29 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -999,7 +999,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.28";
+var VERSION = "0.7.29";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -4651,13 +4651,16 @@ function renderSnapTradeCard(){
     html+='<div style="margin-top:10px;background:rgba(239,68,68,.08);border:1px solid var(--red-dim);border-left:3px solid var(--red);border-radius:6px;padding:10px 12px">';
     html+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">';
     html+='<span style="color:var(--red);font-weight:700;font-size:11.5px">⚠ Last SnapTrade error'+errAge+'</span>';
+    html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    html+='<button class="btn btn-outline" onclick="runSnapTradeDiagnostics()" style="font-size:9.5px;padding:3px 8px;color:var(--accent2);border-color:var(--accent2)">🔍 Run diagnostics</button>';
     html+='<button class="btn btn-outline" onclick="navigator.clipboard.writeText(snapTradeErrorReport()).then(function(){showToast(\'Error report copied to clipboard\')})" style="font-size:9.5px;padding:3px 8px">Copy details</button>';
-    html+='</div>';
+    html+='</div></div>';
     html+='<div style="font-size:11px;font-weight:700;color:var(--text);margin-top:4px">'+stApiState.lastError+'</div>';
     if(stApiState.lastErrorDetail){
       html+='<div style="font-size:10.5px;color:var(--text2);margin-top:4px;line-height:1.5;font-family:var(--mono);background:var(--bg);padding:6px 8px;border-radius:4px;word-break:break-word">'+stApiState.lastErrorDetail.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>';
     }
-    html+='<div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">If this looks like a duplicate-user / "user already registered" error, click Connect again — the app will prompt you to register a fresh SnapTrade ID.</div>';
+    html+='<div id="snapDiagOut" style="margin-top:8px"></div>';
+    html+='<div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Code 1076 / "Unable to verify signature" means Cloudflare\'s SNAPTRADE_CONSUMER_KEY doesn\'t match what SnapTrade has on file. Click <strong>Run diagnostics</strong> to confirm.</div>';
     html+='</div>';
   }
   body.innerHTML=html;
@@ -4672,6 +4675,61 @@ function snapTradeErrorReport(){
     'Detail: '+(stApiState.lastErrorDetail||'(none)'),
     'UserAgent: '+navigator.userAgent
   ].join('\n');
+}
+// Hit the worker's /debug-snaptrade endpoint and dump the result inline.
+// Confirms whether the consumer key is set, whether it has whitespace from
+// a bad paste, and whether SnapTrade accepts the signature on a different
+// endpoint (listUsers — exercises same signing code path as /register).
+async function runSnapTradeDiagnostics(){
+  if(!currentUser){showToast('Sign in first','warn');return}
+  var box = G('snapDiagOut');
+  if(box) box.innerHTML = '<div style="color:var(--muted);font-size:11px">Running diagnostics…</div>';
+  var token;
+  try { token = await currentUser.getIdToken(); }
+  catch(e){ if(box)box.innerHTML='<div style="color:var(--red)">Auth refresh failed: '+e.message+'</div>'; return; }
+  var resp;
+  try {
+    resp = await fetch(WORKER_URL + '/debug-snaptrade', {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+  } catch(e){
+    if(box)box.innerHTML='<div style="color:var(--red)">Worker unreachable: '+e.message+'</div>';
+    return;
+  }
+  var data;
+  try { data = await resp.json(); } catch(e){ data = { error: 'Invalid JSON', text: await resp.text() }; }
+  if(!box) return;
+  // Render compact summary + full JSON for copy
+  var keyOk = data.consumerKeySet && !data.consumerKeyHasWhitespace && !data.consumerKeyTrimmedDiffers;
+  var sigOk = data.signedTest && data.signedTest.ok;
+  var lines = [];
+  lines.push('<div style="font-size:11px;line-height:1.7;font-family:var(--mono)">');
+  lines.push('Worker: <span style="color:var(--green)">v'+(data.workerVersion||'?')+'</span>');
+  lines.push('Client ID: '+(data.clientIdSet?('set '+(data.clientIdFingerprint||'')+', '+data.clientIdLength+' chars'):'<span style="color:var(--red)">NOT SET</span>'));
+  lines.push('Consumer Key: '+(data.consumerKeySet?('set '+(data.consumerKeyFingerprint||'')+', '+data.consumerKeyLength+' chars'):'<span style="color:var(--red)">NOT SET</span>'));
+  if(data.consumerKeyHasWhitespace) lines.push('<span style="color:var(--red)">⚠ Consumer Key contains whitespace — bad paste? Re-set with `wrangler secret put SNAPTRADE_CONSUMER_KEY`.</span>');
+  if(data.consumerKeyTrimmedDiffers) lines.push('<span style="color:var(--red)">⚠ Consumer Key has leading/trailing whitespace.</span>');
+  if(data.signedTest){
+    if(data.signedTest.ok){
+      lines.push('Signed test (listUsers): <span style="color:var(--green)">OK — '+data.signedTest.userCount+' users registered</span>');
+    } else {
+      lines.push('Signed test (listUsers): <span style="color:var(--red)">FAILED — status '+data.signedTest.status+'</span>');
+      if(data.signedTest.error) lines.push('  → '+JSON.stringify(data.signedTest.error).slice(0,200));
+    }
+  }
+  if(data.apiPing) lines.push('SnapTrade reachable: '+(data.apiPing.status||data.apiPing.error));
+  lines.push('</div>');
+  // Verdict
+  var verdict = '';
+  if(!data.consumerKeySet) {
+    verdict = '<div style="margin-top:8px;color:var(--red);font-weight:700">→ Consumer Key is missing. Set it with: cd T:\\ClaudeCodeRepo\\stocks-worker; npx wrangler secret put SNAPTRADE_CONSUMER_KEY</div>';
+  } else if (!sigOk) {
+    verdict = '<div style="margin-top:8px;color:var(--yellow);font-weight:700">→ Consumer Key is set but SnapTrade rejects the signature. Most likely the key value in Cloudflare doesn\'t match what SnapTrade has. <strong>Fix:</strong> log in to the SnapTrade dashboard, copy the consumerKey value, then run:<br><code style="display:inline-block;padding:4px 8px;background:var(--bg);border-radius:4px;margin-top:4px">cd T:\\ClaudeCodeRepo\\stocks-worker; npx wrangler secret put SNAPTRADE_CONSUMER_KEY</code><br>Paste the value when prompted (no quotes, no trailing newline). Then click "Connect a Brokerage" again.</div>';
+  } else if (sigOk) {
+    verdict = '<div style="margin-top:8px;color:var(--green);font-weight:700">→ Signature is valid. Whatever was wrong has been fixed. Try Connect again.</div>';
+  }
+  box.innerHTML = lines.join('<br>') + verdict;
 }
 
 function toggleSnapAutoSync(checked){
@@ -4885,13 +4943,16 @@ function renderBrokersTab(){
     errBlock = '<div style="max-width:560px;margin:14px auto 0;background:rgba(239,68,68,.08);border:1px solid var(--red-dim);border-left:3px solid var(--red);border-radius:6px;padding:12px 14px;text-align:left">';
     errBlock += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">';
     errBlock += '<span style="color:var(--red);font-weight:700;font-size:12px">⚠ Last SnapTrade error'+errAge2+'</span>';
+    errBlock += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+    errBlock += '<button class="btn btn-outline" onclick="runSnapTradeDiagnostics()" style="font-size:9.5px;padding:3px 8px;color:var(--accent2);border-color:var(--accent2)">🔍 Run diagnostics</button>';
     errBlock += '<button class="btn btn-outline" onclick="navigator.clipboard.writeText(snapTradeErrorReport()).then(function(){showToast(\'Error report copied\')})" style="font-size:9.5px;padding:3px 8px">Copy details</button>';
-    errBlock += '</div>';
+    errBlock += '</div></div>';
     errBlock += '<div style="font-size:11.5px;font-weight:700;color:var(--text);margin-top:4px">'+stApiState.lastError+'</div>';
     if (stApiState.lastErrorDetail) {
       errBlock += '<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;font-family:var(--mono);background:var(--bg);padding:6px 8px;border-radius:4px;word-break:break-word">'+stApiState.lastErrorDetail.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>';
     }
-    errBlock += '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5">If this is a duplicate-user error, click Connect again and the app will prompt you to register under a fresh SnapTrade ID.</div>';
+    errBlock += '<div id="snapDiagOut" style="margin-top:8px"></div>';
+    errBlock += '<div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5">Code 1076 / "Unable to verify signature" → SNAPTRADE_CONSUMER_KEY in Cloudflare doesn\'t match SnapTrade. Click <strong>Run diagnostics</strong> to confirm.</div>';
     errBlock += '</div>';
   }
   if(!stApiState.userSecret){
