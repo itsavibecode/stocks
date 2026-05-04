@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.26**
+**Current Version: v0.7.27**
 
 ---
 
 ## Changelog
+
+### v0.7.27 — 2026-05-03 — Toasts top-center + actual /register recovery
+- **Toasts moved to top-center.** Bottom-right meant warn/error notifications were easy to miss when looking at the active part of the page. Now pinned `top:20px; left:50%; translateX(-50%)`. Width auto-fits up to 90vw, slides down on show. Warn and error toasts hold for 5.5s (was 2.5s) so they can actually be read.
+- **SnapTrade detail surfaced in the toast.** Previously `callWorker` only showed the worker's generic error envelope ("registerUser failed") and buried SnapTrade's actual message in `console.error`. Now it digs into the response detail (`message+code` or `errorMessage+errorCode`) and appends it to the toast — so you can see what SnapTrade actually said without opening dev tools.
+- **/register fallback actually works now.** v0.7.26's `resetUserSecret` path didn't work because that endpoint requires the existing userSecret (which is what we lost in the first place). Replaced with a proper recovery flow: when the worker reports `canRetryFresh:true` (Firebase UID was already registered with SnapTrade), the app shows a confirmation dialog explaining the situation — including SnapTrade's actual error message — and on confirm, hits `/register?fresh=1` which generates a new userId of form `${firebaseUid}_${randomSuffix}`. Worker's downstream auth checks now accept any `userId` that starts with the authenticated Firebase UID, so the recovery flow doesn't break later API calls. **Tradeoff:** any brokerages connected under the original userId become orphaned on SnapTrade's side and need to be reconnected through the portal.
 
 ### v0.7.26 — 2026-05-03 — SnapTrade /register recovery
 - **Connect-after-backup no longer dead-ends.** The v0.7.25 backup prompt was working correctly — it was downloading the backup and calling `snapTradeRegister()` — but if the user's Firebase UID had ever been registered with SnapTrade before (and the userSecret was lost from prefs, e.g. fresh sign-in or wiped storage), SnapTrade's `registerUser` returns 400 "user already exists" and the connect popup never opened. Two fixes: (1) **Worker v0.5.0** now catches that 400 and falls back to `resetUserSecret` to mint a fresh userSecret for the existing user, returning `recovered:true` in the response. (2) The app shows a "Reconnecting to existing SnapTrade account" toast when recovery happens, and a clearer "Registration failed: <detail>" toast when register actually does fail (so it no longer looks like the modal silently closed). Note: any brokerages connected before the secret reset will need to be reconnected via the portal.

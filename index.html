@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.26</title>
+<title>Portfolio Command Center v0.7.27</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -35,8 +35,10 @@ input,button,select{font-family:inherit}
 .fade-up{animation:fadeUp .3s ease both}
 
 .container{max-width:1520px;margin:0 auto;padding:0 20px}
-.save-toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#000;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;z-index:500;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none}
-.save-toast.show{opacity:1;transform:translateY(0)}
+/* Toasts pinned top-center so warn/error notifications can't be missed in the
+   bottom-right corner. translateY(-10px) hidden state slides down on show. */
+.save-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:700;z-index:1200;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);line-height:1.4;white-space:normal}
+.save-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* AUTH BAR */
 .auth-bar{background:var(--card);border-bottom:1px solid var(--border);padding:5px 0;font-size:11px}
@@ -493,7 +495,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.26</div>
+        <div class="logo-ver">v0.7.27</div>
       </div>
     </div>
     <div class="header-actions">
@@ -911,7 +913,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.26 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.27 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -995,7 +997,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.26";
+var VERSION = "0.7.27";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1676,9 +1678,21 @@ async function callWorker(path, body, method) {
   var data;
   try { data = await resp.json(); } catch (e) { data = { error: 'Invalid JSON from worker' }; }
   if (!resp.ok) {
+    // Build a more useful error string by digging into the SnapTrade-side detail.
+    // SnapTrade returns either {message,code,detail} or {errorMessage,errorCode}.
+    // We surface the most informative field so the user/dev can act on it.
+    var detailMsg = '';
+    if (data && data.detail) {
+      var d = data.detail;
+      if (typeof d === 'string') detailMsg = d;
+      else if (d.message) detailMsg = d.message + (d.code ? ' (code '+d.code+')' : '');
+      else if (d.errorMessage) detailMsg = d.errorMessage + (d.errorCode ? ' (code '+d.errorCode+')' : '');
+      else detailMsg = JSON.stringify(d).slice(0,180);
+    }
     stApiState.lastError = (data && data.error) || ('HTTP ' + resp.status);
     if (data && data.detail) console.error('Worker '+path+' detail:', data.detail);
-    showToast('SnapTrade ' + path + ': ' + stApiState.lastError, 'warn');
+    var fullMsg = 'SnapTrade ' + path + ': ' + stApiState.lastError + (detailMsg ? ' — ' + detailMsg : '');
+    showToast(fullMsg, 'warn');
     return null;
   }
   stApiState.lastError = "";
@@ -3794,7 +3808,8 @@ function previewSound(){
   if(fn)try{fn()}catch(e){}
 }
 
-// Enhanced toast with type
+// Enhanced toast with type. Warn/error toasts hold longer so the user can
+// actually read them (and not miss them when looking elsewhere on screen).
 function showToast(msg,type){
   var t=document.getElementById('svt');
   t.textContent=msg;
@@ -3802,7 +3817,8 @@ function showToast(msg,type){
   t.style.color=type==='warn'?'#000':type==='error'?'#fff':'#000';
   t.classList.add('show');
   clearTimeout(svTO);
-  svTO=setTimeout(function(){t.classList.remove('show');t.style.background='';t.style.color=''},2500);
+  var holdMs = (type==='warn'||type==='error') ? 5500 : 2500;
+  svTO=setTimeout(function(){t.classList.remove('show');t.style.background='';t.style.color=''},holdMs);
 }
 
 // ═════════════════════════════════════════════════
@@ -4069,29 +4085,91 @@ function clearTdKey(){
 // ═════════════════════════════════════════════════
 // SNAPTRADE — connect / refresh / render
 // ═════════════════════════════════════════════════
-async function snapTradeRegister(){
-  if(!currentUser){showToast('Sign in first','warn');return false}
-  showToast('Registering with SnapTrade...');
-  var data=await callWorker('/register',{});
-  if(!data)return false;
+// Internal: directly hit /register (with optional ?fresh=1) without the
+// retry-on-conflict logic. Returns true on success, false on failure.
+async function _snapTradeRegisterCore(fresh){
+  var path = fresh ? '/register?fresh=1' : '/register';
+  showToast(fresh ? 'Registering fresh SnapTrade account…' : 'Registering with SnapTrade…');
+  // callWorker only takes path/body/method; we encode the query in the path
+  // since the worker reads it via URL.searchParams.
+  var data = await callWorker(path,{});
+  if(!data) return false;
   stApiState.userSecret=data.snaptradeUserSecret;
-  // Persist userSecret in prefs (Firestore-synced)
   var prefs=loadPrefs();
   prefs.snaptradeUserSecret=data.snaptradeUserSecret;
   prefs.snaptradeUserId=data.snaptradeUserId;
   savePrefs(prefs);
-  // The worker returns recovered:true when it had to reset the secret because
-  // the userId was already registered with SnapTrade. Tell the user — any
-  // brokerages they previously connected will need to be reconnected since
-  // the old secret no longer works.
   if (data.recovered) {
-    showToast('Reconnecting to existing SnapTrade account — opening portal...');
-    logActivity('snaptrade.register.recovered','Recovered SnapTrade access via secret reset (user was previously registered)');
+    showToast('Registered with a fresh SnapTrade ID — opening portal to link a brokerage…');
+    logActivity('snaptrade.register.recovered','Registered SnapTrade with fresh-suffix userId (original ID was already taken)');
   } else {
-    showToast('Registered — opening connection portal...');
+    showToast('Registered — opening connection portal…');
     logActivity('snaptrade.register','Registered with SnapTrade');
   }
   return true;
+}
+async function snapTradeRegister(){
+  if(!currentUser){showToast('Sign in first','warn');return false}
+  // Try the normal path first. If it fails AND the worker hints that a
+  // fresh-suffix retry would work (canRetryFresh), prompt the user before
+  // taking the destructive path. We can't read canRetryFresh through
+  // callWorker (it returns null on error), so we do a raw fetch here.
+  var token;
+  try { token = await currentUser.getIdToken(); }
+  catch (e) { showToast('Auth refresh failed','warn'); return false; }
+  showToast('Registering with SnapTrade…');
+  var resp;
+  try {
+    resp = await fetch(WORKER_URL + '/register', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+  } catch (e) {
+    showToast('Worker unreachable: ' + e.message, 'warn');
+    return false;
+  }
+  var data;
+  try { data = await resp.json(); } catch(e) { data = {}; }
+  if (resp.ok) {
+    stApiState.userSecret = data.snaptradeUserSecret;
+    var prefs = loadPrefs();
+    prefs.snaptradeUserSecret = data.snaptradeUserSecret;
+    prefs.snaptradeUserId = data.snaptradeUserId;
+    savePrefs(prefs);
+    showToast('Registered — opening connection portal…');
+    logActivity('snaptrade.register','Registered with SnapTrade');
+    return true;
+  }
+  // Failed. Build a useful error string from the SnapTrade detail.
+  var detailMsg = '';
+  if (data && data.detail) {
+    var d = data.detail;
+    if (typeof d === 'string') detailMsg = d;
+    else if (d.message) detailMsg = d.message + (d.code ? ' (code '+d.code+')' : '');
+    else if (d.errorMessage) detailMsg = d.errorMessage + (d.errorCode ? ' (code '+d.errorCode+')' : '');
+    else detailMsg = JSON.stringify(d).slice(0,200);
+  }
+  stApiState.lastError = (data && data.error) || ('HTTP ' + resp.status);
+  console.error('SnapTrade /register failed:', { status: resp.status, body: data });
+  // Worker hints that a fresh-suffix retry would resolve the conflict.
+  if (data && data.canRetryFresh) {
+    var ok = confirm(
+      'Your Firebase account was previously registered with SnapTrade, but the original userSecret is no longer in your prefs (likely from a fresh sign-in or storage wipe).\n\n' +
+      'SnapTrade\'s API does not allow recovering a lost secret. The only way forward is to register a brand-new SnapTrade account under a fresh ID.\n\n' +
+      '⚠ This means: any brokerages you previously connected become orphaned on SnapTrade\'s side and will not be visible. You\'ll need to reconnect them through the portal under the new ID.\n\n' +
+      'SnapTrade\'s response: ' + (detailMsg || stApiState.lastError) + '\n\n' +
+      'Continue with a fresh registration?'
+    );
+    if (!ok) {
+      showToast('Cancelled — no changes made', 'warn');
+      return false;
+    }
+    return await _snapTradeRegisterCore(true);
+  }
+  // Generic failure — show the SnapTrade detail so the user can act on it.
+  showToast('Registration failed: ' + (detailMsg || stApiState.lastError), 'warn');
+  return false;
 }
 
 // Quick stats for the backup prompt — counts user's current portfolio so they
