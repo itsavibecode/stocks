@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.25**
+**Current Version: v0.7.26**
 
 ---
 
 ## Changelog
+
+### v0.7.26 — 2026-05-03 — SnapTrade /register recovery
+- **Connect-after-backup no longer dead-ends.** The v0.7.25 backup prompt was working correctly — it was downloading the backup and calling `snapTradeRegister()` — but if the user's Firebase UID had ever been registered with SnapTrade before (and the userSecret was lost from prefs, e.g. fresh sign-in or wiped storage), SnapTrade's `registerUser` returns 400 "user already exists" and the connect popup never opened. Two fixes: (1) **Worker v0.5.0** now catches that 400 and falls back to `resetUserSecret` to mint a fresh userSecret for the existing user, returning `recovered:true` in the response. (2) The app shows a "Reconnecting to existing SnapTrade account" toast when recovery happens, and a clearer "Registration failed: <detail>" toast when register actually does fail (so it no longer looks like the modal silently closed). Note: any brokerages connected before the secret reset will need to be reconnected via the portal.
 
 ### v0.7.25 — 2026-05-03 — SnapTrade safety: backup prompts, source tags, dup warnings
 - **Pre-flight backup prompt** appears before connecting your first SnapTrade brokerage and before applying a sync. New modal with three buttons — "Download backup, then continue" (one-click triggers the JSON export then proceeds), "Skip backup, continue anyway", or "Cancel — don't connect". Shows a quick stats line (N tickers · M lots · K accounts · tracked value · realized count) so you can see what you're putting at risk. Skipped automatically if you have no portfolio data yet (first-time setup, nothing to lose) or if you exported a backup within the last 2 minutes (avoids double-prompting at connect-then-sync time).
