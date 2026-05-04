@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.24**
+**Current Version: v0.7.25**
 
 ---
 
 ## Changelog
+
+### v0.7.25 — 2026-05-03 — SnapTrade safety: backup prompts, source tags, dup warnings
+- **Pre-flight backup prompt** appears before connecting your first SnapTrade brokerage and before applying a sync. New modal with three buttons — "Download backup, then continue" (one-click triggers the JSON export then proceeds), "Skip backup, continue anyway", or "Cancel — don't connect". Shows a quick stats line (N tickers · M lots · K accounts · tracked value · realized count) so you can see what you're putting at risk. Skipped automatically if you have no portfolio data yet (first-time setup, nothing to lose) or if you exported a backup within the last 2 minutes (avoids double-prompting at connect-then-sync time).
+- **🔗 SnapTrade tag on synced lots.** When sync applies an ADD or UPDATE, the lot now stores `src:'snaptrade'` plus the source `snapAcctId`. The deep-dive Holdings-by-Lot row shows a small "🔗 SnapTrade" pill next to the account name on those lots, with a hover tooltip warning that manual edits will be overwritten on next sync. Settings → Manage Accounts and the Accounts tab also show a 🔗 next to any account that's mapped via SnapTrade or has any synced lots, so you always know which accounts the sync owns vs. which are purely manual.
+- **Cross-account duplicate warning in the diff modal.** When sync proposes to ADD a ticker to a NEW account, but that ticker already exists at one or more OTHER accounts, the row gets a yellow warning underneath: "⚠ AAPL already exists at: 12 @ Robinhood · 5 @ Fidelity. Adding here will not affect those — if you meant to update one of them, change the 'Map to' selector above." This is the most common way to accidentally double-count: SnapTrade auto-creates a new account name (e.g. "Robinhood — Cash Account") instead of mapping to your existing "Robinhood" entry. The warning catches that before you click Apply.
 
 ### v0.7.24 — 2026-05-03 — Tax Outlook redesign + chart label fix
 - **Tax Outlook panel reorganized into a 3:1 grid.** The bucket bar chart now takes the left 75%; a dedicated "Estimated Annual Tax" sidebar fills the right 25%. The sidebar leads with the tax total in a big yellow number, the effective rate ("X.X% effective") below it, then a mini-breakdown by category (Qualified @ LT rate, Ordinary @ bracket, Collectibles capped at 28%), an after-tax annual income highlight in green, and the bracket footer at the bottom. When no bracket is set, the sidebar shows a "Configure →" CTA that jumps straight to Settings → Tax Estimate and focuses the dropdown. Stacks to a single column at narrow widths (≤760px).

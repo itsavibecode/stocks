@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.24</title>
+<title>Portfolio Command Center v0.7.25</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="feed.xml">
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS" href="rss.xml">
@@ -154,6 +154,10 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .tax-side-after-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .tax-side-after-val{font-size:14px;color:var(--green);font-weight:700;line-height:1.2;margin-top:2px}
 .tax-side-foot{font-size:9.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+/* SnapTrade source tag — shown on lots and accounts that came from SnapTrade
+   sync, so users can tell synced data from manual entries at a glance. */
+.src-tag{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:3px;background:rgba(108,154,255,.15);color:var(--accent2);border:1px solid rgba(108,154,255,.35);margin-right:5px;vertical-align:middle;cursor:help;font-family:var(--font)}
+.src-tag-acct{display:inline-block;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;background:rgba(108,154,255,.18);color:var(--accent2);margin-left:5px;vertical-align:middle;cursor:help}
 .payout-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0}
 .payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
 .payout-chart-title .pct-sub{font-size:10px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
@@ -210,6 +214,8 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .sync-row input[type="checkbox"]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
 .sync-row.row-noop{opacity:.5}
 .sync-row.row-noop input[type="checkbox"]{display:none}
+.sync-warn-row{display:grid;grid-template-columns:24px 80px 70px 1fr 90px;gap:10px;align-items:center;padding:0 4px 6px;font-size:10.5px}
+.sync-warn-row .sync-warn-msg{grid-column:2/-1;color:var(--yellow);background:rgba(255,193,7,.08);border-left:2px solid var(--yellow);padding:5px 8px;border-radius:3px;line-height:1.5}
 .sync-action-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.4px;text-align:center;font-family:var(--mono)}
 .sync-action-tag.act-add{background:var(--green-dim);color:var(--green)}
 .sync-action-tag.act-update{background:var(--accent-dim);color:var(--accent)}
@@ -487,7 +493,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.24</div>
+        <div class="logo-ver">v0.7.25</div>
       </div>
     </div>
     <div class="header-actions">
@@ -905,7 +911,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.24 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.25 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -929,6 +935,24 @@ body.text-xl .sc .scv{font-size:24px}
     <button class="btn btn-primary" onclick="addT()" style="width:100%;justify-content:center;margin-bottom:12px">Add to Portfolio</button>
     <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px">Current Tickers</div>
     <div class="cl" id="cps"></div>
+  </div>
+</div>
+
+<!-- Pre-flight backup prompt — shown before connecting a brokerage to SnapTrade
+     and before applying a sync, when the user already has portfolio data.
+     Three options: download backup then continue, continue without backup,
+     or cancel. Body is populated dynamically by openBackupPrompt(). -->
+<div class="modal-overlay" id="backupMod" style="display:none" onclick="if(event.target===this)cancelBackupPrompt()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;width:480px">
+    <h3 style="margin-bottom:6px" id="backupModTitle">📥 Back up before connecting?</h3>
+    <p style="font-size:11.5px;color:var(--muted);line-height:1.55;margin-bottom:12px" id="backupModBody">SnapTrade will read your brokerage data and propose changes. Before you continue, we recommend exporting a JSON backup so you can restore if anything looks wrong.</p>
+    <div id="backupModStats" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;font-family:var(--mono);color:var(--text2);line-height:1.6"></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="backupAndContinue()" style="justify-content:center;font-size:12px;padding:9px 14px">&#128190; Download backup, then continue</button>
+      <button class="btn btn-outline" onclick="continueWithoutBackup()" style="justify-content:center;font-size:11.5px">Skip backup, continue anyway</button>
+      <button class="btn btn-outline" onclick="cancelBackupPrompt()" style="justify-content:center;font-size:11.5px;color:var(--red);border-color:var(--red-dim)">Cancel — don't connect</button>
+    </div>
+    <p style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">The backup is a single JSON file with all your tickers, lots, accounts, prefs, and customDV. You can re-import it any time from Settings → Export Data.</p>
   </div>
 </div>
 
@@ -971,7 +995,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.24";
+var VERSION = "0.7.25";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -2441,7 +2465,8 @@ function lotsHTML(t){
     var plCls=lotPL>=0?'green':'red';
     h+='<div class="mono muted" style="font-size:10px">'+(i+1)+'</div>';
     h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s?fmSh(lot.s):'edit')+'</span>';
-    h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.b||'set')+'</span>';
+    var syncTag = lot.src==='snaptrade' ? '<span class="src-tag" title="This lot is managed by SnapTrade sync — share count comes from your brokerage. Manual edits will be overwritten on next sync.">&#128279; SnapTrade</span> ' : '';
+    h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+syncTag+(lot.b||'set')+'</span>';
     h+='<span class="sd'+(entry>0?' hv':'')+'" onclick="eLotP(\''+t+'\','+i+',this)" style="justify-self:start;font-family:var(--mono);font-size:10.5px">'+(entry>0?fm(entry):'set')+'</span>';
     if(entry>0&&lot.s>0){
       h+='<div class="mono '+plCls+'" style="text-align:right;font-size:10.5px" title="Cost basis: '+fm(lotCost)+' \u00b7 Current: '+fm(lotCurrent)+'">'+(lotPL>=0?'+':'')+fm(lotPL)+' <span class="muted" style="font-size:9.5px">('+(plPct>=0?'+':'')+plPct.toFixed(1)+'%)</span></div>';
@@ -3243,7 +3268,9 @@ function render(){
   acctNames.forEach(function(acct){
     var grp=acctMap[acct];
     h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px"><div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div><div style="display:flex;gap:12px;font-size:12px"><span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'')+'</div></div>';
+    var acctSynced = _isSyncedAccount(acct);
+    var acctSyncBadge = acctSynced ? '<span class="src-tag-acct" title="Mapped to SnapTrade — lots here may be overwritten on next sync.">&#128279; SnapTrade</span>' : '';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px"><div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div><div style="display:flex;gap:12px;font-size:12px"><span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'')+'</div></div>';
     h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:3px 12px;font-size:11px;align-items:center">';
     h+='<div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase">Value</div><div class="muted" style="font-size:9px;text-transform:uppercase">Added</div>';
     grp.stocks.forEach(function(s){
@@ -3606,14 +3633,31 @@ function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];compute
 // ═════════════════════════════════════════════════
 // SETTINGS: Account management
 // ═════════════════════════════════════════════════
+// Returns true if any lot at this account name has src:'snaptrade', or if the
+// account name appears in prefs.snaptradeAccountMap values (meaning a SnapTrade
+// account was mapped to this name, even if all its lots have been manually
+// cleared since).
+function _isSyncedAccount(acctName){
+  if(!acctName)return false;
+  var found=false;
+  Object.keys(lots).forEach(function(t){
+    (lots[t]||[]).forEach(function(l){
+      if(l.b===acctName && l.src==='snaptrade')found=true;
+    });
+  });
+  if(found)return true;
+  var map=(loadPrefs().snaptradeAccountMap)||{};
+  return Object.keys(map).some(function(k){return map[k]===acctName});
+}
 function renderSettingsAccts(){
   var el=G('settingsAcctList');if(!el)return;
   var list=getBrokerList();
   if(!list.length){el.innerHTML='<div class="muted" style="font-size:11px;padding:8px 0">No accounts yet. Add one below or set an account on any stock.</div>';return}
   var h='';
   list.forEach(function(acct,i){
+    var synced=_isSyncedAccount(acct);
     h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
-    h+='<span class="badge badge-purple" style="font-size:11px;min-width:60px;text-align:center">'+acct+'</span>';
+    h+='<span class="badge badge-purple" style="font-size:11px;min-width:60px;text-align:center">'+acct+(synced?'<span class="src-tag-acct" title="This account is mapped to a SnapTrade brokerage. Lots here may be overwritten on next sync.">&#128279;</span>':'')+'</span>';
     h+='<button class="btn btn-outline" onclick="renameAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:3px 8px">Rename</button>';
     h+='<button class="rb" onclick="deleteAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px">Delete</button>';
     h+='</div>';
@@ -3871,6 +3915,9 @@ function exportPortfolio(){
   var a=document.createElement('a');
   a.href=url;a.download='portfolio-backup-'+new Date().toISOString().slice(0,10)+'.json';
   a.click();URL.revokeObjectURL(url);
+  // Record export time so the SnapTrade sync flow can skip a redundant
+  // backup prompt if the user just exported (within 2 minutes).
+  window._lastBackupExportAt = Date.now();
   showToast('Portfolio exported');
   logActivity('data.export','Exported portfolio ('+tks.length+' tickers)');
 }
@@ -4038,12 +4085,103 @@ async function snapTradeRegister(){
   return true;
 }
 
+// Quick stats for the backup prompt — counts user's current portfolio so they
+// can see what they're about to expose to potential overwrite by sync.
+function _portfolioStatsForBackup(){
+  var lotCount=0, acctSet={}, withSharesCount=0, totalVal=0;
+  Object.keys(lots).forEach(function(t){
+    (lots[t]||[]).forEach(function(l){
+      lotCount++;
+      if(l.b)acctSet[l.b]=1;
+      if(l.s>0){withSharesCount++;totalVal+=(PR[t]||0)*l.s}
+    });
+  });
+  return { tickers: tks.length, lots: lotCount, withShares: withSharesCount, accounts: Object.keys(acctSet).length, value: totalVal, realized: (realized||[]).length };
+}
+// Open the backup prompt. `cb(proceed)` is called with `true` to continue
+// (with or without backup) or `false` to cancel. Skipped entirely if the
+// user has no portfolio data yet (first-time SnapTrade setup, nothing to lose).
+var _backupPromptCb = null;
+function openBackupPrompt(opts, cb){
+  var stats = _portfolioStatsForBackup();
+  // Nothing to back up — go straight through
+  if (stats.tickers === 0 && stats.lots === 0 && stats.realized === 0) {
+    cb(true);
+    return;
+  }
+  _backupPromptCb = cb;
+  var titleEl = G('backupModTitle');
+  var bodyEl = G('backupModBody');
+  var statsEl = G('backupModStats');
+  if(titleEl) titleEl.textContent = opts.title || '📥 Back up before continuing?';
+  if(bodyEl) bodyEl.textContent = opts.body || 'SnapTrade will read your brokerage data and propose changes. We recommend exporting a JSON backup first so you can restore if anything looks wrong.';
+  if(statsEl){
+    var rows = [];
+    rows.push(stats.tickers + ' ticker' + (stats.tickers!==1?'s':'') + ' &middot; ' + stats.lots + ' lot' + (stats.lots!==1?'s':'') + ' &middot; ' + stats.accounts + ' account' + (stats.accounts!==1?'s':''));
+    if(stats.value > 0) rows.push('Tracked value: ' + fm(stats.value));
+    if(stats.realized > 0) rows.push(stats.realized + ' realized sale' + (stats.realized!==1?'s':'') + ' on file');
+    statsEl.innerHTML = rows.join('<br>');
+  }
+  G('backupMod').style.display = 'flex';
+}
+function closeBackupPrompt(){
+  G('backupMod').style.display = 'none';
+}
+function backupAndContinue(){
+  if(typeof exportPortfolio === 'function') exportPortfolio();
+  closeBackupPrompt();
+  var cb = _backupPromptCb; _backupPromptCb = null;
+  if(cb) cb(true);
+}
+function continueWithoutBackup(){
+  closeBackupPrompt();
+  var cb = _backupPromptCb; _backupPromptCb = null;
+  if(cb) cb(true);
+}
+function cancelBackupPrompt(){
+  closeBackupPrompt();
+  var cb = _backupPromptCb; _backupPromptCb = null;
+  if(cb) cb(false);
+  showToast('Cancelled — no changes made');
+}
+
 async function snapTradeConnect(){
   if(!currentUser){showToast('Sign in first','warn');return}
+  // Pre-flight: prompt for backup on first connect (when no userSecret yet),
+  // since first-connect is the moment things start mutating.
   if(!stApiState.userSecret){
-    var ok=await snapTradeRegister();
-    if(!ok)return;
+    await new Promise(function(resolve){
+      openBackupPrompt({
+        title: '📥 Back up before connecting SnapTrade?',
+        body: 'You\'re about to register with SnapTrade and connect a brokerage. Once synced, lots tagged as SnapTrade-managed will follow your brokerage. Before you start, we recommend exporting a JSON backup of your current portfolio so you can restore manually if anything looks off.'
+      }, function(proceed){
+        if(!proceed){ resolve(false); return; }
+        resolve(true);
+      });
+    }).then(async function(proceed){
+      if(!proceed) return;
+      var ok=await snapTradeRegister();
+      if(!ok)return;
+      var data=await callWorker('/connect-url',{
+        snaptradeUserId:currentUser.uid,
+        snaptradeUserSecret:stApiState.userSecret
+      });
+      if(!data||!data.redirectURI){return}
+      var popup=window.open(data.redirectURI,'snaptrade','width=520,height=720,scrollbars=yes');
+      if(!popup){showToast('Popup blocked — allow popups for this site','warn');return}
+      logActivity('snaptrade.connect','Opened brokerage connect flow');
+      var timer=setInterval(function(){
+        if(popup.closed){
+          clearInterval(timer);
+          showToast('Connection portal closed — refreshing accounts...');
+          setTimeout(snapTradeRefresh,800);
+        }
+      },1500);
+    });
+    return;
   }
+  // Already registered — additional brokerages don't need a fresh backup,
+  // but the actual sync (Phase 3) will prompt again before applying changes.
   var data=await callWorker('/connect-url',{
     snaptradeUserId:currentUser.uid,
     snaptradeUserSecret:stApiState.userSecret
@@ -4052,7 +4190,6 @@ async function snapTradeConnect(){
   var popup=window.open(data.redirectURI,'snaptrade','width=520,height=720,scrollbars=yes');
   if(!popup){showToast('Popup blocked — allow popups for this site','warn');return}
   logActivity('snaptrade.connect','Opened brokerage connect flow');
-  // Auto-refresh accounts when popup closes
   var timer=setInterval(function(){
     if(popup.closed){
       clearInterval(timer);
@@ -4102,8 +4239,21 @@ function _stBuildDiffForAccount(acct,mappedAccountName){
     if(!tk||snapShares<=0)return;
     var existingLots=(lots[tk]||[]).filter(function(l){return l.b===mappedAccountName});
     var snapPrice=pos.price||0;
+    // Duplicate-detection: when proposing to ADD to a new account, check if
+    // this ticker already exists at OTHER accounts. The existing data won't
+    // be touched — but the user might be unintentionally double-counting if
+    // they meant to map the SnapTrade account to that other account name.
+    var crossAccount = null;
     if(existingLots.length===0){
-      rows.push({action:'ADD',ticker:tk,account:mappedAccountName,current:0,proposed:snapShares,snapPrice:snapPrice});
+      var otherAcctLots = (lots[tk]||[]).filter(function(l){return l.b && l.b!==mappedAccountName && l.s>0});
+      if(otherAcctLots.length>0){
+        var byAcct = {};
+        otherAcctLots.forEach(function(l){ byAcct[l.b] = (byAcct[l.b]||0) + l.s; });
+        crossAccount = Object.keys(byAcct).map(function(k){return {acct:k, shares:byAcct[k]}}).sort(function(a,b){return b.shares-a.shares});
+      }
+    }
+    if(existingLots.length===0){
+      rows.push({action:'ADD',ticker:tk,account:mappedAccountName,current:0,proposed:snapShares,snapPrice:snapPrice,crossAccount:crossAccount});
     }else if(existingLots.length===1){
       var lot=existingLots[0];
       if(Math.abs(lot.s-snapShares)<0.0001){
@@ -4198,6 +4348,18 @@ function renderSyncModal(){
           html+='<span class="sync-row-detail">'+detail+'</span>';
           html+='<span class="sync-row-value">'+(val>0?fm(val):'—')+'</span>';
           html+='</div>';
+          // Cross-account duplicate warning — only on ADD rows when the same
+          // ticker already exists at one or more OTHER accounts. The user may
+          // have meant to map this SnapTrade account to one of those existing
+          // names instead of creating a new one.
+          if(r.crossAccount && r.crossAccount.length){
+            var dupTxt = r.crossAccount.map(function(c){return fmSh(c.shares)+' @ '+c.acct}).join(' &middot; ');
+            html += '<div class="sync-warn-row">';
+            html += '<span></span><span></span><span></span>';
+            html += '<span class="sync-warn-msg">&#9888; '+r.ticker+' already exists at: '+dupTxt+'. Adding here will not affect those — if you meant to update one of them, change the &quot;Map to&quot; selector above.</span>';
+            html += '<span></span>';
+            html += '</div>';
+          }
         });
       }
     }
@@ -4222,6 +4384,25 @@ function updateSyncApplyCount(){
   btn.style.opacity=(n===0)?'0.5':'1';
 }
 function applySnapTradeSync(){
+  if(!stSyncSession)return;
+  // One last chance to grab a backup before mutating lots. Skip the prompt if
+  // the user just exported within the last 2 minutes (avoid double-asking when
+  // they backed up at connect time and are now applying immediately).
+  var lastExport = window._lastBackupExportAt || 0;
+  var skipPrompt = (Date.now() - lastExport) < 2*60*1000;
+  if (skipPrompt) {
+    _applySnapTradeSyncCore();
+    return;
+  }
+  openBackupPrompt({
+    title: '📥 Back up before applying these changes?',
+    body: 'About to apply the selected changes from SnapTrade to your portfolio. We recommend exporting a JSON backup first so you can restore if anything went wrong with the diff.'
+  }, function(proceed){
+    if(!proceed)return;
+    _applySnapTradeSyncCore();
+  });
+}
+function _applySnapTradeSyncCore(){
   if(!stSyncSession)return;
   // Persist mappings + create new accounts
   var prefs=loadPrefs();
@@ -4249,7 +4430,12 @@ function applySnapTradeSync(){
     if(!r)return;
     if(r.action==='ADD'){
       if(!lots[r.ticker])lots[r.ticker]=[];
-      lots[r.ticker].push({s:r.proposed,b:r.account,added:new Date().toISOString()});
+      // src:'snaptrade' marks this lot as managed by SnapTrade sync, surfaced
+      // in lotsHTML as a 🔗 badge so users can tell synced lots from manual.
+      // snapAcctId stores the SnapTrade account UUID for traceability and to
+      // help future syncs reconcile against the right source account even if
+      // the user renames the account label later.
+      lots[r.ticker].push({s:r.proposed,b:r.account,added:new Date().toISOString(),src:'snaptrade',snapAcctId:snapId});
       if(tks.indexOf(r.ticker)<0)tks.push(r.ticker);
       logActivity('snaptrade.add','Added '+r.ticker+' '+r.proposed+' shares at '+r.account+' (from SnapTrade)');
       addedCount++;applied++;
@@ -4259,6 +4445,10 @@ function applySnapTradeSync(){
         var lot=existingLots[0];
         var oldS=lot.s;
         lot.s=r.proposed;
+        // Tag the lot as SnapTrade-managed since the share count came from sync.
+        // Preserves user-set entry price/date — only shares + src are touched.
+        lot.src='snaptrade';
+        lot.snapAcctId=snapId;
         logActivity('snaptrade.update','Updated '+r.ticker+' at '+r.account+': '+oldS+' → '+r.proposed+' shares (from SnapTrade)');
         updatedCount++;applied++;
       }else if(existingLots.length>1){
@@ -4266,6 +4456,8 @@ function applySnapTradeSync(){
         var lot1=existingLots[0];
         var oldTotal=existingLots.reduce(function(s,l){return s+l.s},0);
         lot1.s=r.proposed;
+        lot1.src='snaptrade';
+        lot1.snapAcctId=snapId;
         // Mark other lots at same account/ticker for removal
         lots[r.ticker]=(lots[r.ticker]||[]).filter(function(l){return l===lot1||l.b!==r.account});
         logActivity('snaptrade.update','Merged '+existingLots.length+' lots of '+r.ticker+' at '+r.account+': '+oldTotal+' → '+r.proposed+' shares (from SnapTrade)');
