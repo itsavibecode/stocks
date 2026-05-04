@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.27**
+**Current Version: v0.7.28**
 
 ---
 
 ## Changelog
+
+### v0.7.28 — 2026-05-04 — SnapTrade error visibility + feed.xml deprecation
+- **Generic "Try again or check the Brokers tab" toast removed.** v0.7.26 added a fallback toast in `snapTradeConnect` that overwrote the more detailed toast from `snapTradeRegister` (which already includes SnapTrade's actual error message). The Connect flow no longer double-toasts on register failures — the detailed message stays visible.
+- **Brokers tab now actually shows the error** (when there is one). New error block at the top of the Brokers-tab empty state and on the Settings → SnapTrade card: red-bordered card with the error headline, the SnapTrade detail in monospace, a "Copy details" button that puts a structured error report on the clipboard (version + timestamp + error + detail + UA), and a hint that links the user to the duplicate-user retry path. So "check the Brokers tab for details" is now a real instruction.
+- **feed.xml deprecation.** The static `feed.xml` at the repo root has been stale for 25+ days because it was hardcoded demo data from before the in-app live news feed existed. Replaced with a single-item RSS deprecation notice (still a valid feed so feed readers don't error, just shows "this feed is no longer updated — use the in-app RSS panel"). Deleted the unused `generate-feed.js`. Removed the misleading `<link rel="alternate" href="rss.xml">` (rss.xml never existed). RSS panel UI now explains that the public URL is deprecation-only and the in-app feed below it is the live source.
 
 ### v0.7.27 — 2026-05-03 — Toasts top-center + actual /register recovery
 - **Toasts moved to top-center.** Bottom-right meant warn/error notifications were easy to miss when looking at the active part of the page. Now pinned `top:20px; left:50%; translateX(-50%)`. Width auto-fits up to 90vw, slides down on show. Warn and error toasts hold for 5.5s (was 2.5s) so they can actually be read.
