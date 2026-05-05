@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.37</title>
+<title>Stockfolio v0.7.38</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -96,6 +96,40 @@ input,button,select{font-family:inherit}
    html2canvas pass so they don't end up baked into the exported image. */
 .share-btn{font-size:9.5px;padding:3px 8px;line-height:1}
 .capturing-png .share-btn{visibility:hidden!important}
+/* Insights tab — dividend ranking cards. Each "ins-card" is one stock,
+   collapsing horizontally on narrow screens. The score-bar visualizes the
+   composite 0–100 score; sub-bars break it into the components. */
+.ins-summary{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.ins-summary-item{flex:1;min-width:130px}
+.ins-summary-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.ins-summary-val{font-size:18px;font-weight:700;font-family:var(--mono);margin-top:2px}
+.ins-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;display:grid;grid-template-columns:36px 38px 60px 1fr 110px 80px;gap:12px;align-items:center}
+.ins-card:hover{border-color:var(--accent)}
+.ins-card.expanded{cursor:default}
+.ins-rank{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--muted);text-align:center}
+.ins-rank.top{color:var(--accent);font-size:14px}
+.ins-tk{font-family:var(--mono);font-weight:700;font-size:13px}
+.ins-yield{font-family:var(--mono);font-size:11.5px;color:var(--green);text-align:right}
+.ins-reason{font-size:11.5px;color:var(--text2);line-height:1.45;min-width:0}
+.ins-score{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-family:var(--mono)}
+.ins-score-num{font-size:14px;font-weight:700;color:var(--accent)}
+.ins-score-bar{width:100px;height:6px;background:var(--card3);border-radius:3px;overflow:hidden}
+.ins-score-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s}
+.ins-rec{font-size:11px;font-family:var(--mono);color:var(--text);text-align:right;font-weight:600}
+.ins-detail{grid-column:1/-1;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none}
+.ins-card.expanded .ins-detail{display:block}
+.ins-comp-grid{display:grid;grid-template-columns:140px 1fr 60px;gap:6px 12px;font-size:11px;align-items:center;margin-bottom:10px}
+.ins-comp-label{color:var(--muted);font-size:10.5px}
+.ins-comp-bar-bg{height:8px;background:var(--card3);border-radius:4px;overflow:hidden}
+.ins-comp-bar-fill{height:100%;border-radius:4px}
+.ins-comp-val{font-family:var(--mono);font-size:10.5px;text-align:right;color:var(--text2)}
+.ins-detail-text{font-size:11.5px;line-height:1.6;color:var(--text2)}
+.ins-detail-text strong{color:var(--text)}
+@media(max-width:760px){
+  .ins-card{grid-template-columns:30px 38px 1fr 80px;grid-auto-rows:auto;gap:8px}
+  .ins-yield,.ins-rec{display:none}
+  .ins-reason{grid-column:3/4}
+}
 /* Scrolling stock ticker — sits below the header (sticky stack), above tabs.
    Uses last cached price from livePrices + day-change % from liveChanges.
    Marquee animation runs continuously; pauses on hover so users can read.
@@ -659,6 +693,7 @@ body.text-xl .sc .scv{font-size:24px}
     <button class="tab" data-tab="brokers" onclick="sTab('brokers')">&#127974; Brokers <span class="tab-count" id="cBk">0</span></button>
     <button class="tab" data-tab="paylog" onclick="sTab('paylog')">&#128203; Payout Log</button>
     <button class="tab" data-tab="all" onclick="sTab('all')">&#128451; All</button>
+    <button class="tab" data-tab="insights" onclick="sTab('insights')">&#127919; Insights</button>
     <button class="tab" data-tab="settings" onclick="sTab('settings')">&#9881; Settings</button>
     <button class="btn btn-primary" onclick="openMod()" style="margin-left:auto;align-self:center">+ Add</button>
   </div>
@@ -796,6 +831,21 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
     <div id="acctBody"></div>
     <div class="mc" id="mAcct"></div>
+  </div>
+
+  <!-- INSIGHTS — dividend ranking + expansion suggestions -->
+  <div class="tab-content" id="content-insights">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:700">🎯 Insights — Where to Expand</h3>
+        <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);max-width:680px;line-height:1.55">Ranks the dividend stocks you already own by how efficiently each one would close the gap to your annual dividend goal. Score blends yield, payout safety, tax efficiency, sector concentration, and goal-impact. Click any row to see the breakdown.</p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insTaxOnly" onchange="renderInsights()"> Tax-advantaged only</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insHideTop" onchange="renderInsights()" checked> Hide already-large positions (&gt;15% of portfolio)</label>
+      </div>
+    </div>
+    <div id="insightsBody"></div>
   </div>
 
   <!-- SETTINGS -->
@@ -1068,7 +1118,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.37 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.38 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1155,7 +1205,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.37";
+var VERSION = "0.7.38";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2892,6 +2942,8 @@ function render(){
   if(ti>0){G('aiB').style.display='';G('aiV').textContent=fm(ti)}else G('aiB').style.display='none';
   // Scrolling portfolio ticker (uses last cached prices, no extra API calls)
   renderPortfolioTicker();
+  // Insights tab — recomputes ranking when portfolio / prices / DV change
+  if(typeof renderInsights==='function') try{renderInsights()}catch(e){console.error('Insights render error:',e)}
 
   // NEWS
   var q=(G('nQ').value||'').toLowerCase();
@@ -3755,6 +3807,227 @@ var TAX_BUCKETS={
   k1:           {label:'K-1 Partnerships',        color:'var(--red)',       hint:'Issues Schedule K-1, not 1099 \u2014 complex tax filing required'}
 };
 var TAX_BUCKET_ORDER=['qualified','nonqualified','reit','foreign','mixed','collectible','k1'];
+
+// ─────────────────────────────────────────────────────────────────
+// INSIGHTS — dividend expansion ranking
+// Scores each dividend stock the user owns on five components, blends them
+// into a 0–100 composite, and produces a ranked list of "where to add more
+// shares to close the goal gap fastest" with a one-line reason per row.
+// Pure read of in-memory state (tks/sh/lots/DV/PR + prefs) — no fetches.
+// ─────────────────────────────────────────────────────────────────
+var INS_RATING_PTS = {
+  'King':100, 'Aristocrat':92, 'Excellent':86, 'ETF - Strong':82,
+  'Strong':80, 'Good':70, 'REIT - Good':68, 'Stable':62, 'ETF':62,
+  'High Yield':58, 'Moderate':50, 'Variable':40, 'Caution':25,
+  'Low Yield':35, 'New':45, 'None':40
+};
+function _insRatingPts(rt){
+  if(rt && INS_RATING_PTS[rt]!=null) return INS_RATING_PTS[rt];
+  return 50; // unknown rating → middle
+}
+// Tax score: prefer qualified dividends (lower LT cap-gains rate) over
+// ordinary income (REIT, foreign, K-1). Uses the user's bracket if set;
+// otherwise treats qualified as "preferred" with a flat bonus.
+function _insTaxPts(ticker, prefs){
+  var b = (typeof taxBucket === 'function') ? taxBucket(ticker) : '';
+  var br = parseFloat(prefs.taxBracket)||0;
+  // Higher bracket → bigger gap between qualified vs ordinary, so qualified
+  // gets stronger lift in higher brackets.
+  var qualBonus = br>=32 ? 100 : br>=22 ? 90 : br>=12 ? 80 : 75;
+  switch(b){
+    case 'qualified': return qualBonus;
+    case 'mixed': return Math.round(qualBonus*0.7 + 30);
+    case 'nonqualified': return 50;
+    case 'reit': return 45;
+    case 'foreign': return 40; // Foreign tax credit complicates things
+    case 'collectible': return 25;
+    case 'k1': return 20; // K-1 paperwork drag
+    default: return 60;
+  }
+}
+// Sector concentration score: penalize stocks where the user's sector is
+// already heavy. < 8% of portfolio = full points, > 30% = clamp to 35.
+function _insSectorPts(ticker, sectorTotals, totalValue){
+  if(!totalValue || totalValue<=0) return 70;
+  var d = DV[ticker]; if(!d) return 70;
+  var sec = (d.sc||'Unknown')||'Unknown';
+  var secVal = sectorTotals[sec]||0;
+  var pct = (secVal/totalValue)*100;
+  if(pct < 8) return 100;
+  if(pct > 30) return 35;
+  // Linear interpolate 8% (100 pts) to 30% (35 pts)
+  return Math.round(100 - ((pct-8)/22)*65);
+}
+// Impact score: how efficiently does $1000 invested in this stock close the
+// goal gap? = annual_dividend_per_$1000 / max_in_portfolio. Scaled 0–100.
+function _insImpactPts(ticker, maxYieldPer1k){
+  var d = DV[ticker]; if(!d || !d.a) return 0;
+  var px = PR[ticker]||0;
+  if(px<=0) return 0;
+  var sharesPer1k = 1000/px;
+  var divPer1k = sharesPer1k * d.a;
+  if(maxYieldPer1k<=0) return 50;
+  return Math.round((divPer1k/maxYieldPer1k)*100);
+}
+// Yield points: 0% → 0pts, 5%+ → 100pts, linear in between.
+function _insYieldPts(yieldPct){
+  return Math.round(Math.max(0, Math.min(100, (yieldPct/5)*100)));
+}
+// Build all-stock scores. Returns sorted array of insight rows.
+function buildInsightsRows(){
+  var prefs = loadPrefs();
+  var taxOnly = G('insTaxOnly') && G('insTaxOnly').checked;
+  var hideTop = G('insHideTop') && G('insHideTop').checked;
+  // Pre-compute portfolio totals
+  var totalValue = 0;
+  var sectorTotals = {};
+  tks.forEach(function(t){
+    var s = sh[t]||0;
+    var px = PR[t]||0;
+    var v = s*px;
+    if(v>0){
+      totalValue += v;
+      var sec = (DV[t] && DV[t].sc) || 'Unknown';
+      sectorTotals[sec] = (sectorTotals[sec]||0) + v;
+    }
+  });
+  var goalAmt = parseFloat(prefs.dividendGoal)||0;
+  var currentAnnualIncome = tks.filter(isDiv).reduce(function(s,t){
+    var d = DV[t]; if(!d) return s;
+    return s + (d.a||0)*(sh[t]||0);
+  }, 0);
+  var goalGap = Math.max(0, goalAmt - currentAnnualIncome);
+  // Find max dividend-per-$1000 across the dividend universe — for impact normalization
+  var maxYieldPer1k = 0;
+  tks.filter(isDiv).forEach(function(t){
+    var d = DV[t]; var px = PR[t]||0;
+    if(d && d.a && px>0){
+      var y = (1000/px)*d.a;
+      if(y>maxYieldPer1k) maxYieldPer1k = y;
+    }
+  });
+  // Build candidate rows
+  var rows = [];
+  tks.filter(isDiv).forEach(function(t){
+    var d = DV[t]; if(!d) return;
+    var s = sh[t]||0;
+    var px = PR[t]||0;
+    if(px<=0) return; // need a price to score
+    var posValue = s*px;
+    var posPct = totalValue>0 ? (posValue/totalValue)*100 : 0;
+    if(hideTop && posPct > 15) return; // already-large filter
+    // Tax filter: qualified + mixed only when toggled
+    if(taxOnly){
+      var bk = (typeof taxBucket==='function') ? taxBucket(t) : '';
+      if(bk!=='qualified' && bk!=='mixed') return;
+    }
+    var yieldPct = d.y||0;
+    var rating = d.rt||'';
+    var yPts = _insYieldPts(yieldPct);
+    var sPts = _insRatingPts(rating);
+    var tPts = _insTaxPts(t, prefs);
+    var secPts = _insSectorPts(t, sectorTotals, totalValue);
+    var iPts = _insImpactPts(t, maxYieldPer1k);
+    // Composite: yield 30% + safety 25% + tax 15% + sector 15% + impact 15%
+    var score = Math.round(yPts*0.30 + sPts*0.25 + tPts*0.15 + secPts*0.15 + iPts*0.15);
+    // What if you added shares worth ~5% of current portfolio (or $1000, min)?
+    var addBudget = Math.max(1000, totalValue*0.05);
+    var addShares = px>0 ? addBudget/px : 0;
+    var addAnnualGain = addShares * (d.a||0);
+    // Reason — pick the strongest signals to write
+    var reasons = [];
+    if(yieldPct>=4.5) reasons.push(yieldPct.toFixed(1)+'% yield');
+    else if(yieldPct>=3) reasons.push('solid '+yieldPct.toFixed(1)+'% yield');
+    if(rating==='King'||rating==='Aristocrat') reasons.push(rating+' status');
+    else if(sPts>=80) reasons.push(rating+' rating');
+    else if(sPts<=40 && rating) reasons.push('caution: '+rating);
+    if(posPct < 5 && s>0) reasons.push('small position ('+posPct.toFixed(1)+'%)');
+    else if(s===0) reasons.push('not yet held');
+    var sec = d.sc||'Unknown';
+    var secPctP = totalValue>0 ? (sectorTotals[sec]||0)/totalValue*100 : 0;
+    if(secPctP < 10 && sec!=='Unknown') reasons.push('low '+sec+' exposure');
+    if(tPts>=85) reasons.push('tax-advantaged (qualified)');
+    else if(tPts<=45) reasons.push('taxed as ordinary income');
+    var reasonStr = reasons.slice(0,3).join(' · ') || 'meets baseline criteria';
+    rows.push({
+      ticker: t, score: score,
+      shares: s, posValue: posValue, posPct: posPct,
+      yield: yieldPct, rating: rating, sector: sec,
+      annualIncome: (d.a||0)*s, perShareDiv: d.a||0, price: px,
+      yPts: yPts, sPts: sPts, tPts: tPts, secPts: secPts, iPts: iPts,
+      addBudget: addBudget, addShares: addShares, addAnnualGain: addAnnualGain,
+      goalGap: goalGap, goalAmt: goalAmt, currentAnnualIncome: currentAnnualIncome,
+      reason: reasonStr
+    });
+  });
+  rows.sort(function(a,b){return b.score-a.score});
+  return { rows: rows, totalValue: totalValue, goalAmt: goalAmt, goalGap: goalGap, currentAnnualIncome: currentAnnualIncome };
+}
+// Render the Insights tab content. Driven by render() (refreshes whenever
+// the rest of the portfolio re-renders) and by the filter checkboxes.
+function renderInsights(){
+  var body = G('insightsBody'); if(!body) return;
+  var data = buildInsightsRows();
+  var rows = data.rows;
+  if(rows.length===0){
+    body.innerHTML = '<div class="muted" style="text-align:center;padding:30px;font-size:12.5px">No dividend stocks match the current filters. Add dividend tickers to your portfolio (or relax the filters above) to see expansion suggestions.</div>';
+    return;
+  }
+  // Summary stats up top
+  var goalText = data.goalAmt>0 ? fm(data.goalGap)+' gap to '+fm(data.goalAmt)+' target' : 'Set a goal in Settings → Annual Dividend Goal to see goal-aware ranking';
+  var goalCls = data.goalAmt>0 ? (data.goalGap===0?'green':'accent') : 'muted';
+  var html = '<div class="ins-summary">';
+  html += '<div class="ins-summary-item"><div class="ins-summary-label">Current annual</div><div class="ins-summary-val" style="color:var(--green)">'+fm(data.currentAnnualIncome)+'</div></div>';
+  html += '<div class="ins-summary-item"><div class="ins-summary-label">Goal status</div><div class="ins-summary-val" style="color:var(--'+goalCls+')">'+goalText+'</div></div>';
+  html += '<div class="ins-summary-item"><div class="ins-summary-label">Stocks ranked</div><div class="ins-summary-val">'+rows.length+'</div></div>';
+  html += '<div class="ins-summary-item"><div class="ins-summary-label">Avg score</div><div class="ins-summary-val accent">'+(rows.reduce(function(s,r){return s+r.score},0)/rows.length).toFixed(0)+'</div></div>';
+  html += '</div>';
+  // Ranked card list
+  rows.forEach(function(r, i){
+    var rankCls = i<3?'top':'';
+    html += '<div class="ins-card" id="ins-card-'+r.ticker+'" onclick="toggleInsightCard(\''+r.ticker+'\')">';
+    html += '<span class="ins-rank '+rankCls+'">#'+(i+1)+'</span>';
+    html += '<span class="ins-tk">'+r.ticker+'</span>';
+    html += '<span class="ins-yield">'+r.yield.toFixed(2)+'%</span>';
+    html += '<span class="ins-reason">'+r.reason+'</span>';
+    html += '<span class="ins-rec">+'+fmSh(Math.round(r.addShares))+' sh<br><span style="color:var(--green);font-weight:700">+'+fm(r.addAnnualGain)+'/yr</span></span>';
+    html += '<span class="ins-score"><span class="ins-score-num">'+r.score+'</span><span class="ins-score-bar"><span class="ins-score-fill" style="width:'+r.score+'%"></span></span></span>';
+    // Detail row (revealed on click)
+    html += '<div class="ins-detail">';
+    html += '<div class="ins-comp-grid">';
+    var bars = [
+      ['Yield ('+r.yield.toFixed(2)+'%)', r.yPts, 'var(--accent2)'],
+      ['Payout safety ('+(r.rating||'—')+')', r.sPts, 'var(--green)'],
+      ['Tax efficiency', r.tPts, 'var(--purple)'],
+      ['Sector diversification ('+r.sector+')', r.secPts, 'var(--yellow)'],
+      ['Goal impact ($/$1k)', r.iPts, 'var(--accent)']
+    ];
+    bars.forEach(function(b){
+      html += '<span class="ins-comp-label">'+b[0]+'</span>';
+      html += '<div class="ins-comp-bar-bg"><div class="ins-comp-bar-fill" style="width:'+b[1]+'%;background:'+b[2]+'"></div></div>';
+      html += '<span class="ins-comp-val">'+b[1]+'</span>';
+    });
+    html += '</div>';
+    var goalLine = '';
+    if(r.goalAmt>0 && r.goalGap>0){
+      var gapClose = Math.min(100, (r.addAnnualGain/r.goalGap)*100);
+      goalLine = ' That\'s <strong>'+gapClose.toFixed(1)+'% of your '+fm(r.goalGap)+' goal gap</strong> closed in one move.';
+    }
+    var posDescr = r.shares>0 ? 'You currently hold <strong>'+fmSh(r.shares)+' shares</strong> ('+r.posPct.toFixed(1)+'% of portfolio, '+fm(r.annualIncome)+'/yr)' : 'You don\'t hold any shares of this yet.';
+    html += '<div class="ins-detail-text">';
+    html += posDescr+'. ';
+    html += 'Adding ~<strong>'+fmSh(Math.round(r.addShares))+' shares</strong> at the current '+fm(r.price)+'/share ('+fm(r.addBudget)+' total) would generate an additional <strong style="color:var(--green)">'+fm(r.addAnnualGain)+'/year</strong>.'+goalLine;
+    html += '</div>';
+    html += '</div>'; // /ins-detail
+    html += '</div>'; // /ins-card
+  });
+  body.innerHTML = html;
+}
+function toggleInsightCard(ticker){
+  var c = G('ins-card-'+ticker); if(!c) return;
+  c.classList.toggle('expanded');
+}
+
 // Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load.
 // `small` produces a 22\u00d722 inline-friendly version for table cells / list items.
 var LOGO_DEV_TOKEN="pk_X-1ZO13GSgeOoUrIuJ6GMQ";

@@ -1,10 +1,25 @@
 # Stockfolio
 
-**Current Version: v0.7.37**
+**Current Version: v0.7.38**
 
 ---
 
 ## Changelog
+
+### v0.7.38 — 2026-05-05 — 🎯 Insights tab — dividend expansion ranking
+- **New "🎯 Insights" tab** between All and Settings. Ranks every dividend stock you own by how efficiently each one would close the gap to your annual dividend goal. Pure local computation — no extra API calls; reads `tks` / `sh` / `lots` / `DV` / `PR` and `prefs.dividendGoal` / `prefs.taxBracket`.
+- **Composite 0–100 score** blends five components with these weights: Yield 30% · Payout safety 25% · Tax efficiency 15% · Sector diversification 15% · Goal impact (annual divs per $1k invested) 15%. Each component gets its own progress bar in the per-row detail view so you can see the breakdown.
+  - **Yield points:** linear 0% → 0pts, 5%+ → 100pts.
+  - **Payout safety:** rating-keyed table — King 100, Aristocrat 92, Excellent 86, Strong 80, Good 70, Stable 62, Moderate 50, Variable 40, Caution 25.
+  - **Tax efficiency:** Qualified gets a bonus that scales with your bracket (32%+ bracket → 100pts, 22%+ → 90, lower → 80). REIT/Foreign/Non-qualified score 40–50; Collectibles/K-1 score 20–25.
+  - **Sector diversification:** stocks in sectors that are <8% of your portfolio get 100pts; clamped to 35 above 30%.
+  - **Goal impact:** annual dividends per $1000 invested, normalized against the highest-yielding stock you own.
+- **Per-row "+ X shares" recommendation** — automatically suggests adding shares worth ~5% of current portfolio value (or $1000 minimum), shows the resulting `+$Y/yr` and what % of the goal gap that single move closes.
+- **One-line "why" reason** generated from the strongest signals: yield level, rating, position size, sector exposure, tax bucket. Click any row to expand and see the full component breakdown + the suggested-share math.
+- **Two filters at the top** of the tab:
+  - "Tax-advantaged only" — narrows to qualified + mixed buckets
+  - "Hide already-large positions (>15%)" — defaults on; useful for finding under-loaded names
+- **Summary header** — current annual dividends, goal status (gap or "✓ reached"), stocks ranked, average score across the filtered list.
 
 ### v0.7.37 — 2026-05-05 — Share UX + ticker + version polish
 - **Per-chart Share buttons** on the All-tab Snapshot. The single "Share Snapshot PNG" mega-button at the top is gone — replaced with a small 💾 Share button on each individual chart's title row (Sector Allocation, Account Allocation, Top Holdings). Each saves just that chart as a PNG. Tax Outlook, Realized P/L, and the History Chart already had per-panel buttons; they're now consistent.
