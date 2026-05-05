@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.32</title>
+<title>Portfolio Command Center v0.7.33</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -231,8 +231,17 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .sync-acct-skipped{opacity:.5}
 .broker-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
 .broker-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.broker-header-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
 .broker-name{font-weight:700;font-size:13px}
 .broker-meta{font-size:10.5px;color:var(--muted);margin-top:2px}
+/* Brokerage logo — sized to match the height of the 2 header rows
+   (broker-name 13px + 2px gap + broker-meta 10.5px ≈ 36–40px). Square
+   container with the actual <img> inside so we can show a text fallback
+   when logo.dev doesn't have the brand or the request fails. */
+.broker-logo{flex-shrink:0;width:40px;height:40px;border-radius:8px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
+.broker-logo img{width:100%;height:100%;object-fit:contain;padding:2px;box-sizing:border-box}
+.broker-logo img[data-broken="1"]{display:none}
+body.compact .broker-logo{width:34px;height:34px}
 .broker-bal{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--accent2);text-align:right}
 .broker-pos{width:100%;border-collapse:collapse;font-size:11px}
 .broker-pos th{text-align:left;padding:6px 8px;color:var(--muted);border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
@@ -497,7 +506,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.32</div>
+        <div class="logo-ver">v0.7.33</div>
       </div>
     </div>
     <div class="header-actions">
@@ -915,7 +924,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.32 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.33 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1002,7 +1011,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.32";
+var VERSION = "0.7.33";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -3414,6 +3423,100 @@ function logoHTML(t,small){
   var url='https://img.logo.dev/ticker/'+encodeURIComponent(t)+'?token='+LOGO_DEV_TOKEN+'&size='+size+'&format=png';
   return '<span class="'+cls+'" aria-label="'+t+' logo"><span class="tk-logo-fallback">'+t+'</span><img src="'+url+'" alt="" onerror="this.setAttribute(\'data-broken\',\'1\')"></span>';
 }
+// Map common brokerage / institution names from SnapTrade to a domain we can
+// hand to logo.dev. SnapTrade returns names like "Charles Schwab", "Fidelity",
+// "Robinhood" via institution_name or brokerage. logo.dev's /{domain} endpoint
+// returns a clean square logo for almost every public-facing finance brand.
+// Fallback: lowercase the brand, strip non-alpha, append .com (catches a lot
+// of small / international brokers).
+var _BROKERAGE_DOMAINS = {
+  'charles schwab':'schwab.com',
+  'schwab':'schwab.com',
+  'fidelity':'fidelity.com',
+  'fidelity investments':'fidelity.com',
+  'vanguard':'vanguard.com',
+  'td ameritrade':'tdameritrade.com',
+  'thinkorswim':'tdameritrade.com',
+  'etrade':'etrade.com',
+  'e*trade':'etrade.com',
+  'robinhood':'robinhood.com',
+  'webull':'webull.com',
+  'public':'public.com',
+  'public.com':'public.com',
+  'm1 finance':'m1.com',
+  'm1':'m1.com',
+  'sofi':'sofi.com',
+  'sofi invest':'sofi.com',
+  'interactive brokers':'interactivebrokers.com',
+  'ibkr':'interactivebrokers.com',
+  'tastytrade':'tastytrade.com',
+  'tastyworks':'tastytrade.com',
+  'wealthfront':'wealthfront.com',
+  'betterment':'betterment.com',
+  'alpaca':'alpaca.markets',
+  'coinbase':'coinbase.com',
+  'kraken':'kraken.com',
+  'gemini':'gemini.com',
+  'binance':'binance.com',
+  'binance.us':'binance.us',
+  'cash app':'cash.app',
+  'stash':'stash.com',
+  'acorns':'acorns.com',
+  'wealthsimple':'wealthsimple.com',
+  'questrade':'questrade.com',
+  'td direct investing':'td.com',
+  'td':'td.com',
+  'rbc direct investing':'rbcdirectinvesting.com',
+  'cibc investors edge':'cibc.com',
+  'cibc investor\'s edge':'cibc.com',
+  'national bank direct brokerage':'nbdb.ca',
+  'bmo investorline':'bmo.com',
+  'trading 212':'trading212.com',
+  'trading212':'trading212.com',
+  'merrill edge':'merrill.com',
+  'merrill lynch':'merrill.com',
+  'morgan stanley':'morganstanley.com',
+  'jp morgan':'jpmorgan.com',
+  'jpmorgan':'jpmorgan.com',
+  'chase':'chase.com',
+  'ally':'ally.com',
+  'ally invest':'ally.com',
+  'firstrade':'firstrade.com',
+  'tradestation':'tradestation.com',
+  'questrade canada':'questrade.com'
+};
+function _brokerageLogoURL(name){
+  if(!name) return '';
+  var key = String(name).trim().toLowerCase();
+  // Direct match first
+  if(_BROKERAGE_DOMAINS[key]) {
+    return 'https://img.logo.dev/'+_BROKERAGE_DOMAINS[key]+'?token='+LOGO_DEV_TOKEN+'&size=80&format=png';
+  }
+  // Substring match — useful for "Charles Schwab Inc." or "Fidelity (Brokerage)"
+  for (var k in _BROKERAGE_DOMAINS) {
+    if (key.indexOf(k) >= 0) {
+      return 'https://img.logo.dev/'+_BROKERAGE_DOMAINS[k]+'?token='+LOGO_DEV_TOKEN+'&size=80&format=png';
+    }
+  }
+  // Fallback: brand → naive .com guess. logo.dev returns a placeholder when no
+  // match, our img onerror flips to data-broken which CSS hides.
+  var guess = key.replace(/[^a-z0-9]/g,'') + '.com';
+  return 'https://img.logo.dev/'+guess+'?token='+LOGO_DEV_TOKEN+'&size=80&format=png';
+}
+// Build the small logo block for a SnapTrade account card. `acct` is the
+// SnapTrade account object; we prefer an explicit logo URL from SnapTrade if
+// they provide one (some adapters do via brokerage.logo), otherwise we look up
+// by institution name. Always wraps a 2-letter text fallback that shows when
+// no logo image loads (or before the image returns).
+function brokerageLogoHTML(acct){
+  var name = (acct.institution_name||acct.brokerage_authorization||acct.brokerage||'').toString();
+  var fallback = (name||'?').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase() || '?';
+  var url = (acct.brokerage && acct.brokerage.logo_url) || (acct.brokerage && acct.brokerage.logo) || _brokerageLogoURL(name);
+  return '<div class="broker-logo" title="'+name.replace(/"/g,'&quot;')+'">'+
+    '<span>'+fallback+'</span>'+
+    (url ? '<img src="'+url+'" alt="" onerror="this.setAttribute(\'data-broken\',\'1\')">' : '')+
+  '</div>';
+}
 function taxPanelHTML(t){
   var info=TAX_INFO[t];
   if(!info)return'';
@@ -5060,7 +5163,9 @@ function renderBrokersTab(){
       return q>0;
     });
     html+='<div class="broker-card">';
-    html+='<div class="broker-header"><div><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+'</div></div>';
+    // Two-row left side (logo + name/meta stack), totals on the right.
+    html+='<div class="broker-header">';
+    html+='<div class="broker-header-left">'+brokerageLogoHTML(acct)+'<div style="min-width:0"><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+'</div></div></div>';
     var bal=(acct.balance&&acct.balance.total&&typeof acct.balance.total.amount==='number')?acct.balance.total.amount:null;
     if(bal!==null)html+='<div class="broker-bal">'+fm(bal)+'</div>';
     html+='</div>';

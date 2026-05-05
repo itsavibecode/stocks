@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.32**
+**Current Version: v0.7.33**
 
 ---
 
 ## Changelog
+
+### v0.7.33 — 2026-05-05 — Brokerage logos on Brokers tab
+- **Each broker card on the Brokers tab now shows the brokerage's logo on the left** at the height of the 2 header rows (account name + meta). Sourced from logo.dev's `/{domain}` endpoint. New `_BROKERAGE_DOMAINS` mapping covers ~40 common brokers (Charles Schwab, Fidelity, Vanguard, TD Ameritrade, E*TRADE, Robinhood, Webull, Public, M1, SoFi, Interactive Brokers, Tastytrade, Wealthfront, Betterment, Alpaca, Coinbase, Kraken, Gemini, Cash App, Stash, Acorns, Wealthsimple, Questrade, Merrill, Morgan Stanley, JP Morgan, Chase, Ally, Firstrade, TradeStation, Trading 212, plus the major Canadian banks). Substring match handles things like "Charles Schwab Inc." Falls back to a 2-letter text badge when logo.dev has no match. SnapTrade-provided `brokerage.logo_url` is preferred when present.
 
 ### v0.7.32 — 2026-05-05 — Auto-refresh SnapTrade on page load
 - **SnapTrade Brokers tab + "N connected accounts" line on the Settings card now populate automatically on every page load** (when a userSecret is stored). Previously `stApiState.accounts` reset to `[]` on each reload and only repopulated when the user clicked Refresh — which made the Brokers tab look broken right after a hard reload even though the SnapTrade-side connection was alive. Fix: fire-and-forget call to `snapTradeRefresh()` immediately after `loadFromCloud()` resolves, when `stApiState.userSecret` is present. Failures surface in the existing red error block on the Brokers tab + Settings card.
