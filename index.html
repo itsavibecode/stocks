@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.34</title>
+<title>Stockfolio v0.7.35</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -63,10 +63,45 @@ input,button,select{font-family:inherit}
 .header{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 0;position:sticky;top:0;z-index:100}
 .header-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .logo-block{display:flex;align-items:center;gap:10px}
-.logo-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.logo-title{font-size:17px;font-weight:700;letter-spacing:-.4px}
+/* Stockfolio mark — folio outline with rising bar-chart inside. The base
+   logo-icon sets size/background; the inline SVG inherits color via stroke */
+.logo-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.3)}
+.logo-icon svg{width:22px;height:22px}
+.logo-title{font-size:18px;font-weight:700;letter-spacing:-.5px}
 .logo-sub{font-size:10px;color:var(--muted);margin-top:1px}
 .logo-ver{font-size:9px;color:var(--accent);font-family:var(--mono);opacity:.7}
+/* Header date/time — slid to the LEFT, no background, tighter than the
+   v0.7.x .local-clock badge. Sits between logo-block and the right-side
+   action cluster. */
+.header-clock{display:flex;flex-direction:column;align-items:flex-start;font-family:var(--mono);line-height:1.1;color:var(--muted);padding-left:14px;border-left:1px solid var(--border);margin-left:4px}
+.header-clock-time{font-size:13px;color:var(--accent2);font-weight:600;letter-spacing:.4px}
+.header-clock-date{font-size:9px;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+@media(max-width:768px){.header-clock{padding-left:8px;margin-left:0}.header-clock-time{font-size:11.5px}}
+/* Quick-toggle icons in the header for theme + text size. Small icon
+   buttons that cycle on click; tooltip explains the next state. */
+.hdr-quick{background:transparent;border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;padding:0;transition:all .15s}
+.hdr-quick:hover{color:var(--text);border-color:var(--text2);background:var(--card2)}
+.hdr-quick.active{color:var(--accent);border-color:var(--accent)}
+/* Auth-bar username is now clickable — opens the user info modal */
+.auth-name{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:text-decoration-color .15s}
+.auth-name:hover{text-decoration-color:var(--accent)}
+/* Scrolling stock ticker — sits above the tabs, below the auth bar.
+   Uses last cached price from livePrices (no extra API calls).
+   Marquee animation runs continuously; pauses on hover so users can
+   read individual entries. */
+.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:relative;height:30px;display:flex;align-items:center}
+.tk-ticker:before,.tk-ticker:after{content:"";position:absolute;top:0;bottom:0;width:30px;z-index:2;pointer-events:none}
+.tk-ticker:before{left:0;background:linear-gradient(90deg,var(--card),transparent)}
+.tk-ticker:after{right:0;background:linear-gradient(-90deg,var(--card),transparent)}
+.tk-ticker-track{display:inline-flex;animation:tk-marquee 90s linear infinite;will-change:transform;padding-left:100%}
+.tk-ticker:hover .tk-ticker-track{animation-play-state:paused}
+.tk-ticker-item{display:inline-flex;align-items:center;gap:6px;padding:0 14px;font-size:11.5px;font-family:var(--mono);border-right:1px solid var(--border)}
+.tk-ticker-sym{font-weight:700;color:var(--text2)}
+.tk-ticker-px{color:var(--accent2)}
+.tk-ticker-empty{color:var(--muted);font-size:10.5px;font-style:italic;padding:0 14px;width:100%;text-align:center}
+@keyframes tk-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+body.compact .tk-ticker{height:26px}
+@media(max-width:640px){.tk-ticker{height:26px}.tk-ticker-item{font-size:10.5px;padding:0 10px}}
 .header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
@@ -144,20 +179,27 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 @media(max-width:760px){.tax-outlook-grid{grid-template-columns:1fr}}
 .tax-outlook-chart{min-width:0}
 .tax-outlook-side{min-width:0}
-.tax-side-card{background:var(--bg);border-radius:8px;border-left:3px solid var(--yellow);padding:12px 14px;display:flex;flex-direction:column;gap:6px;height:100%;box-sizing:border-box}
-.tax-side-empty{border-left-color:var(--accent);justify-content:center}
+/* Tax Outlook side card — compacted in v0.7.35.
+   Was a vertical stack with lots of empty space next to the big number;
+   now a tight 2-row layout: top row has the headline + tax total side-by-side
+   (uses available horizontal space instead of stretching down), and the
+   detail rows + after-tax sit below in a denser format. */
+.tax-side-card{background:var(--bg);border-radius:8px;border-left:3px solid var(--yellow);padding:10px 12px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box;align-self:start}
+.tax-side-empty{border-left-color:var(--accent);justify-content:flex-start;padding:14px 14px}
 .tax-side-empty-msg{font-size:10.5px;color:var(--muted);line-height:1.5;margin-top:4px}
 .tax-side-cta{margin-top:10px;font-size:11px;align-self:flex-start}
-.tax-side-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600}
-.tax-side-big{font-size:22px;font-weight:700;color:var(--yellow);font-family:var(--mono);line-height:1}
-.tax-side-rate{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
-.tax-side-breakdown{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:3px}
+.tax-side-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tax-side-headleft{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.tax-side-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;white-space:nowrap}
+.tax-side-rate{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.tax-side-big{font-size:18px;font-weight:700;color:var(--yellow);font-family:var(--mono);line-height:1;text-align:right;white-space:nowrap}
+.tax-side-breakdown{padding-top:6px;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:2px}
 .tax-side-row{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;color:var(--text2);gap:6px}
-.tax-side-row.tax-side-meta{color:var(--muted);font-size:9.5px;font-style:italic;margin-top:2px}
-.tax-side-after{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.tax-side-row.tax-side-meta{color:var(--muted);font-size:9.5px;font-style:italic;margin-top:1px}
+.tax-side-after{padding-top:6px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .tax-side-after-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.tax-side-after-val{font-size:14px;color:var(--green);font-weight:700;line-height:1.2;margin-top:2px}
-.tax-side-foot{font-size:9.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.tax-side-after-val{font-size:13px;color:var(--green);font-weight:700;line-height:1.2;font-family:var(--mono);white-space:nowrap}
+.tax-side-foot{font-size:9px;color:var(--muted);padding-top:4px;border-top:1px solid var(--border)}
 /* SnapTrade source tag — shown on lots and accounts that came from SnapTrade
    sync, so users can tell synced data from manual entries at a glance. */
 .src-tag{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:3px;background:rgba(108,154,255,.15);color:var(--accent2);border:1px solid rgba(108,154,255,.35);vertical-align:middle;cursor:help;font-family:var(--font);white-space:nowrap;line-height:1.4}
@@ -452,6 +494,15 @@ body.text-xl .sc .scv{font-size:24px}
 /* RECENT NEWS HIGHLIGHT */
 .news-recent td{background:var(--accent-dim)!important}
 .news-recent td:first-child{border-left:3px solid var(--accent)}
+/* Read-news markers — persistent state once you've held a row open ≥1.5s.
+   `news-read` is the saved-forever look (subtle muting + checkmark badge);
+   `news-just-read` is a brief one-shot pulse the first time the row gets
+   marked, so the user sees the transition happen. */
+.news-read td{opacity:.78}
+.news-read td:first-child{position:relative}
+.news-read td:first-child::after{content:"✓";position:absolute;left:2px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--green);font-weight:700}
+@keyframes news-pulse{0%{background:var(--green-dim)}100%{background:transparent}}
+.news-just-read td{animation:news-pulse 1.6s ease-out 1}
 
 /* TAX TOOLTIP */
 .tax-tag{display:inline-flex;align-items:center;gap:3px;background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600;cursor:help}
@@ -499,23 +550,48 @@ body.text-xl .sc .scv{font-size:24px}
   </div>
 </div>
 
+<!-- Scrolling portfolio ticker — populated from livePrices (no extra API calls).
+     Shows each ticker once, deduped, with the last cached price. Pauses on hover.
+     Hidden when there are no tickers with prices (e.g. before first fetch). -->
+<div class="tk-ticker" id="pfTicker" style="display:none"><div class="tk-ticker-track" id="pfTickerTrack"></div></div>
+
 <header class="header">
   <div class="container header-inner">
     <div class="logo-block">
-      <div class="logo-icon">&#128202;</div>
+      <!-- Stockfolio default logo: folio outline with stylized bar-chart growth.
+           Replaceable — see #logo-default-mark. Alternatives are in chat. -->
+      <div class="logo-icon" id="logo-default-mark" aria-label="Stockfolio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/>
+          <path d="M7 16 V12"/>
+          <path d="M11 16 V9"/>
+          <path d="M15 16 V11"/>
+          <path d="M19 16 V7"/>
+        </svg>
+      </div>
       <div>
-        <div class="logo-title">Portfolio Command Center</div>
+        <div class="logo-title">Stockfolio</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.34</div>
+        <div class="logo-ver">v0.7.35</div>
       </div>
     </div>
+    <!-- Date + time pinned to the LEFT next to the logo, no background -->
+    <div class="header-clock" title="Your local time — news timestamps below are shown in this timezone">
+      <span class="header-clock-time" id="hClockTime">--:--:--</span>
+      <span class="header-clock-date" id="hClockDate">--</span>
+    </div>
     <div class="header-actions">
-      <div class="local-clock" title="Your local time — news timestamps below are shown in this timezone"><div class="local-clock-time" id="hClockTime">--:--:--</div><div class="local-clock-date" id="hClockDate">--</div></div>
       <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value <span id="priceStatus" style="font-size:8px;text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="stat-val" id="pvV"></div></div>
       <div class="stat-box" id="aiB" style="display:none"><div class="stat-label">Annual Income</div><div class="stat-val" id="aiV" style="color:var(--green)"></div></div>
       <div class="market-tickers" id="mktTickers" title="Live market indices and Bitcoin"></div>
       <span id="apiErrorBadge" style="display:none;cursor:pointer" onclick="showApiErrors()"><span class="badge badge-red" style="font-size:9px">&#9888; API <span id="apiErrCount">0</span></span></span>
-      <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()" style="margin-left:auto">&#128225; RSS</button>
+      <!-- Quick toggles + RSS, pushed right and grouped together with a clear
+           gap from the auth/sign-out area below this header. -->
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <button class="hdr-quick" id="hdrThemeBtn" onclick="cycleTheme()" title="Toggle dark / light theme">🌓</button>
+        <button class="hdr-quick" id="hdrTextBtn" onclick="cycleTextSize()" title="Cycle text size (Normal → Large → Extra Large)"><span style="font-weight:700">A</span></button>
+        <button class="btn btn-rss" id="rBtn" onclick="toggleRSS()" style="margin:0">&#128225; RSS</button>
+      </div>
     </div>
   </div>
 </header>
@@ -933,7 +1009,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.34 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.35 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1020,7 +1096,8 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.34";
+var VERSION = "0.7.35";
+var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1072,8 +1149,8 @@ function updateAuthUI() {
   var el = document.getElementById('authStatus');
   var act = document.getElementById('authActions');
   if (currentUser) {
-    el.innerHTML = '<img class="auth-avatar" src="'+(currentUser.photoURL||'')+'" alt="">' +
-      '<span class="auth-name">' + (currentUser.displayName||currentUser.email) + '</span>' +
+    el.innerHTML = '<img class="auth-avatar" src="'+(currentUser.photoURL||'')+'" alt="" onclick="showUserInfoModal()" style="cursor:pointer" title="Click for account details">' +
+      '<span class="auth-name" onclick="showUserInfoModal()" title="Click for account details">' + (currentUser.displayName||currentUser.email) + '</span>' +
       '<span class="cloud-badge">CLOUD SYNC</span>' +
       '<span class="sync-indicator" id="syncInd"><span class="sync-dot"></span> Synced</span>';
     act.innerHTML = '<button class="auth-btn signout" onclick="signOut()">Sign Out</button>';
@@ -1086,6 +1163,38 @@ function updateAuthUI() {
   renderBrokersTab();
 }
 
+// Username-click handler — opens a modal with the same content as the
+// Settings → Your Account card so users get account details without having
+// to navigate to Settings.
+function showUserInfoModal(){
+  if(!currentUser){ showToast('Not signed in','warn'); return; }
+  // Reuse renderAccountCard's logic by writing into an in-modal container
+  var ov=document.getElementById('userInfoOv');
+  if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.className='modal-overlay';
+  ov.id='userInfoOv';
+  ov.style.zIndex='1500';
+  ov.style.display='flex';
+  ov.onclick=function(e){if(e.target===ov)ov.remove()};
+  var modal=document.createElement('div');
+  modal.className='modal';
+  modal.style.cssText='width:560px;max-width:94vw;max-height:88vh;overflow-y:auto';
+  modal.onclick=function(e){e.stopPropagation()};
+  modal.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="margin:0">👤 Your Account</h3><button onclick="document.getElementById(\'userInfoOv\').remove()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0;line-height:1">&times;</button></div><div id="userInfoModalBody"></div>';
+  ov.appendChild(modal);
+  document.body.appendChild(ov);
+  // Render account card content into the modal body — temporarily reassign
+  // the target id and call the existing function, then swap back.
+  var origBody=document.getElementById('acctCardBody');
+  var modalBody=document.getElementById('userInfoModalBody');
+  // Swap IDs so renderAccountCard writes to the modal
+  if(origBody)origBody.id='_acctCardBody_orig';
+  modalBody.id='acctCardBody';
+  renderAccountCard();
+  modalBody.id='userInfoModalBody';
+  if(origBody)origBody.id='acctCardBody';
+}
 // Settings → Your Account card. Surfaces every piece of user data we have
 // from the Google sign-in (so it's not a black box) plus a forget-me action.
 function renderAccountCard(){
@@ -2602,8 +2711,64 @@ var openMobileTab = null;    // which tab the mobile card is in: 'div','growth',
 
 function tog(id){
   var r=document.getElementById(id);if(!r)return;
-  if(r.classList.contains('open')){r.classList.remove('open');openDesktopPanel=null}
-  else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open')});r.classList.add('open');openDesktopPanel=id}
+  if(r.classList.contains('open')){r.classList.remove('open');openDesktopPanel=null;_clearNewsReadTimer(id)}
+  else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open');_clearNewsReadTimer(x.id)});r.classList.add('open');openDesktopPanel=id;_armNewsReadTimer(id, r)}
+}
+// News read-tracking: when a news-row expand panel is open for ≥1.5s, mark
+// the corresponding article as read in prefs.newsRead (keyed by ticker|title
+// hash so the same article doesn't get a different ID across renders). The
+// click handler on the parent row sets the timer; closing within 1.5s
+// cancels it. Read rows get a persistent ✓ marker via .news-read class.
+var _newsReadTimers = {};
+function _newsKey(tk, title){
+  return tk+'|'+(title||'').trim().toLowerCase().slice(0,80);
+}
+function _armNewsReadTimer(rid, expandRow){
+  if(!rid || rid.indexOf('n')!==0 || !/^n\d+$/.test(rid)) return; // only news rows (ids like "n0", "n1"…)
+  var clickRow = expandRow && expandRow.previousElementSibling;
+  if(!clickRow) return;
+  // Pull the ticker + title out of the click row to build a stable key
+  var tickerEl = clickRow.querySelector('.badge.badge-accent');
+  var titleEl = clickRow.querySelectorAll('td')[3];
+  if(!tickerEl || !titleEl) return;
+  var tk = tickerEl.textContent.trim();
+  var title = titleEl.textContent.trim();
+  var key = _newsKey(tk, title);
+  // If already marked read, skip the pulse animation
+  var prefs = loadPrefs();
+  if(prefs.newsRead && prefs.newsRead[key]) return;
+  _newsReadTimers[rid] = setTimeout(function(){
+    _newsReadTimers[rid] = null;
+    var p = loadPrefs();
+    if(!p.newsRead) p.newsRead = {};
+    p.newsRead[key] = Date.now();
+    // Trim to last 500 read entries (keyed by recency)
+    var keys = Object.keys(p.newsRead);
+    if(keys.length > 500){
+      keys.sort(function(a,b){return p.newsRead[b]-p.newsRead[a]});
+      var trimmed = {};
+      keys.slice(0,500).forEach(function(k){trimmed[k] = p.newsRead[k]});
+      p.newsRead = trimmed;
+    }
+    savePrefs(p);
+    if(clickRow){
+      clickRow.classList.add('news-read');
+      clickRow.classList.add('news-just-read');
+      // Strip the just-read pulse class after the animation finishes
+      setTimeout(function(){clickRow.classList.remove('news-just-read')}, 1700);
+    }
+  }, 1500);
+}
+function _clearNewsReadTimer(rid){
+  if(_newsReadTimers[rid]){
+    clearTimeout(_newsReadTimers[rid]);
+    _newsReadTimers[rid] = null;
+  }
+}
+function isNewsRead(tk, title){
+  var p = loadPrefs();
+  if(!p.newsRead) return false;
+  return !!p.newsRead[_newsKey(tk, title)];
 }
 function togM(el){
   var wasOpen=el.classList.contains('open');
@@ -2659,6 +2824,8 @@ function render(){
   if(tv>0){G('pvB').style.display='';G('pvV').textContent=fm(tv)}else G('pvB').style.display='none';
   var ti=tks.filter(isDiv).reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0);
   if(ti>0){G('aiB').style.display='';G('aiV').textContent=fm(ti)}else G('aiB').style.display='none';
+  // Scrolling portfolio ticker (uses last cached prices, no extra API calls)
+  renderPortfolioTicker();
 
   // NEWS
   var q=(G('nQ').value||'').toLowerCase();
@@ -2686,7 +2853,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -2922,19 +3089,26 @@ function render(){
       html += '<div class="tax-outlook-side">';
       if (hasTax) {
         html += '<div class="tax-side-card">';
-        html += '<div class="tax-side-label">&#129534; Est. Annual Tax</div>';
-        html += '<div class="tax-side-big">'+fm(taxTotal)+'</div>';
-        html += '<div class="tax-side-rate">'+effectiveRate.toFixed(1)+'% effective</div>';
-        // Mini breakdown by category
-        html += '<div class="tax-side-breakdown">';
-        if(taxQualified>0) html += '<div class="tax-side-row"><span>Qualified @ '+ltRate+'%</span><span class="mono">'+fm(taxQualified)+'</span></div>';
-        if(taxOrdinary>0) html += '<div class="tax-side-row"><span>Ordinary @ '+stRate+'%</span><span class="mono">'+fm(taxOrdinary)+'</span></div>';
-        if(taxCollectibles>0) html += '<div class="tax-side-row"><span>Collectibles @ '+Math.min(28,stRate)+'%</span><span class="mono">'+fm(taxCollectibles)+'</span></div>';
-        if(stateRate>0) html += '<div class="tax-side-row tax-side-meta"><span>incl. '+stateRate+'% state on all</span></div>';
+        // Top row: label + big tax number side-by-side, fills horizontal space
+        html += '<div class="tax-side-head">';
+        html += '<div class="tax-side-headleft">';
+        html += '<span class="tax-side-label">&#129534; Est. Annual Tax</span>';
+        html += '<span class="tax-side-rate">'+effectiveRate.toFixed(1)+'% effective</span>';
         html += '</div>';
-        // After-tax income highlight
-        html += '<div class="tax-side-after"><div class="tax-side-after-label">After-tax annual income</div><div class="tax-side-after-val mono">'+fm(afterTax)+'</div></div>';
-        html += '<div class="tax-side-foot">Bracket '+bracket+'%'+(stateRate?' + '+stateRate+'% state':'')+'</div>';
+        html += '<span class="tax-side-big">'+fm(taxTotal)+'</span>';
+        html += '</div>';
+        // Mini breakdown by category (only if more than one category contributes)
+        var hasMulti = (taxQualified>0?1:0) + (taxOrdinary>0?1:0) + (taxCollectibles>0?1:0) > 1;
+        if (hasMulti) {
+          html += '<div class="tax-side-breakdown">';
+          if(taxQualified>0) html += '<div class="tax-side-row"><span>Qualified @ '+ltRate+'%</span><span class="mono">'+fm(taxQualified)+'</span></div>';
+          if(taxOrdinary>0) html += '<div class="tax-side-row"><span>Ordinary @ '+stRate+'%</span><span class="mono">'+fm(taxOrdinary)+'</span></div>';
+          if(taxCollectibles>0) html += '<div class="tax-side-row"><span>Collectibles @ '+Math.min(28,stRate)+'%</span><span class="mono">'+fm(taxCollectibles)+'</span></div>';
+          html += '</div>';
+        }
+        // After-tax income — single horizontal row
+        html += '<div class="tax-side-after"><span class="tax-side-after-label">After-tax</span><span class="tax-side-after-val">'+fm(afterTax)+'</span></div>';
+        html += '<div class="tax-side-foot">Bracket '+bracket+'%'+(stateRate?' + '+stateRate+'% state':'')+(taxQualified>0?' &middot; LT '+ltRate+'%':'')+'</div>';
         html += '</div>';
       } else {
         html += '<div class="tax-side-card tax-side-empty">';
@@ -3327,8 +3501,10 @@ function render(){
     var acctSynced = _isSyncedAccount(acct);
     var acctSyncBadge = acctSynced ? '<span class="src-tag-acct" title="Mapped to SnapTrade — lots here may be overwritten on next sync.">&#128279; SnapTrade</span>' : '';
     var acctEsc = acct.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    var acctUpdateLbl = _acctLastUpdateLabel(acct);
+    var acctUpdateHTML = acctUpdateLbl ? '<span style="font-size:10px;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--mono)" title="Last update for this account">'+acctUpdateLbl+'</span>' : '';
     h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">';
-    h+='<div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div>';
+    h+='<div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+acctUpdateHTML+'</div>';
     h+='<div style="display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap">';
     h+='<span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'');
     h+='<button class="btn btn-outline" onclick="event.stopPropagation();renameAccount(\''+acctEsc+'\')" style="font-size:9.5px;padding:3px 8px" title="Rename this account — updates all lots assigned to it">Rename</button>';
@@ -3369,8 +3545,53 @@ function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 // ═════════════════════════════════════════════════
 // THEME + TEXT SIZE
 // ═════════════════════════════════════════════════
-function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t}
-function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s}
+// Build / update the marquee ticker above the tabs. Uses PR (which is the
+// runtime price store fed by livePrices). Dedupes by ticker, hides when no
+// prices have been fetched yet, and duplicates the track once so the CSS
+// translateX(-50%) marquee animation loops seamlessly.
+function renderPortfolioTicker(){
+  var bar = G('pfTicker'), track = G('pfTickerTrack');
+  if(!bar || !track) return;
+  var seen = {};
+  var items = [];
+  tks.forEach(function(t){
+    if(seen[t]) return;
+    seen[t] = 1;
+    var px = PR[t]||0;
+    if(px<=0) return;
+    items.push('<span class="tk-ticker-item"><span class="tk-ticker-sym">'+t+'</span><span class="tk-ticker-px">'+fm(px)+'</span></span>');
+  });
+  if(items.length===0){
+    bar.style.display='none';
+    track.innerHTML='';
+    return;
+  }
+  bar.style.display='flex';
+  // Duplicate for seamless loop. The animation translates -50% so the start
+  // of the second copy lands exactly where the first started.
+  var inner = items.join('') + items.join('');
+  track.innerHTML = inner;
+}
+function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t;_syncQuickToggleStates()}
+function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s;_syncQuickToggleStates()}
+// Header quick toggles — cycle through states with one click. The active
+// indicator on each button shows the current selection.
+function cycleTheme(){
+  var p=loadPrefs();
+  setTheme(p.theme==='light'?'dark':'light');
+  showToast('Theme: '+(loadPrefs().theme==='light'?'Light':'Dark'));
+}
+function cycleTextSize(){
+  var p=loadPrefs();
+  var next = p.textSize==='lg' ? 'xl' : (p.textSize==='xl' ? 'normal' : 'lg');
+  setTextSize(next);
+  showToast('Text size: '+(next==='lg'?'Large':next==='xl'?'Extra Large':'Normal'));
+}
+function _syncQuickToggleStates(){
+  var p=loadPrefs();
+  var t=G('hdrThemeBtn'); if(t) t.classList.toggle('active', p.theme==='light');
+  var s=G('hdrTextBtn'); if(s) s.classList.toggle('active', p.textSize==='lg'||p.textSize==='xl');
+}
 function setCompact(on){document.body.classList.toggle('compact',!!on);var p=loadPrefs();p.compact=!!on;savePrefs(p);var el=G('sCompact');if(el)el.checked=!!on}
 function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl');if(p.compact)document.body.classList.add('compact');var cb=G('sCompact');if(cb)cb.checked=!!p.compact}
 
@@ -3792,6 +4013,40 @@ function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];compute
 // ═════════════════════════════════════════════════
 // SETTINGS: Account management
 // ═════════════════════════════════════════════════
+// Friendly relative-time label ("just now", "5m ago", "2h ago", "Apr 30")
+// for surface-level "when was this last touched" displays.
+function _relTimeShort(ts){
+  if(!ts) return '';
+  var diff = Date.now() - ts;
+  if(diff < 60*1000) return 'just now';
+  if(diff < 60*60*1000) return Math.round(diff/60000)+'m ago';
+  if(diff < 24*60*60*1000) return Math.round(diff/3600000)+'h ago';
+  if(diff < 7*24*60*60*1000) return Math.round(diff/86400000)+'d ago';
+  // Older — show short date
+  return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+// "Last update" label for an account. SnapTrade-synced accounts report the
+// global last-fetched timestamp from stApiState.lastFetched; non-synced
+// accounts report the most-recent lot.added date among their lots.
+function _acctLastUpdateLabel(acctName){
+  if(!acctName) return '';
+  if(_isSyncedAccount(acctName)){
+    if(stApiState && stApiState.lastFetched) return 'synced '+_relTimeShort(stApiState.lastFetched);
+    return 'synced — never';
+  }
+  // Manual / M1 CSV / other — find the latest lot.added at this account
+  var maxTs = 0;
+  Object.keys(lots).forEach(function(t){
+    (lots[t]||[]).forEach(function(l){
+      if(l.b===acctName && l.added){
+        var ms = new Date(l.added).getTime();
+        if(ms > maxTs) maxTs = ms;
+      }
+    });
+  });
+  if(!maxTs) return '';
+  return 'modified '+_relTimeShort(maxTs);
+}
 // Returns true if any lot at this account name has src:'snaptrade', or if the
 // account name appears in prefs.snaptradeAccountMap values (meaning a SnapTrade
 // account was mapped to this name, even if all its lots have been manually
@@ -3815,11 +4070,14 @@ function renderSettingsAccts(){
   var h='';
   list.forEach(function(acct,i){
     var synced=_isSyncedAccount(acct);
-    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
+    var updLbl=_acctLastUpdateLabel(acct);
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">';
     h+='<span class="badge badge-purple" style="font-size:11px;min-width:60px;text-align:center">'+acct+(synced?'<span class="src-tag-acct" title="This account is mapped to a SnapTrade brokerage. Lots here may be overwritten on next sync.">&#128279;</span>':'')+'</span>';
+    if(updLbl) h+='<span class="muted" style="font-size:10px;font-family:var(--mono)" title="Last update for this account">'+updLbl+'</span>';
+    h+='<div style="margin-left:auto;display:flex;gap:6px">';
     h+='<button class="btn btn-outline" onclick="renameAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:3px 8px">Rename</button>';
     h+='<button class="rb" onclick="deleteAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px">Delete</button>';
-    h+='</div>';
+    h+='</div></div>';
   });
   el.innerHTML=h;
 }
@@ -5398,8 +5656,9 @@ function renderBrokersTab(){
     });
     html+='<div class="broker-card">';
     // Two-row left side (logo + name/meta stack), totals on the right.
+    var acctSyncLabel = (stApiState && stApiState.lastFetched) ? ' &middot; <span style="color:var(--accent2)">synced '+_relTimeShort(stApiState.lastFetched)+'</span>' : '';
     html+='<div class="broker-header">';
-    html+='<div class="broker-header-left">'+brokerageLogoHTML(acct)+'<div style="min-width:0"><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+'</div></div></div>';
+    html+='<div class="broker-header-left">'+brokerageLogoHTML(acct)+'<div style="min-width:0"><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+acctSyncLabel+'</div></div></div>';
     var bal=(acct.balance&&acct.balance.total&&typeof acct.balance.total.amount==='number')?acct.balance.total.amount:null;
     if(bal!==null)html+='<div class="broker-bal">'+fm(bal)+'</div>';
     html+='</div>';

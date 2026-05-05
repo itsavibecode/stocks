@@ -1,10 +1,19 @@
-# Portfolio Command Center
+# Stockfolio
 
-**Current Version: v0.7.34**
+**Current Version: v0.7.35**
 
 ---
 
 ## Changelog
+
+### v0.7.35 — 2026-05-05 — Stockfolio rebrand + header/UX polish
+- **Rebranded to "Stockfolio"** — title, footer, header logo word, page meta. New SVG logo (folio outline + rising bar chart) replaces the 📊 emoji. The logo lives in `#logo-default-mark` and is easy to swap; four alternate SVG concepts are listed in the v0.7.35 PR description for picking a different style.
+- **Header restructure.** Date + time slid to the LEFT next to the logo block (no background, simple monospace stack with a faint left border). Clock badge style retired. The right-side action cluster now groups: stat boxes, market tickers, API-error badge, then a tight trio of quick-toggle buttons (🌓 theme cycle, **A** text-size cycle, 📡 RSS) with a clear visual gap before the auth bar's Sign Out.
+- **Click your username (or avatar) in the auth bar to open the full account-info modal.** Same content as Settings → Your Account but reachable in one click without leaving the page you're on.
+- **Scrolling portfolio ticker** between the auth bar and tabs. Marquees through every ticker in your portfolio with its last cached price (uses `livePrices` — no extra API calls, no rate-limit cost). Pauses on hover. Hidden until you have at least one priced ticker. Dedupes so a ticker only shows once even if it's in multiple lots/accounts.
+- **Tax Outlook side card compacted.** Was a tall vertical stack with a lot of empty space next to the big tax number; now a 2-row layout with the headline + tax total side-by-side, breakdown only shown when more than one category contributes, and after-tax income on a single horizontal line. Cuts the panel height roughly in half on most portfolios.
+- **News-row "read" tracking.** Hold a news row open ≥1.5 seconds and it's marked as read in `prefs.newsRead` (keyed by ticker + title hash, capped at 500 entries). Read rows get a subtle ✓ marker in the first column and slight opacity dim; freshly-marked rows get a brief green pulse so you can see the transition fire. Closing the row before 1.5s cancels the timer.
+- **Last-update label per account.** Brokers tab cards, Accounts tab cards, and Settings → Manage Accounts list rows now show "synced X mins ago" for SnapTrade-mapped accounts (using `stApiState.lastFetched`) and "modified X ago" for manual / M1 CSV / unsynced accounts (using the most-recent `lot.added` at that account). New `_relTimeShort()` helper produces friendly relative labels (just now / 5m ago / 2h ago / Apr 30).
 
 ### v0.7.34 — 2026-05-05 — M1 Finance CSV import + Holdings-by-Lot polish
 - **M1 Finance Holdings CSV import.** New "Import M1 Holdings CSV" button on Settings → Export & Import card. Parses M1's official Holdings summary export (Symbol, Quantity, Avg. Price columns), shows an ADD/UPDATE/NOOP diff against existing lots at a target account name (defaults to the first existing M1-named account, falls back to "M1 Finance"), and applies on Apply. Imported lots are tagged `src:'m1csv'` and surface in the deep-dive Holdings-by-Lot view as a purple **💾 M1 CSV** pill alongside the existing 🔗 SnapTrade marker — so manual / synced / imported lots are all visually distinguishable. Re-importing the same file later UPDATEs share counts to the new values. The Settings card includes the M1 export instructions inline so future-you doesn't have to remember the path (Invest → account → Holdings → ⋮ → Holdings summary).
