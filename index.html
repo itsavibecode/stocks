@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.36</title>
+<title>Stockfolio v0.7.37</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -89,13 +89,23 @@ input,button,select{font-family:inherit}
 /* Auth-bar username is now clickable — opens the user info modal */
 .auth-name{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:text-decoration-color .15s}
 .auth-name:hover{text-decoration-color:var(--accent)}
+/* Tiny version pill in the auth bar (right of the sync indicator). Replaces
+   the version line that used to live in the logo-block sub-area. */
+.ver-pill{font-family:var(--mono);font-size:9.5px;color:var(--accent);opacity:.75;padding:2px 6px;background:var(--card2);border:1px solid var(--border);border-radius:4px;letter-spacing:.3px;white-space:nowrap}
+/* Share buttons — class lets the PNG-capture helper hide them during the
+   html2canvas pass so they don't end up baked into the exported image. */
+.share-btn{font-size:9.5px;padding:3px 8px;line-height:1}
+.capturing-png .share-btn{visibility:hidden!important}
 /* Scrolling stock ticker — sits below the header (sticky stack), above tabs.
    Uses last cached price from livePrices + day-change % from liveChanges.
    Marquee animation runs continuously; pauses on hover so users can read.
    Sticky-stacked under the header — top:var(--sticky-top) so it sits
    exactly below the header, and the table thead's stick-top is bumped to
    --thead-top to clear both. */
-.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:sticky;top:var(--sticky-top,90px);z-index:90;height:32px;display:flex;align-items:center}
+.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:sticky;top:var(--sticky-top,90px);z-index:90;height:32px;display:flex;align-items:center;margin-top:0;border-top:0}
+/* Margin reset to neutralize any default gap between the sticky header
+   and this sticky ticker — they should sit flush. */
+header.header + .tk-ticker{margin-top:0}
 .tk-ticker:before,.tk-ticker:after{content:"";position:absolute;top:0;bottom:0;width:30px;z-index:2;pointer-events:none}
 .tk-ticker:before{left:0;background:linear-gradient(90deg,var(--card),transparent)}
 .tk-ticker:after{right:0;background:linear-gradient(-90deg,var(--card),transparent)}
@@ -597,7 +607,6 @@ body.text-xl .sc .scv{font-size:24px}
         <div>
           <div class="logo-title">Stockfolio</div>
           <div class="logo-sub" id="hSub"></div>
-          <div class="logo-ver">v0.7.36</div>
         </div>
       </div>
       <!-- Date + time, sits right next to the logo. The clock-date below
@@ -1059,7 +1068,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.36 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.37 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1146,7 +1155,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.36";
+var VERSION = "0.7.37";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1202,10 +1211,11 @@ function updateAuthUI() {
     el.innerHTML = '<img class="auth-avatar" src="'+(currentUser.photoURL||'')+'" alt="" onclick="showUserInfoModal()" style="cursor:pointer" title="Click for account details">' +
       '<span class="auth-name" onclick="showUserInfoModal()" title="Click for account details">' + (currentUser.displayName||currentUser.email) + '</span>' +
       '<span class="cloud-badge">CLOUD SYNC</span>' +
-      '<span class="sync-indicator" id="syncInd"><span class="sync-dot"></span> Synced</span>';
+      '<span class="sync-indicator" id="syncInd"><span class="sync-dot"></span> Synced</span>' +
+      '<span class="ver-pill" title="Stockfolio version">v'+VERSION+'</span>';
     act.innerHTML = '<button class="auth-btn signout" onclick="signOut()">Sign Out</button>';
   } else {
-    el.innerHTML = '<span class="local-badge">LOCAL ONLY</span><span>Sign in to sync across devices</span>';
+    el.innerHTML = '<span class="local-badge">LOCAL ONLY</span><span>Sign in to sync across devices</span><span class="ver-pill" title="Stockfolio version">v'+VERSION+'</span>';
     act.innerHTML = '<button class="auth-btn google" onclick="signInGoogle()"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Sign in with Google</button>';
   }
   renderAccountCard();
@@ -1763,12 +1773,16 @@ function priceCls(t){
   return 'px-down';
 }
 var PRICE_CACHE_MS = 10 * 60 * 1000; // 10 min
-// Load cached prices
+// Load cached prices + day-change %s (the latter feeds the ticker arrows
+// so they survive reload — without this, liveChanges starts empty after
+// every page load and the ticker shows no arrows until next fetch).
 try {
   var cp = localStorage.getItem('pf_prices');
   var cpt = parseInt(localStorage.getItem('pf_prices_ts')||'0');
   if (cp) livePrices = JSON.parse(cp);
   pricesLastFetched = cpt;
+  var cch = localStorage.getItem('pf_changes');
+  if (cch) liveChanges = JSON.parse(cch);
 } catch(e){}
 
 var DV={
@@ -2156,7 +2170,7 @@ function fetchAllPrices() {
   function next() {
     if (idx >= queue.length) {
       pricesLastFetched = Date.now();
-      try { localStorage.setItem('pf_prices', JSON.stringify(livePrices)); localStorage.setItem('pf_prices_ts', ''+pricesLastFetched); } catch(e){}
+      try { localStorage.setItem('pf_prices', JSON.stringify(livePrices)); localStorage.setItem('pf_prices_ts', ''+pricesLastFetched); localStorage.setItem('pf_changes', JSON.stringify(liveChanges)); } catch(e){}
       saveCacheToCloud();
       if (st) st.innerHTML = '<span class="news-live">&#9679; Prices live &mdash; ' + new Date().toLocaleTimeString() + '</span>';
       if (typeof updateRecheckTimeUI === 'function') updateRecheckTimeUI();
@@ -2905,7 +2919,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share PNG</button></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline share-btn" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share</button></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -3100,7 +3114,7 @@ function render(){
         return '<div class="snap-history" style="margin-top:14px"><div class="snap-history-title">🧾 Tax Outlook</div><div class="snap-empty">Set shares on dividend stocks to see estimated income by tax treatment.</div></div>';
       }
       var html = '<div class="snap-history" id="tax-outlook-panel" style="margin-top:14px">';
-      html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">Annual dividend income by tax treatment · ' + fm(total) + ' total <button class="btn btn-outline" onclick="shareElementById(\'tax-outlook-panel\',\'tax-outlook\',\'Tax Outlook\')" style="font-size:9.5px;padding:3px 8px" title="Save this panel as a PNG">💾 Share</button></span></div>';
+      html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">Annual dividend income by tax treatment · ' + fm(total) + ' total <button class="btn btn-outline share-btn" onclick="shareElementById(\'tax-outlook-panel\',\'tax-outlook\',\'Tax Outlook\')" title="Save this panel as a PNG">💾 Share</button></span></div>';
       html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Estimates based on common classifications — your actual 1099-DIV may vary. Hold &gt;60 days for qualified treatment on most US stocks.</div>';
       // Compute tax estimate up-front so the sidebar can use it
       var taxPrefs = loadPrefs();
@@ -3213,7 +3227,7 @@ function render(){
       var html = '<div class="snap-history" id="realized-pl-panel" style="margin-top:14px">';
       var ytdSign = ytdGain>=0?'+':'', allSign = totalGain>=0?'+':'';
       var ytdCls = ytdGain>=0?'green':'red', allCls = totalGain>=0?'green':'red';
-      html += '<div class="snap-history-title"><span>💰 Realized P/L</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">'+realized.length+' sale'+(realized.length!==1?'s':'')+' total &middot; '+(thisYear)+' YTD '+ytdSign+fm(ytdGain)+' <button class="btn btn-outline" onclick="shareElementById(\'realized-pl-panel\',\'realized-pl\',\'Realized P/L\')" style="font-size:9.5px;padding:3px 8px" title="Save this panel as a PNG">💾 Share</button></span></div>';
+      html += '<div class="snap-history-title"><span>💰 Realized P/L</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">'+realized.length+' sale'+(realized.length!==1?'s':'')+' total &middot; '+(thisYear)+' YTD '+ytdSign+fm(ytdGain)+' <button class="btn btn-outline share-btn" onclick="shareElementById(\'realized-pl-panel\',\'realized-pl\',\'Realized P/L\')" title="Save this panel as a PNG">💾 Share</button></span></div>';
       // 4-stat row
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">';
       html += '<div class="snap-stat" style="padding:8px 12px"><div class="snap-stat-label">YTD Realized</div><div class="snap-stat-val '+ytdCls+'">'+ytdSign+fm(ytdGain)+'</div></div>';
@@ -3311,7 +3325,7 @@ function render(){
       var changeSign = change >= 0 ? '+' : '';
       var dataAttr = JSON.stringify(pts).replace(/"/g, '&quot;');
       var html = '<div class="snap-history" id="history-chart-panel" style="position:relative">';
-      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" style="font-size:9.5px;padding:3px 8px" title="Save this chart as a PNG">💾 Share</button></span></div>';
+      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline share-btn" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
       html += '<div class="snap-history-chart-wrap">';
       // Y-axis labels — HTML overlay (max top, mid middle, min bottom)
       html += '<div class="snap-history-y">';
@@ -3440,7 +3454,7 @@ function render(){
     var maxHold=topHoldings.length?topHoldings[0].val:1;
     var maxSec=topSectors.length?topSectors[0][1]:1;
     var maxAcct=topAccounts.length?topAccounts[0][1]:1;
-    var sH='<div class="snap-wrap" id="portfolio-snapshot-panel"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline" onclick="shareElementById(\'portfolio-snapshot-panel\',\'snapshot\',\'Portfolio Snapshot\')" style="font-size:10px;padding:4px 10px" title="Save the entire snapshot as a PNG">💾 Share Snapshot PNG</button></div><div class="snap-stats">';
+    var sH='<div class="snap-wrap"><div class="snap-stats">';
     sH+='<div class="snap-stat"><div class="snap-stat-label">Portfolio Value</div><div class="snap-stat-val accent">'+fm(totalValue)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">Annual Dividend</div><div class="snap-stat-val green">'+fm(annualIncome)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">YTD Received ('+thisYear+')</div><div class="snap-stat-val green">'+fm(ytdIncome)+'</div></div>';
@@ -3469,7 +3483,7 @@ function render(){
     }
     sH+='<div class="snap-charts">';
     // Sector allocation
-    sH+='<div class="snap-chart"><div class="snap-chart-title">📊 Sector Allocation<span class="snap-sub">'+sectorEntries.length+' total</span></div>';
+    sH+='<div class="snap-chart" id="chart-sector"><div class="snap-chart-title">📊 Sector Allocation<span class="snap-sub" style="display:flex;align-items:center;gap:8px">'+sectorEntries.length+' total <button class="btn btn-outline share-btn" onclick="shareElementById(\'chart-sector\',\'sector-allocation\',\'Sector Allocation\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
     if(topSectors.length===0)sH+='<div class="snap-empty">No sector data yet.</div>';
     else topSectors.forEach(function(e){
       var pct=totalValue>0?(e[1]/totalValue*100):0;
@@ -3478,7 +3492,7 @@ function render(){
     });
     sH+='</div>';
     // Account allocation
-    sH+='<div class="snap-chart"><div class="snap-chart-title">🏦 Account Allocation<span class="snap-sub">'+accountEntries.length+' total</span></div>';
+    sH+='<div class="snap-chart" id="chart-account"><div class="snap-chart-title">🏦 Account Allocation<span class="snap-sub" style="display:flex;align-items:center;gap:8px">'+accountEntries.length+' total <button class="btn btn-outline share-btn" onclick="shareElementById(\'chart-account\',\'account-allocation\',\'Account Allocation\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
     if(topAccounts.length===0)sH+='<div class="snap-empty">No accounts assigned to lots yet.</div>';
     else topAccounts.forEach(function(e){
       var pct=totalValue>0?(e[1]/totalValue*100):0;
@@ -3487,7 +3501,7 @@ function render(){
     });
     sH+='</div>';
     // Top holdings
-    sH+='<div class="snap-chart"><div class="snap-chart-title">🏆 Top Holdings<span class="snap-sub">'+holdingValues.length+' total</span></div>';
+    sH+='<div class="snap-chart" id="chart-holdings"><div class="snap-chart-title">🏆 Top Holdings<span class="snap-sub" style="display:flex;align-items:center;gap:8px">'+holdingValues.length+' total <button class="btn btn-outline share-btn" onclick="shareElementById(\'chart-holdings\',\'top-holdings\',\'Top Holdings\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
     if(topHoldings.length===0)sH+='<div class="snap-empty">Set shares to see holdings.</div>';
     else topHoldings.forEach(function(h){
       var pct=totalValue>0?(h.val/totalValue*100):0;
@@ -4172,21 +4186,29 @@ function _sharePanelAsPNG(el, filename, label){
   }
   showToast('Generating PNG…');
   var bg = getComputedStyle(document.body).backgroundColor || '#0d1117';
+  // Body class drives `.share-btn { visibility:hidden }` so any Share buttons
+  // inside the captured element (or anywhere on the page that html2canvas
+  // sees) are stripped from the PNG. Restored in finally().
+  document.body.classList.add('capturing-png');
+  var done = function(){ document.body.classList.remove('capturing-png'); };
   html2canvas(el, { backgroundColor: bg, scale: 2, logging: false, useCORS: true }).then(function(canvas){
     canvas.toBlob(function(blob){
-      if(!blob){ showToast('PNG generation failed','error'); return; }
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'stockfolio-'+(filename||'panel')+'-'+new Date().toISOString().slice(0,10)+'.png';
-      a.click();
-      setTimeout(function(){URL.revokeObjectURL(url)}, 1000);
-      showToast('PNG saved');
-      if(typeof logActivity==='function') logActivity('data.share.png', 'Shared '+(label||filename||'panel')+' as PNG');
+      try {
+        if(!blob){ showToast('PNG generation failed','error'); return; }
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'stockfolio-'+(filename||'panel')+'-'+new Date().toISOString().slice(0,10)+'.png';
+        a.click();
+        setTimeout(function(){URL.revokeObjectURL(url)}, 1000);
+        showToast('PNG saved');
+        if(typeof logActivity==='function') logActivity('data.share.png', 'Shared '+(label||filename||'panel')+' as PNG');
+      } finally { done(); }
     }, 'image/png');
   }).catch(function(e){
     console.error('html2canvas failed:', e);
     showToast('PNG generation failed: '+(e.message||e),'error');
+    done();
   });
 }
 // Share an All-tab panel by element id. The element must already be in the

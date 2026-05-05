@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.7.36**
+**Current Version: v0.7.37**
 
 ---
 
 ## Changelog
+
+### v0.7.37 — 2026-05-05 — Share UX + ticker + version polish
+- **Per-chart Share buttons** on the All-tab Snapshot. The single "Share Snapshot PNG" mega-button at the top is gone — replaced with a small 💾 Share button on each individual chart's title row (Sector Allocation, Account Allocation, Top Holdings). Each saves just that chart as a PNG. Tax Outlook, Realized P/L, and the History Chart already had per-panel buttons; they're now consistent.
+- **Share buttons no longer appear in the captured PNG.** Added a `.share-btn` class to every Share button + a `body.capturing-png .share-btn { visibility:hidden }` rule. The PNG helper toggles `body.capturing-png` around the html2canvas pass so all share buttons are invisible during capture, then visible again right after. The download still works because they're hidden, not removed.
+- **"PNG" stripped from button labels** — they all say just 💾 Share now (the file is obviously a PNG; redundant in the label).
+- **Day-change arrows in the ticker now persist across reloads.** `liveChanges` was being populated only at fetch time and reset to `{}` on every page load, so the ticker showed prices but no ▲/▼ until the next price refresh. Now persisted to `localStorage.pf_changes` alongside `pf_prices` and rehydrated on init — so arrows show up immediately after reload.
+- **Version badge moved to the auth bar** — small monospace pill (`v0.7.37`) sits to the right of the CLOUD SYNC / Synced indicator (or right of the LOCAL ONLY badge when signed out). Removed from the logo-block sub-area where it competed for space with the brand name.
+- **Header → ticker gap removed.** Explicit `margin-top:0` + `border-top:0` on `.tk-ticker` plus an adjacent-sibling rule on `header.header + .tk-ticker` so the two flush together cleanly.
 
 ### v0.7.36 — 2026-05-05 — Logo, 404, ticker, collapsibles, PNG share
 - **Logo finalized** — option 2 (stacked candlesticks) is now the live mark in `#logo-default-mark`. The 5-option preview page (`logo-preview.html`) was removed since selection is done.
