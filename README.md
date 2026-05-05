@@ -1,10 +1,15 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.33**
+**Current Version: v0.7.34**
 
 ---
 
 ## Changelog
+
+### v0.7.34 — 2026-05-05 — M1 Finance CSV import + Holdings-by-Lot polish
+- **M1 Finance Holdings CSV import.** New "Import M1 Holdings CSV" button on Settings → Export & Import card. Parses M1's official Holdings summary export (Symbol, Quantity, Avg. Price columns), shows an ADD/UPDATE/NOOP diff against existing lots at a target account name (defaults to the first existing M1-named account, falls back to "M1 Finance"), and applies on Apply. Imported lots are tagged `src:'m1csv'` and surface in the deep-dive Holdings-by-Lot view as a purple **💾 M1 CSV** pill alongside the existing 🔗 SnapTrade marker — so manual / synced / imported lots are all visually distinguishable. Re-importing the same file later UPDATEs share counts to the new values. The Settings card includes the M1 export instructions inline so future-you doesn't have to remember the path (Invest → account → Holdings → ⋮ → Holdings summary).
+- **Imported Portfolio JSON now lives in the same card** for symmetry. Existing Full Portfolio JSON export is unchanged.
+- **Holdings-by-Lot Account cell layout fixed.** The SnapTrade pill was wrapping mid-word inside the `.bd` clickable account span when the account name was long ("Schwab - Commons" + "🔗 SnapTrade" couldn't fit on one line and the badge text broke as "SnapTrad / e"). Restructured into an inline-flex wrapper with `flex-wrap:wrap` so the badge cleanly drops to a second row when the cell is narrow. Account name pill is now `white-space:nowrap` so it stays in one piece regardless. Same wrapper handles the new M1 CSV badge.
 
 ### v0.7.33 — 2026-05-05 — Brokerage logos on Brokers tab
 - **Each broker card on the Brokers tab now shows the brokerage's logo on the left** at the height of the 2 header rows (account name + meta). Sourced from logo.dev's `/{domain}` endpoint. New `_BROKERAGE_DOMAINS` mapping covers ~40 common brokers (Charles Schwab, Fidelity, Vanguard, TD Ameritrade, E*TRADE, Robinhood, Webull, Public, M1, SoFi, Interactive Brokers, Tastytrade, Wealthfront, Betterment, Alpaca, Coinbase, Kraken, Gemini, Cash App, Stash, Acorns, Wealthsimple, Questrade, Merrill, Morgan Stanley, JP Morgan, Chase, Ally, Firstrade, TradeStation, Trading 212, plus the major Canadian banks). Substring match handles things like "Charles Schwab Inc." Falls back to a 2-letter text badge when logo.dev has no match. SnapTrade-provided `brokerage.logo_url` is preferred when present.

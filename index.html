@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.33</title>
+<title>Portfolio Command Center v0.7.34</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -160,7 +160,7 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .tax-side-foot{font-size:9.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
 /* SnapTrade source tag — shown on lots and accounts that came from SnapTrade
    sync, so users can tell synced data from manual entries at a glance. */
-.src-tag{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:3px;background:rgba(108,154,255,.15);color:var(--accent2);border:1px solid rgba(108,154,255,.35);margin-right:5px;vertical-align:middle;cursor:help;font-family:var(--font)}
+.src-tag{display:inline-block;font-size:8.5px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:3px;background:rgba(108,154,255,.15);color:var(--accent2);border:1px solid rgba(108,154,255,.35);vertical-align:middle;cursor:help;font-family:var(--font);white-space:nowrap;line-height:1.4}
 .src-tag-acct{display:inline-block;font-size:8px;font-weight:700;padding:1px 4px;border-radius:3px;background:rgba(108,154,255,.18);color:var(--accent2);margin-left:5px;vertical-align:middle;cursor:help}
 .payout-chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:14px 0}
 .payout-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
@@ -506,7 +506,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.33</div>
+        <div class="logo-ver">v0.7.34</div>
       </div>
     </div>
     <div class="header-actions">
@@ -754,12 +754,21 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export Data</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Download your portfolio history as CSV for taxes, spreadsheets, or backup.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export &amp; Import</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Download your portfolio history as CSV for taxes, spreadsheets, or backup. Import M1 Finance Holdings CSV for brokerages SnapTrade doesn't support.</p>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Export</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
           <button class="btn btn-outline" onclick="exportRealizedCSV()" style="font-size:11.5px">&#129534; Realized Sales CSV</button>
           <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:11.5px">&#128176; Dividend History CSV</button>
           <button class="btn btn-outline" onclick="exportPortfolio()" style="font-size:11.5px">&#128190; Full Portfolio JSON</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Import</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import M1 Holdings CSV<input type="file" accept=".csv" onchange="importM1HoldingsFile(event)" style="display:none"></label>
+          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import Portfolio JSON<input type="file" accept=".json,application/json" onchange="importPortfolio(event)" style="display:none"></label>
+        </div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.5">
+          <strong>How to export from M1 Finance:</strong> open M1 → click the specific account under <strong>Invest</strong> → <strong>Holdings</strong> → click the <strong>⋮</strong> next to <em>Download</em> → <strong>Holdings summary</strong>.
         </div>
       </div>
 
@@ -924,7 +933,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.33 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.34 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1011,7 +1020,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.33";
+var VERSION = "0.7.34";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -2504,8 +2513,16 @@ function lotsHTML(t){
     var plCls=lotPL>=0?'green':'red';
     h+='<div class="mono muted" style="font-size:10px">'+(i+1)+'</div>';
     h+='<span class="sd'+(lot.s?' hv':'')+'" onclick="eLotS(\''+t+'\','+i+',this)" style="justify-self:start">'+(lot.s?fmSh(lot.s):'edit')+'</span>';
-    var syncTag = lot.src==='snaptrade' ? '<span class="src-tag" title="This lot is managed by SnapTrade sync — share count comes from your brokerage. Manual edits will be overwritten on next sync.">&#128279; SnapTrade</span> ' : '';
-    h+='<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="justify-self:start">'+syncTag+(lot.b||'set')+'</span>';
+    // Account cell: account name pill + (optional) source tag in a flex-wrap
+    // wrapper so the tag drops to a second row when the cell is narrow rather
+    // than splitting "SnapTrade" mid-word inside the .bd pill.
+    var srcTagHTML = '';
+    if(lot.src==='snaptrade') srcTagHTML = '<span class="src-tag" title="Managed by SnapTrade — share count comes from your brokerage. Manual edits will be overwritten on next sync.">&#128279; SnapTrade</span>';
+    else if(lot.src==='m1csv') srcTagHTML = '<span class="src-tag" style="background:rgba(168,85,247,.15);color:var(--purple);border-color:rgba(168,85,247,.35)" title="Imported from an M1 Finance Holdings CSV. Share count was set by the most recent CSV import.">&#128190; M1 CSV</span>';
+    h+='<div class="lot-acct-cell" style="display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;justify-self:start;min-width:0">';
+    h+= '<span class="bd'+(lot.b?' hv':'')+'" onclick="eLotB(\''+t+'\','+i+',this)" style="white-space:nowrap">'+(lot.b||'set')+'</span>';
+    if(srcTagHTML) h += srcTagHTML;
+    h+='</div>';
     h+='<span class="sd'+(entry>0?' hv':'')+'" onclick="eLotP(\''+t+'\','+i+',this)" style="justify-self:start;font-family:var(--mono);font-size:10.5px">'+(entry>0?fm(entry):'set')+'</span>';
     if(entry>0&&lot.s>0){
       h+='<div class="mono '+plCls+'" style="text-align:right;font-size:10.5px" title="Cost basis: '+fm(lotCost)+' \u00b7 Current: '+fm(lotCurrent)+'">'+(lotPL>=0?'+':'')+fm(lotPL)+' <span class="muted" style="font-size:9.5px">('+(plPct>=0?'+':'')+plPct.toFixed(1)+'%)</span></div>';
@@ -4041,6 +4058,223 @@ function showApiErrors(){
 // ═════════════════════════════════════════════════
 // IMPORT / EXPORT
 // ═════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────
+// M1 FINANCE HOLDINGS CSV IMPORT
+// Parses M1's official "Holdings summary" CSV export (Invest → Holdings →
+// 3-dot menu → Holdings summary). Builds an ADD/UPDATE/NOOP diff against
+// existing lots at a target account name, then applies to the portfolio
+// with src:'m1csv' so the lots are visually distinct (purple 💾 M1 CSV
+// pill) from manual or SnapTrade-synced lots.
+//
+// M1 export columns (order matters in the parser, but we look up by name
+// so reordered exports still work):
+//   Symbol, Name, Quantity, Avg. Price, Cost Basis,
+//   Unrealized Gain ($), Unrealized Gain (%), Value
+// ─────────────────────────────────────────────────────────────────
+function _parseCSVLine(line){
+  // Minimal CSV line parser: handles quoted fields with embedded commas
+  // ("2,209.68") and the "" escape for literal double quotes inside a value.
+  var out=[], cur='', q=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(q){
+      if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; }
+      else cur+=c;
+    } else {
+      if(c===','){ out.push(cur); cur=''; }
+      else if(c==='"') q=true;
+      else cur+=c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+function _parseM1HoldingsCSV(text){
+  var lines=text.split(/\r?\n/).map(function(l){return l}).filter(function(l){return l.trim().length>0});
+  if(lines.length<2) throw new Error('CSV is empty or has no data rows.');
+  var hdr=_parseCSVLine(lines[0]).map(function(h){return h.trim().toLowerCase()});
+  var iSym=hdr.indexOf('symbol');
+  var iQty=hdr.indexOf('quantity');
+  var iAvg=hdr.findIndex(function(h){return h.indexOf('avg')>=0&&h.indexOf('price')>=0});
+  if(iSym<0||iQty<0) throw new Error('Expected columns Symbol + Quantity. Got: '+hdr.join(', '));
+  var rows=[];
+  for(var i=1;i<lines.length;i++){
+    var c=_parseCSVLine(lines[i]);
+    var sym=(c[iSym]||'').trim().toUpperCase();
+    var qty=parseFloat(((c[iQty]||'').replace(/[",\s]/g,'')))||0;
+    var avg=iAvg>=0?(parseFloat(((c[iAvg]||'').replace(/[",\s$]/g,'')))||0):0;
+    if(!sym||qty<=0) continue;
+    rows.push({ ticker: sym, shares: qty, entryPrice: avg||null });
+  }
+  return rows;
+}
+// Build an ADD/UPDATE/NOOP diff comparing parsed CSV rows against existing
+// lots at a target account name. Same shape/semantics as the SnapTrade diff
+// so the import modal can render with the same conventions.
+function _buildM1Diff(rows, targetAccount){
+  return rows.map(function(r){
+    var existing=(lots[r.ticker]||[]).filter(function(l){return l.b===targetAccount});
+    if(existing.length===0){
+      return { action:'ADD', ticker:r.ticker, account:targetAccount, current:0, proposed:r.shares, entryPrice:r.entryPrice };
+    }
+    if(existing.length===1){
+      var lot=existing[0];
+      if(Math.abs(lot.s-r.shares)<0.0001 && (!r.entryPrice || Math.abs((lot.p||0)-r.entryPrice)<0.01)){
+        return { action:'NOOP', ticker:r.ticker, account:targetAccount, current:lot.s, proposed:r.shares, entryPrice:r.entryPrice };
+      }
+      return { action:'UPDATE', ticker:r.ticker, account:targetAccount, current:lot.s, proposed:r.shares, entryPrice:r.entryPrice };
+    }
+    // Multi-lot at this account → conservative merge into first lot
+    var totalCur=existing.reduce(function(s,l){return s+l.s},0);
+    return { action:'UPDATE', ticker:r.ticker, account:targetAccount, current:totalCur, proposed:r.shares, entryPrice:r.entryPrice, multiLot:existing.length };
+  });
+}
+// State for the import session (parsed rows + chosen target account name).
+var _m1ImportSession=null;
+function importM1HoldingsFile(evt){
+  var file=evt.target.files&&evt.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try {
+      var rows=_parseM1HoldingsCSV(e.target.result);
+      if(rows.length===0){ showToast('No holdings rows found in CSV','error'); return; }
+      // Default account name — first existing M1-named account if any, else "M1 Finance"
+      var existing=getBrokerList().filter(function(b){return b.toLowerCase().indexOf('m1')>=0});
+      var defaultAcct = existing[0] || 'M1 Finance';
+      _m1ImportSession={ rows:rows, target:defaultAcct, fileName:file.name };
+      _showM1ImportModal();
+    } catch(err){
+      showToast('Import failed: '+err.message,'error');
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value=''; // allow re-importing same file
+}
+function _showM1ImportModal(){
+  if(!_m1ImportSession)return;
+  var s=_m1ImportSession;
+  var diff=_buildM1Diff(s.rows, s.target);
+  var counts={ ADD:0, UPDATE:0, NOOP:0 };
+  diff.forEach(function(r){counts[r.action]++});
+  var brokerOpts=getBrokerList();
+  var html='<div class="modal-overlay" id="m1ImportOv" style="display:flex;z-index:1500" onclick="if(event.target===this)closeM1Import()">';
+  html+='<div class="modal" onclick="event.stopPropagation()" style="width:560px;max-width:94vw;max-height:88vh;overflow-y:auto">';
+  html+='<h3 style="margin-bottom:6px">📥 Import M1 Finance Holdings</h3>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:10px">From: <span class="mono">'+s.fileName.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span> &middot; '+s.rows.length+' holdings parsed</div>';
+  html+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;line-height:1.6">';
+  html+='<strong>How to export this file from M1:</strong><br>';
+  html+='1. Open M1 Finance and click on the specific account under <strong>Invest</strong>.<br>';
+  html+='2. Click <strong>Holdings</strong>.<br>';
+  html+='3. Click the <strong>⋮</strong> menu next to <em>Download</em> and choose <strong>Holdings summary</strong>.<br>';
+  html+='4. Drop the CSV here.';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">';
+  html+='<div style="flex:1;min-width:160px"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Import into account</div>';
+  html+='<input class="mi" type="text" id="m1ImportAcct" value="'+s.target.replace(/"/g,'&quot;')+'" oninput="onM1AcctChange(this.value)" style="margin:0;padding:6px 10px;font-size:12px;width:100%" list="m1ImportAcctList">';
+  html+='<datalist id="m1ImportAcctList">'+brokerOpts.map(function(b){return '<option value="'+b.replace(/"/g,'&quot;')+'">'}).join('')+'</datalist>';
+  html+='</div></div>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+counts.ADD+' add'+(counts.ADD!==1?'s':'')+' &middot; '+counts.UPDATE+' update'+(counts.UPDATE!==1?'s':'')+' &middot; '+counts.NOOP+' unchanged</div>';
+  html+='<div style="border:1px solid var(--border);border-radius:6px;max-height:280px;overflow-y:auto;background:var(--bg);margin-bottom:12px">';
+  html+='<div style="display:grid;grid-template-columns:24px 70px 60px 1fr 90px;gap:8px;padding:6px 10px;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg)">';
+  html+='<span></span><span>Action</span><span>Ticker</span><span>Detail</span><span style="text-align:right">Entry $</span></div>';
+  diff.forEach(function(r,i){
+    var detail = r.action==='ADD'? '+'+fmSh(r.proposed)+' shares' : r.action==='UPDATE'? fmSh(r.current)+' → '+fmSh(r.proposed)+(r.multiLot?' (merges '+r.multiLot+' lots)':'') : fmSh(r.proposed);
+    var color = r.action==='ADD'?'var(--green)':r.action==='UPDATE'?'var(--accent)':'var(--muted)';
+    html+='<div style="display:grid;grid-template-columns:24px 70px 60px 1fr 90px;gap:8px;padding:5px 10px;font-size:11px;align-items:center;'+(i<diff.length-1?'border-bottom:1px solid var(--border);':'')+'">';
+    html+='<input type="checkbox" class="m1-import-row" data-idx="'+i+'"'+(r.action==='NOOP'?' disabled':' checked')+' style="accent-color:var(--accent)">';
+    html+='<span style="color:'+color+';font-weight:700;font-size:9px;text-transform:uppercase">'+r.action+'</span>';
+    html+='<span class="mono fw7">'+r.ticker+'</span>';
+    html+='<span style="font-size:10.5px">'+detail+'</span>';
+    html+='<span class="mono" style="text-align:right;font-size:10.5px">'+(r.entryPrice?fm(r.entryPrice):'—')+'</span>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-bottom:12px">Imported lots are tagged <strong>💾 M1 CSV</strong> in the Holdings-by-Lot view so you can tell them apart from manual entries and SnapTrade-synced lots. Re-importing the same CSV later will UPDATE the share counts to whatever the new file shows.</div>';
+  html+='<div style="display:flex;gap:8px">';
+  html+='<button class="btn btn-outline" onclick="closeM1Import()" style="flex:1;justify-content:center">Cancel</button>';
+  html+='<button class="btn btn-primary" onclick="applyM1Import()" style="flex:2;justify-content:center">Import Selected</button>';
+  html+='</div>';
+  html+='</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+function closeM1Import(){
+  var ov=document.getElementById('m1ImportOv');
+  if(ov)ov.remove();
+  _m1ImportSession=null;
+}
+function onM1AcctChange(val){
+  if(!_m1ImportSession)return;
+  _m1ImportSession.target = (val||'').trim() || 'M1 Finance';
+  // Re-render diff with new target
+  closeM1Import();
+  // closeM1Import nulled the session — restore it
+  // (Avoid that by saving + restoring)
+}
+// Better: compute the new diff in-place rather than re-rendering whole modal
+// to preserve the session. Re-render the rows part on account change.
+function _rerenderM1ImportRows(){
+  var ov=document.getElementById('m1ImportOv'); if(!ov||!_m1ImportSession)return;
+  closeM1Import();
+  _showM1ImportModal();
+}
+// Override onM1AcctChange with the proper version that preserves session
+onM1AcctChange = function(val){
+  if(!_m1ImportSession)return;
+  _m1ImportSession.target = (val||'').trim() || 'M1 Finance';
+  // Save session, close+reopen to re-diff
+  var saved = _m1ImportSession;
+  var ov=document.getElementById('m1ImportOv'); if(ov)ov.remove();
+  _m1ImportSession = saved;
+  _showM1ImportModal();
+};
+function applyM1Import(){
+  if(!_m1ImportSession)return;
+  var s=_m1ImportSession;
+  var diff=_buildM1Diff(s.rows, s.target);
+  var checked={};
+  document.querySelectorAll('.m1-import-row:checked').forEach(function(cb){
+    checked[parseInt(cb.dataset.idx)] = true;
+  });
+  var addedCount=0, updatedCount=0;
+  diff.forEach(function(r,i){
+    if(!checked[i] || r.action==='NOOP') return;
+    if(r.action==='ADD'){
+      if(!lots[r.ticker]) lots[r.ticker]=[];
+      lots[r.ticker].push({ s:r.proposed, b:r.account, added:new Date().toISOString(), src:'m1csv', p: r.entryPrice||undefined });
+      if(tks.indexOf(r.ticker)<0) tks.push(r.ticker);
+      addedCount++;
+    } else if(r.action==='UPDATE'){
+      var existing=(lots[r.ticker]||[]).filter(function(l){return l.b===r.account});
+      if(existing.length===1){
+        var lot=existing[0];
+        lot.s=r.proposed;
+        lot.src='m1csv';
+        if(r.entryPrice) lot.p=r.entryPrice;
+        updatedCount++;
+      } else if(existing.length>1){
+        // Conservative merge: first lot becomes the total, drop the rest
+        var lot1=existing[0];
+        lot1.s=r.proposed;
+        lot1.src='m1csv';
+        if(r.entryPrice) lot1.p=r.entryPrice;
+        lots[r.ticker]=(lots[r.ticker]||[]).filter(function(l){return l===lot1||l.b!==r.account});
+        updatedCount++;
+      }
+    }
+  });
+  // Make sure the target account is registered in prefs.accounts so it shows in dropdowns
+  var prefs=loadPrefs();
+  if(!prefs.accounts) prefs.accounts=[];
+  if(prefs.accounts.indexOf(s.target)<0) prefs.accounts.push(s.target);
+  savePrefs(prefs);
+  computeFromLots();save();render();
+  closeM1Import();
+  if(addedCount===0 && updatedCount===0){ showToast('No changes selected','warn'); return; }
+  showToast('Imported '+addedCount+' new + '+updatedCount+' updated holdings into "'+s.target+'"');
+  logActivity('data.import.m1','M1 CSV import: '+addedCount+' added, '+updatedCount+' updated, target "'+s.target+'"');
+}
+
 // Quote a CSV cell — wraps in double-quotes if it contains a comma, quote, or newline.
 function _csvCell(v){
   var s = (v==null?'':String(v));
