@@ -1,10 +1,14 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.30**
+**Current Version: v0.7.31**
 
 ---
 
 ## Changelog
+
+### v0.7.31 — 2026-05-05 — Real account delete (with lots) + per-card delete button
+- **Rename + Delete buttons on each account card on the Accounts tab.** Previously you had to bounce to Settings → Manage Accounts to do either, but Accounts is where you actually look at the data — so the controls live there now (along with the existing per-card sync badge and totals).
+- **Account delete now offers a destructive vs unassign choice.** The original delete just cleared the account label on lots ("Schwab" lots became "Unassigned" but stuck around). For cleanup scenarios — like a manual account that SnapTrade just replaced with a synced one — you usually want the lots gone too. New flow: first confirm shows the scope ("Schwab has 12 lots — 47 shares total, $5,210 value, some are SnapTrade-managed"), then a second confirm asks "Click OK to DELETE the account AND all 12 lots. Click Cancel to keep the lots — they'll just lose their account label and become 'Unassigned'." Either path also clears the entry from `prefs.snaptradeAccountMap` so SnapTrade sync won't re-target it. If destructive delete empties a ticker entirely (no lots remaining anywhere), the ticker is removed from the portfolio too.
 
 ### v0.7.30 — 2026-05-05 — Backup modal stacking fix
 - **"Apply Selected" in the sync diff modal was opening the pre-flight backup prompt behind the sync modal.** `.sync-overlay` is z-index:1000 but `.modal-overlay` is z-index:200, so when the v0.7.25 backup-before-sync prompt fired from inside Apply Selected, the modal opened invisibly underneath the sync overlay — visible only as a slightly darker background. Bumped `#backupMod` to z-index:1500 so it stacks above the sync overlay.

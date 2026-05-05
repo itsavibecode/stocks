@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.30</title>
+<title>Portfolio Command Center v0.7.31</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -497,7 +497,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.30</div>
+        <div class="logo-ver">v0.7.31</div>
       </div>
     </div>
     <div class="header-actions">
@@ -915,7 +915,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.30 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.31 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1002,7 +1002,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.30";
+var VERSION = "0.7.31";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -3292,7 +3292,14 @@ function render(){
     h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">';
     var acctSynced = _isSyncedAccount(acct);
     var acctSyncBadge = acctSynced ? '<span class="src-tag-acct" title="Mapped to SnapTrade — lots here may be overwritten on next sync.">&#128279; SnapTrade</span>' : '';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px"><div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div><div style="display:flex;gap:12px;font-size:12px"><span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'')+'</div></div>';
+    var acctEsc = acct.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">';
+    h+='<div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+'</div>';
+    h+='<div style="display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap">';
+    h+='<span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'');
+    h+='<button class="btn btn-outline" onclick="event.stopPropagation();renameAccount(\''+acctEsc+'\')" style="font-size:9.5px;padding:3px 8px" title="Rename this account — updates all lots assigned to it">Rename</button>';
+    h+='<button class="btn btn-outline" onclick="event.stopPropagation();deleteAccount(\''+acctEsc+'\')" style="font-size:9.5px;padding:3px 8px;color:var(--red);border-color:var(--red-dim)" title="Delete this account — choose to drop the lots too or just unassign them">&#128465; Delete</button>';
+    h+='</div></div>';
     h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:3px 12px;font-size:11px;align-items:center">';
     h+='<div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase">Value</div><div class="muted" style="font-size:9px;text-transform:uppercase">Added</div>';
     grp.stocks.forEach(function(s){
@@ -3720,17 +3727,89 @@ function renameAccount(oldName){
   showToast('Renamed "'+oldName+'" to "'+newName+'"');
   logActivity('account.rename','Renamed account: '+oldName+' -> '+newName);
 }
+// Delete account with two modes via a 3-button confirm dialog:
+//   1. Delete account + all lots (DESTRUCTIVE — for cleaning up a duplicate
+//      account that SnapTrade replaced, or any other "I don't want these
+//      shares anymore" scenario).
+//   2. Unassign lots only (KEEPS shares, clears the account label — same as
+//      the original v0.7.x behavior).
+//   3. Cancel.
+// Counts shares + value first so the user sees what's at stake before choosing.
 function deleteAccount(name){
-  if(!confirm('Remove account "'+name+'"? Shares will be kept but account label cleared.'))return;
+  if(!name)return;
+  // Tally lots at this account so the user can see scope
+  var lotsAtAcct = [], totShares = 0, totValue = 0;
   Object.keys(lots).forEach(function(t){
-    (lots[t]||[]).forEach(function(lot){if(lot.b===name)lot.b=''});
+    (lots[t]||[]).forEach(function(lot){
+      if(lot.b===name && lot.s>0){
+        lotsAtAcct.push({tk:t, lot:lot});
+        totShares += lot.s;
+        totValue += (PR[t]||0)*lot.s;
+      }
+    });
   });
+  var hasSnaptraded = lotsAtAcct.some(function(p){return p.lot.src==='snaptrade'});
+  var summary = lotsAtAcct.length===0
+    ? '"'+name+'" has no lots assigned.'
+    : '"'+name+'" has '+lotsAtAcct.length+' lot'+(lotsAtAcct.length!==1?'s':'')+' ('+fmSh(totShares)+' shares, '+fm(totValue)+').'
+      + (hasSnaptraded ? ' Some lots are SnapTrade-managed — they\'ll re-appear on next sync unless you also disconnect this brokerage.' : '');
+  // confirm() can only do 2 buttons, so use a sequence: first ask delete-or-keep,
+  // then ask the destructive vs unassign question only when delete-or-keep=delete.
+  var step1 = confirm(summary + '\n\nClick OK to remove this account, or Cancel to keep it.');
+  if(!step1)return;
+  if(lotsAtAcct.length===0){
+    // No lots — just drop from prefs.accounts + map. Nothing to ask.
+    _removeAcctFromPrefs(name);
+    save();render();
+    showToast('Account "'+name+'" removed');
+    logActivity('account.delete','Deleted empty account: '+name);
+    return;
+  }
+  var step2 = confirm(
+    'Two options for the '+lotsAtAcct.length+' lot'+(lotsAtAcct.length!==1?'s':'')+' assigned to "'+name+'":\n\n' +
+    '• Click OK to DELETE the account AND all '+lotsAtAcct.length+' lot'+(lotsAtAcct.length!==1?'s':'')+' ('+fmSh(totShares)+' shares, '+fm(totValue)+'). Cannot be undone.\n\n' +
+    '• Click Cancel to keep the lots — they\'ll just lose their account label and become "Unassigned".'
+  );
+  if(step2){
+    // Destructive path: delete lots
+    var droppedTickers = [];
+    Object.keys(lots).forEach(function(t){
+      var before = (lots[t]||[]).length;
+      lots[t] = (lots[t]||[]).filter(function(lot){return lot.b!==name});
+      if(lots[t].length===0){
+        delete lots[t];
+        if(tks.indexOf(t)>=0){tks=tks.filter(function(x){return x!==t}); droppedTickers.push(t);}
+      } else if(lots[t].length<before){
+        // Some lots removed but ticker still has others
+      }
+    });
+    _removeAcctFromPrefs(name);
+    computeFromLots();save();render();
+    var msg = 'Deleted "'+name+'" + '+lotsAtAcct.length+' lot'+(lotsAtAcct.length!==1?'s':'')+(droppedTickers.length?' (also removed tickers: '+droppedTickers.join(', ')+')':'');
+    showToast(msg);
+    logActivity('account.delete.full', msg);
+  } else {
+    // Unassign path: clear lot.b but keep the lots
+    Object.keys(lots).forEach(function(t){
+      (lots[t]||[]).forEach(function(lot){if(lot.b===name)lot.b=''});
+    });
+    _removeAcctFromPrefs(name);
+    computeFromLots();save();render();
+    showToast('Unassigned '+lotsAtAcct.length+' lot'+(lotsAtAcct.length!==1?'s':'')+' from "'+name+'"');
+    logActivity('account.delete.unassign','Removed account label "'+name+'" from '+lotsAtAcct.length+' lots');
+  }
+}
+// Helper: drop the account from prefs.accounts and prefs.snaptradeAccountMap
+// so it doesn't reappear in dropdowns or get re-targeted by SnapTrade sync.
+function _removeAcctFromPrefs(name){
   var prefs=loadPrefs();
   if(prefs.accounts){prefs.accounts=prefs.accounts.filter(function(a){return a!==name})}
+  if(prefs.snaptradeAccountMap){
+    Object.keys(prefs.snaptradeAccountMap).forEach(function(snapId){
+      if(prefs.snaptradeAccountMap[snapId]===name) delete prefs.snaptradeAccountMap[snapId];
+    });
+  }
   savePrefs(prefs);
-  computeFromLots();save();render();
-  showToast('Account "'+name+'" removed');
-  logActivity('account.delete','Deleted account: '+name);
 }
 
 // Override getBrokerList to include prefs.accounts too
