@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.29**
+**Current Version: v0.7.30**
 
 ---
 
 ## Changelog
+
+### v0.7.30 — 2026-05-05 — Backup modal stacking fix
+- **"Apply Selected" in the sync diff modal was opening the pre-flight backup prompt behind the sync modal.** `.sync-overlay` is z-index:1000 but `.modal-overlay` is z-index:200, so when the v0.7.25 backup-before-sync prompt fired from inside Apply Selected, the modal opened invisibly underneath the sync overlay — visible only as a slightly darker background. Bumped `#backupMod` to z-index:1500 so it stacks above the sync overlay.
 
 ### v0.7.29 — 2026-05-04 — SnapTrade signature diagnostics
 - **"Run diagnostics" button on the SnapTrade error block** (both Brokers tab and Settings card). Calls a new worker endpoint `GET /debug-snaptrade` (worker v0.5.2) and renders the result inline: whether the consumer key is set, its length and 3-char fingerprint, whether it has stray whitespace from a bad paste, and the result of running a signed test call (`/snapTrade/listUsers`) using the same signing code path as `/register`. Verdict line tells you exactly what to do — most commonly "Consumer Key in Cloudflare doesn't match SnapTrade — re-run `wrangler secret put SNAPTRADE_CONSUMER_KEY`." This catches signature errors (code 1076 / "Unable to verify signature sent") without needing dev tools or curl. Endpoint is OWNER_UID-only and never returns the actual key value, just a fingerprint.

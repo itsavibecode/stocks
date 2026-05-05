@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.29</title>
+<title>Portfolio Command Center v0.7.30</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -497,7 +497,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.29</div>
+        <div class="logo-ver">v0.7.30</div>
       </div>
     </div>
     <div class="header-actions">
@@ -915,7 +915,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.29 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.30 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -945,8 +945,11 @@ body.text-xl .sc .scv{font-size:24px}
 <!-- Pre-flight backup prompt — shown before connecting a brokerage to SnapTrade
      and before applying a sync, when the user already has portfolio data.
      Three options: download backup then continue, continue without backup,
-     or cancel. Body is populated dynamically by openBackupPrompt(). -->
-<div class="modal-overlay" id="backupMod" style="display:none" onclick="if(event.target===this)cancelBackupPrompt()">
+     or cancel. Body is populated dynamically by openBackupPrompt().
+     z-index 1500 so this stacks ABOVE the sync modal (.sync-overlay = z-index
+     1000); otherwise the backup prompt opens behind sync and can't be reached
+     when triggered from the sync apply flow. -->
+<div class="modal-overlay" id="backupMod" style="display:none;z-index:1500" onclick="if(event.target===this)cancelBackupPrompt()">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;width:480px">
     <h3 style="margin-bottom:6px" id="backupModTitle">📥 Back up before connecting?</h3>
     <p style="font-size:11.5px;color:var(--muted);line-height:1.55;margin-bottom:12px" id="backupModBody">SnapTrade will read your brokerage data and propose changes. Before you continue, we recommend exporting a JSON backup so you can restore if anything looks wrong.</p>
@@ -999,7 +1002,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.29";
+var VERSION = "0.7.30";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
