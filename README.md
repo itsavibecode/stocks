@@ -1,10 +1,26 @@
 # Stockfolio
 
-**Current Version: v0.7.35**
+**Current Version: v0.7.36**
 
 ---
 
 ## Changelog
+
+### v0.7.36 — 2026-05-05 — Logo, 404, ticker, collapsibles, PNG share
+- **Logo finalized** — option 2 (stacked candlesticks) is now the live mark in `#logo-default-mark`. The 5-option preview page (`logo-preview.html`) was removed since selection is done.
+- **Branded `404.html`** at the repo root for any future deep-link 404s. Stockfolio mark, the path the user requested displayed as `/?…`, "Back to Stockfolio" CTA, "View on GitHub" link, and a tape-strip of sample tickers. `noindex` so it doesn't show up in search results.
+- **Header layout fix.** Date+time clock no longer sits orphaned on the right — logo block + clock are now grouped tightly on the left with a thin vertical divider between them. Time font bumped from 13px → 17px. The redundant date that used to appear in the logo-sub line ("73 tickers · 45 dividend · 5/5/2026") is dropped — the live clock to the right of the logo covers it.
+- **Ticker repositioned + made sticky** — moved from above the header to below it (sandwiched between header and tabs) and pinned with `position:sticky` at `top:var(--sticky-top)` so it slides under the header but stays visible while scrolling. Table thead's sticky-top bumped to `--thead-top` (= header height + ticker height) so column headers don't get hidden behind the ticker. Items now show a colored arrow + day-change %: ▲ green when up, ▼ red when down, ▬ muted when flat (sourced from `liveChanges[t]`).
+- **Ticker scroll speed slider** in Settings → Appearance. Drag from 60s (fast) → 300s (slow), default 150s. Persisted to `prefs.tickerSpeed` and applied via `--ticker-speed` CSS variable; live-updates while you drag.
+- **Collapsible cards on Brokers + Accounts tabs.** Click any broker/account header to collapse/expand. State persisted per-card in `prefs.uiCollapsed` (separate scopes for `brokers` and `accounts`). Each tab gets an "⊕ Expand all" / "⊖ Collapse all" toolbar; the Brokers toolbar auto-hides when no accounts are connected.
+- **Sync timestamp tooltips.** Hovering "synced just now" / "modified Apr 30" now shows the absolute date+time. New `_acctLastUpdateInfo()` returns both the friendly label and the raw ts; `_absTimeTitle()` formats for the tooltip.
+- **PNG sharing** via `html2canvas` (loaded from CDN, ~50KB, deferred). Added `💾 Share` buttons in:
+  - News rows (in the expanded panel, next to "Read full article") — builds a clean off-screen "share card" with the Stockfolio logo + ticker + headline + summary + source + date, then captures that. The exported PNG looks like a polished social-share image, not a screenshot of a table row.
+  - All-tab Snapshot panel (top-right of the snapshot block, captures everything: stats, charts, tax outlook, realized P/L, history)
+  - Tax Outlook subpanel
+  - Realized P/L subpanel
+  - Portfolio Value Over Time chart
+- **Generic share helper** `_sharePanelAsPNG(el, filename, label)` handles the html2canvas call + blob download + activity log entry. Filenames format as `stockfolio-<label>-YYYY-MM-DD.png`.
 
 ### v0.7.35 — 2026-05-05 — Stockfolio rebrand + header/UX polish
 - **Rebranded to "Stockfolio"** — title, footer, header logo word, page meta. New SVG logo (folio outline + rising bar chart) replaces the 📊 emoji. The logo lives in `#logo-default-mark` and is easy to swap; four alternate SVG concepts are listed in the v0.7.35 PR description for picking a different style.

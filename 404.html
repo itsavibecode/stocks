@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>404 — Stockfolio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<style>
+:root{
+  --bg:#0d1117; --card:#161b22; --card2:#1f2630; --border:#30363d;
+  --text:#e6edf3; --muted:#7d8590; --accent:#2f81f7; --accent2:#388bfd;
+  --green:#3fb950; --red:#f85149;
+  --mono:'SF Mono',Consolas,'Roboto Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:30px 16px}
+.wrap{max-width:560px;width:100%;text-align:center}
+.logo{width:80px;height:80px;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:inline-flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 20px rgba(47,129,247,.3);margin-bottom:24px}
+.logo svg{width:50px;height:50px}
+.brand{font-size:24px;font-weight:700;letter-spacing:-.5px;margin:0 0 4px}
+.brand-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:36px}
+.code{font-size:96px;font-weight:800;letter-spacing:-3px;line-height:1;background:linear-gradient(135deg,var(--accent),var(--red));-webkit-background-clip:text;background-clip:text;color:transparent;margin:0 0 16px}
+.headline{font-size:22px;font-weight:600;margin:0 0 8px}
+.body{font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 24px}
+.body code{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-family:var(--mono);font-size:12px;color:var(--text)}
+.cta-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:30px}
+.cta{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;transition:all .15s;border:1px solid transparent}
+.cta-primary{background:var(--accent);color:#fff}
+.cta-primary:hover{background:var(--accent2)}
+.cta-outline{background:transparent;color:var(--text);border-color:var(--border)}
+.cta-outline:hover{border-color:var(--text);background:var(--card2)}
+.tape{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;letter-spacing:.5px;display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
+.tape-item{display:inline-flex;gap:6px;align-items:baseline}
+.tape-item.up{color:var(--green)}
+.tape-item.dn{color:var(--red)}
+.foot{margin-top:24px;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.foot a{color:var(--muted)}
+@media(max-width:520px){.code{font-size:72px}.headline{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo" aria-label="Stockfolio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <rect x="5" y="9" width="3" height="9" rx=".7"/>
+      <line x1="6.5" y1="6" x2="6.5" y2="9"/>
+      <line x1="6.5" y1="18" x2="6.5" y2="20"/>
+      <rect x="10.5" y="6" width="3" height="13" rx=".7"/>
+      <line x1="12" y1="3" x2="12" y2="6"/>
+      <line x1="12" y1="19" x2="12" y2="21"/>
+      <rect x="16" y="11" width="3" height="7" rx=".7"/>
+      <line x1="17.5" y1="8" x2="17.5" y2="11"/>
+      <line x1="17.5" y1="18" x2="17.5" y2="20"/>
+    </svg>
+  </div>
+  <h1 class="brand">Stockfolio</h1>
+  <div class="brand-sub" id="brandSub">Portfolio dashboard</div>
+
+  <div class="code">404</div>
+  <h2 class="headline">This ticker isn't in the index.</h2>
+  <p class="body">
+    The page at <code id="urlBox">/?</code> doesn't exist. It may have been moved, the link could be stale, or you might've typed something off by a character.
+  </p>
+
+  <div class="cta-row">
+    <a class="cta cta-primary" href="/stocks/">↩ Back to Stockfolio</a>
+    <a class="cta cta-outline" href="https://github.com/itsavibecode/stocks" target="_blank" rel="noopener">View on GitHub</a>
+  </div>
+
+  <div class="tape" aria-label="Sample ticker">
+    <span class="tape-item up">SCHD <span>+0.42%</span></span>
+    <span class="tape-item dn">VICI <span>−2.72%</span></span>
+    <span class="tape-item up">MSFT <span>+1.18%</span></span>
+    <span class="tape-item up">AAPL <span>+0.87%</span></span>
+    <span class="tape-item dn">INTU <span>−0.31%</span></span>
+  </div>
+
+  <div class="foot">404 · <span id="foot404Time">—</span></div>
+</div>
+
+<script>
+// Show the path the user actually requested so they can spot a typo
+try {
+  var u = window.location.pathname + window.location.search + window.location.hash;
+  document.getElementById('urlBox').textContent = u || '/';
+  var subBits = ['Portfolio dashboard'];
+  if (window.location.host) subBits.push(window.location.host);
+  document.getElementById('brandSub').textContent = subBits.join(' · ');
+  document.getElementById('foot404Time').textContent = new Date().toLocaleString();
+} catch (e) {}
+</script>
+</body>
+</html>

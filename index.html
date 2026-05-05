@@ -3,12 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.35</title>
+<title>Stockfolio v0.7.36</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
      never generated, so its discovery link is removed to avoid 404s. -->
 <link rel="alternate" type="application/rss+xml" title="Portfolio News RSS (deprecated — use in-app RSS panel)" href="feed.xml">
+<!-- html2canvas — used by the Share buttons on News rows and All-tab panels
+     to render the panel into a PNG the user can save/post. ~50KB gzipped from
+     CDN, loaded with defer so it doesn't block first paint. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 
 <!-- Firebase SDKs -->
@@ -73,10 +77,10 @@ input,button,select{font-family:inherit}
 /* Header date/time — slid to the LEFT, no background, tighter than the
    v0.7.x .local-clock badge. Sits between logo-block and the right-side
    action cluster. */
-.header-clock{display:flex;flex-direction:column;align-items:flex-start;font-family:var(--mono);line-height:1.1;color:var(--muted);padding-left:14px;border-left:1px solid var(--border);margin-left:4px}
-.header-clock-time{font-size:13px;color:var(--accent2);font-weight:600;letter-spacing:.4px}
-.header-clock-date{font-size:9px;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
-@media(max-width:768px){.header-clock{padding-left:8px;margin-left:0}.header-clock-time{font-size:11.5px}}
+.header-clock{display:flex;flex-direction:column;align-items:flex-start;font-family:var(--mono);line-height:1.1;color:var(--muted);padding-left:14px;border-left:1px solid var(--border)}
+.header-clock-time{font-size:17px;color:var(--accent2);font-weight:600;letter-spacing:.5px}
+.header-clock-date{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+@media(max-width:768px){.header-clock{padding-left:10px}.header-clock-time{font-size:14px}}
 /* Quick-toggle icons in the header for theme + text size. Small icon
    buttons that cycle on click; tooltip explains the next state. */
 .hdr-quick{background:transparent;border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;padding:0;transition:all .15s}
@@ -85,23 +89,32 @@ input,button,select{font-family:inherit}
 /* Auth-bar username is now clickable — opens the user info modal */
 .auth-name{cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;transition:text-decoration-color .15s}
 .auth-name:hover{text-decoration-color:var(--accent)}
-/* Scrolling stock ticker — sits above the tabs, below the auth bar.
-   Uses last cached price from livePrices (no extra API calls).
-   Marquee animation runs continuously; pauses on hover so users can
-   read individual entries. */
-.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:relative;height:30px;display:flex;align-items:center}
+/* Scrolling stock ticker — sits below the header (sticky stack), above tabs.
+   Uses last cached price from livePrices + day-change % from liveChanges.
+   Marquee animation runs continuously; pauses on hover so users can read.
+   Sticky-stacked under the header — top:var(--sticky-top) so it sits
+   exactly below the header, and the table thead's stick-top is bumped to
+   --thead-top to clear both. */
+.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:sticky;top:var(--sticky-top,90px);z-index:90;height:32px;display:flex;align-items:center}
 .tk-ticker:before,.tk-ticker:after{content:"";position:absolute;top:0;bottom:0;width:30px;z-index:2;pointer-events:none}
 .tk-ticker:before{left:0;background:linear-gradient(90deg,var(--card),transparent)}
 .tk-ticker:after{right:0;background:linear-gradient(-90deg,var(--card),transparent)}
-.tk-ticker-track{display:inline-flex;animation:tk-marquee 90s linear infinite;will-change:transform;padding-left:100%}
+.tk-ticker-track{display:inline-flex;animation:tk-marquee var(--ticker-speed,150s) linear infinite;will-change:transform;padding-left:100%}
 .tk-ticker:hover .tk-ticker-track{animation-play-state:paused}
 .tk-ticker-item{display:inline-flex;align-items:center;gap:6px;padding:0 14px;font-size:11.5px;font-family:var(--mono);border-right:1px solid var(--border)}
 .tk-ticker-sym{font-weight:700;color:var(--text2)}
-.tk-ticker-px{color:var(--accent2)}
+.tk-ticker-px{color:var(--text)}
+/* Day-change cluster: arrow + percent. Green when up, red when down,
+   muted when no day change is known (e.g. fresh ticker, weekend). */
+.tk-ticker-ch{display:inline-flex;align-items:center;gap:2px;font-size:10.5px;font-weight:700}
+.tk-ticker-ch.up{color:var(--green)}
+.tk-ticker-ch.dn{color:var(--red)}
+.tk-ticker-ch.flat{color:var(--muted)}
+.tk-ticker-arrow{font-size:10px;line-height:1}
 .tk-ticker-empty{color:var(--muted);font-size:10.5px;font-style:italic;padding:0 14px;width:100%;text-align:center}
 @keyframes tk-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-body.compact .tk-ticker{height:26px}
-@media(max-width:640px){.tk-ticker{height:26px}.tk-ticker-item{font-size:10.5px;padding:0 10px}}
+body.compact .tk-ticker{height:28px}
+@media(max-width:640px){.tk-ticker{height:28px}.tk-ticker-item{font-size:10.5px;padding:0 10px}}
 .header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
@@ -271,8 +284,18 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .sync-row-value{font-family:var(--mono);font-weight:600;text-align:right;color:var(--accent2)}
 .sync-empty{text-align:center;padding:30px;color:var(--muted);font-size:11px}
 .sync-acct-skipped{opacity:.5}
-.broker-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.broker-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;transition:padding .15s}
+.broker-card.collapsed{padding:10px 16px}
+.broker-card.collapsed > .broker-header{margin-bottom:0}
+.broker-card.collapsed > :not(.broker-header){display:none}
+.broker-card .collapse-chev{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;color:var(--muted);font-size:13px;line-height:1;transition:transform .2s ease;cursor:pointer;flex-shrink:0;user-select:none}
+.broker-card.collapsed .collapse-chev{transform:rotate(-90deg)}
+.broker-card .broker-header{cursor:pointer}
+.broker-card .broker-header:hover .collapse-chev{color:var(--text);background:var(--card2)}
 .broker-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+/* Expand-all / Collapse-all toolbar at the top of Brokers + Accounts tabs */
+.coll-toolbar{display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px}
+.coll-toolbar .btn{font-size:10.5px;padding:5px 10px}
 .broker-header-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
 .broker-name{font-weight:700;font-size:13px}
 .broker-meta{font-size:10.5px;color:var(--muted);margin-top:2px}
@@ -374,8 +397,8 @@ table{width:100%;border-collapse:separate;border-spacing:0 2px;font-size:12px}
    sits above table rows but below the page header (z-index 100), so the
    thead slides under the header on scroll — but by then `top:--sticky-top`
    has already pinned it just below the header, so it stays visible. */
-:root{--sticky-top:90px}
-table thead th{position:sticky;top:var(--sticky-top);background:var(--bg);z-index:90;box-shadow:inset 0 -1px 0 var(--border)}
+:root{--sticky-top:90px;--ticker-h:0px;--thead-top:90px}
+table thead th{position:sticky;top:var(--thead-top);background:var(--bg);z-index:80;box-shadow:inset 0 -1px 0 var(--border)}
 thead th{padding:8px 10px;text-align:left;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;background:var(--bg)}
 thead th:hover{color:var(--text2)}
 thead th .sa{margin-left:3px;font-size:9px;opacity:.3}
@@ -550,35 +573,40 @@ body.text-xl .sc .scv{font-size:24px}
   </div>
 </div>
 
-<!-- Scrolling portfolio ticker — populated from livePrices (no extra API calls).
-     Shows each ticker once, deduped, with the last cached price. Pauses on hover.
-     Hidden when there are no tickers with prices (e.g. before first fetch). -->
-<div class="tk-ticker" id="pfTicker" style="display:none"><div class="tk-ticker-track" id="pfTickerTrack"></div></div>
-
 <header class="header">
   <div class="container header-inner">
-    <div class="logo-block">
-      <!-- Stockfolio default logo: folio outline with stylized bar-chart growth.
-           Replaceable — see #logo-default-mark. Alternatives are in chat. -->
-      <div class="logo-icon" id="logo-default-mark" aria-label="Stockfolio">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/>
-          <path d="M7 16 V12"/>
-          <path d="M11 16 V9"/>
-          <path d="M15 16 V11"/>
-          <path d="M19 16 V7"/>
-        </svg>
+    <!-- Left cluster: logo, brand text, and the live clock — all grouped
+         tightly so they read as one "header identity" block instead of the
+         logo on the far left and the clock on the far right. -->
+    <div style="display:flex;align-items:center;gap:14px;min-width:0">
+      <div class="logo-block">
+        <!-- Stockfolio logo — option 2: stacked candlesticks. -->
+        <div class="logo-icon" id="logo-default-mark" aria-label="Stockfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <rect x="5" y="9" width="3" height="9" rx=".7"/>
+            <line x1="6.5" y1="6" x2="6.5" y2="9"/>
+            <line x1="6.5" y1="18" x2="6.5" y2="20"/>
+            <rect x="10.5" y="6" width="3" height="13" rx=".7"/>
+            <line x1="12" y1="3" x2="12" y2="6"/>
+            <line x1="12" y1="19" x2="12" y2="21"/>
+            <rect x="16" y="11" width="3" height="7" rx=".7"/>
+            <line x1="17.5" y1="8" x2="17.5" y2="11"/>
+            <line x1="17.5" y1="18" x2="17.5" y2="20"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-title">Stockfolio</div>
+          <div class="logo-sub" id="hSub"></div>
+          <div class="logo-ver">v0.7.36</div>
+        </div>
       </div>
-      <div>
-        <div class="logo-title">Stockfolio</div>
-        <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.35</div>
+      <!-- Date + time, sits right next to the logo. The clock-date below
+           shows the day-of-week + month/day, replacing the "5/5/2026" that
+           used to live in the logo-sub line (now redundant). -->
+      <div class="header-clock" title="Your local time — news timestamps below are shown in this timezone">
+        <span class="header-clock-time" id="hClockTime">--:--:--</span>
+        <span class="header-clock-date" id="hClockDate">--</span>
       </div>
-    </div>
-    <!-- Date + time pinned to the LEFT next to the logo, no background -->
-    <div class="header-clock" title="Your local time — news timestamps below are shown in this timezone">
-      <span class="header-clock-time" id="hClockTime">--:--:--</span>
-      <span class="header-clock-date" id="hClockDate">--</span>
     </div>
     <div class="header-actions">
       <div class="stat-box" id="pvB" style="display:none"><div class="stat-label">Portfolio Value <span id="priceStatus" style="font-size:8px;text-transform:none;letter-spacing:0;margin-left:4px"></span></div><div class="stat-val" id="pvV"></div></div>
@@ -595,6 +623,11 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 </header>
+
+<!-- Scrolling portfolio ticker — sits below the header (sticky stack), uses
+     last cached prices from livePrices + day-change from liveChanges (no
+     extra API calls). Hidden until there's at least one priced ticker. -->
+<div class="tk-ticker" id="pfTicker" style="display:none"><div class="tk-ticker-track" id="pfTickerTrack"></div></div>
 
 <div class="container">
   <div class="rss-panel" id="rP" style="display:none">
@@ -705,6 +738,10 @@ body.text-xl .sc .scv{font-size:24px}
         <button class="btn btn-outline" onclick="snapTradeFetchTransactions()" style="font-size:10px">&#128176; Fetch Transactions</button>
       </div>
     </div>
+    <div class="coll-toolbar" id="bCollToolbar" style="display:none">
+      <button class="btn btn-outline" onclick="expandAllBrokers()" title="Expand all broker cards">⊕ Expand all</button>
+      <button class="btn btn-outline" onclick="collapseAllBrokers()" title="Collapse all broker cards">⊖ Collapse all</button>
+    </div>
     <div id="bBrokers"></div>
     <div id="bSellsPanel"></div>
     <div id="bDripPanel"></div>
@@ -741,7 +778,13 @@ body.text-xl .sc .scv{font-size:24px}
 
   <!-- ACCOUNTS -->
   <div class="tab-content" id="content-accounts">
-    <input class="search-bar" type="text" placeholder="Search by account name..." id="acctQ" oninput="render()" style="margin-bottom:10px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <input class="search-bar" type="text" placeholder="Search by account name..." id="acctQ" oninput="render()" style="margin-bottom:0;flex:1;min-width:180px">
+      <div class="coll-toolbar" style="margin-bottom:0">
+        <button class="btn btn-outline" onclick="expandAllAccounts()" title="Expand all account cards">⊕ Expand all</button>
+        <button class="btn btn-outline" onclick="collapseAllAccounts()" title="Collapse all account cards">⊖ Collapse all</button>
+      </div>
+    </div>
     <div id="acctBody"></div>
     <div class="mc" id="mAcct"></div>
   </div>
@@ -883,6 +926,13 @@ body.text-xl .sc .scv{font-size:24px}
               <span>Compact</span>
             </label>
           </div>
+          <div style="min-width:180px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Ticker scroll speed <span style="color:var(--muted)">(slower → faster)</span></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="range" id="sTickerSpeed" min="60" max="300" step="10" value="150" onchange="setTickerSpeed(this.value)" oninput="setTickerSpeed(this.value,true)" style="flex:1;accent-color:var(--accent)">
+              <span id="sTickerSpeedLabel" class="mono" style="font-size:10.5px;color:var(--muted);min-width:42px;text-align:right">150s</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1009,7 +1059,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.35 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.36 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1096,7 +1146,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.35";
+var VERSION = "0.7.36";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2819,7 +2869,9 @@ function nwH(t){var items=getNews(t);if(!items.length)return'<div class="muted" 
 // ═════════════════════════════════════════════════
 function render(){
   var dc=tks.filter(isDiv).length;
-  G('hSub').textContent=tks.length+' tickers \u00b7 '+dc+' dividend \u00b7 '+new Date().toLocaleDateString();
+  // Date dropped \u2014 it's redundant with the live clock to the right of the
+  // logo block now.
+  G('hSub').textContent=tks.length+' tickers \u00b7 '+dc+' dividend';
   var tv=tks.reduce(function(s,t){return s+(PR[t]||0)*(sh[t]||0)},0);
   if(tv>0){G('pvB').style.display='';G('pvV').textContent=fm(tv)}else G('pvB').style.display='none';
   var ti=tks.filter(isDiv).reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0);
@@ -2853,7 +2905,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none">Read full article at '+n.s+' \u2192</a></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share PNG</button></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -3047,8 +3099,8 @@ function render(){
       if (total === 0) {
         return '<div class="snap-history" style="margin-top:14px"><div class="snap-history-title">🧾 Tax Outlook</div><div class="snap-empty">Set shares on dividend stocks to see estimated income by tax treatment.</div></div>';
       }
-      var html = '<div class="snap-history" style="margin-top:14px">';
-      html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub">Annual dividend income by tax treatment · ' + fm(total) + ' total</span></div>';
+      var html = '<div class="snap-history" id="tax-outlook-panel" style="margin-top:14px">';
+      html += '<div class="snap-history-title"><span>🧾 Tax Outlook</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">Annual dividend income by tax treatment · ' + fm(total) + ' total <button class="btn btn-outline" onclick="shareElementById(\'tax-outlook-panel\',\'tax-outlook\',\'Tax Outlook\')" style="font-size:9.5px;padding:3px 8px" title="Save this panel as a PNG">💾 Share</button></span></div>';
       html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Estimates based on common classifications — your actual 1099-DIV may vary. Hold &gt;60 days for qualified treatment on most US stocks.</div>';
       // Compute tax estimate up-front so the sidebar can use it
       var taxPrefs = loadPrefs();
@@ -3158,10 +3210,10 @@ function render(){
       var taxLT = Math.max(0,ytdLT) * (ltRate+stateRate)/100;
       var taxST = Math.max(0,ytdST) * (stRate+stateRate)/100;
       var taxTotal = taxLT + taxST;
-      var html = '<div class="snap-history" style="margin-top:14px">';
+      var html = '<div class="snap-history" id="realized-pl-panel" style="margin-top:14px">';
       var ytdSign = ytdGain>=0?'+':'', allSign = totalGain>=0?'+':'';
       var ytdCls = ytdGain>=0?'green':'red', allCls = totalGain>=0?'green':'red';
-      html += '<div class="snap-history-title"><span>💰 Realized P/L</span><span class="snap-sub">'+realized.length+' sale'+(realized.length!==1?'s':'')+' total &middot; '+(thisYear)+' YTD '+ytdSign+fm(ytdGain)+'</span></div>';
+      html += '<div class="snap-history-title"><span>💰 Realized P/L</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">'+realized.length+' sale'+(realized.length!==1?'s':'')+' total &middot; '+(thisYear)+' YTD '+ytdSign+fm(ytdGain)+' <button class="btn btn-outline" onclick="shareElementById(\'realized-pl-panel\',\'realized-pl\',\'Realized P/L\')" style="font-size:9.5px;padding:3px 8px" title="Save this panel as a PNG">💾 Share</button></span></div>';
       // 4-stat row
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px">';
       html += '<div class="snap-stat" style="padding:8px 12px"><div class="snap-stat-label">YTD Realized</div><div class="snap-stat-val '+ytdCls+'">'+ytdSign+fm(ytdGain)+'</div></div>';
@@ -3258,8 +3310,8 @@ function render(){
       var changeColor = change >= 0 ? 'var(--green)' : 'var(--red)';
       var changeSign = change >= 0 ? '+' : '';
       var dataAttr = JSON.stringify(pts).replace(/"/g, '&quot;');
-      var html = '<div class="snap-history" style="position:relative">';
-      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span></span></div>';
+      var html = '<div class="snap-history" id="history-chart-panel" style="position:relative">';
+      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" style="font-size:9.5px;padding:3px 8px" title="Save this chart as a PNG">💾 Share</button></span></div>';
       html += '<div class="snap-history-chart-wrap">';
       // Y-axis labels — HTML overlay (max top, mid middle, min bottom)
       html += '<div class="snap-history-y">';
@@ -3388,7 +3440,7 @@ function render(){
     var maxHold=topHoldings.length?topHoldings[0].val:1;
     var maxSec=topSectors.length?topSectors[0][1]:1;
     var maxAcct=topAccounts.length?topAccounts[0][1]:1;
-    var sH='<div class="snap-wrap"><div class="snap-stats">';
+    var sH='<div class="snap-wrap" id="portfolio-snapshot-panel"><div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-outline" onclick="shareElementById(\'portfolio-snapshot-panel\',\'snapshot\',\'Portfolio Snapshot\')" style="font-size:10px;padding:4px 10px" title="Save the entire snapshot as a PNG">💾 Share Snapshot PNG</button></div><div class="snap-stats">';
     sH+='<div class="snap-stat"><div class="snap-stat-label">Portfolio Value</div><div class="snap-stat-val accent">'+fm(totalValue)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">Annual Dividend</div><div class="snap-stat-val green">'+fm(annualIncome)+'</div></div>';
     sH+='<div class="snap-stat"><div class="snap-stat-label">YTD Received ('+thisYear+')</div><div class="snap-stat-val green">'+fm(ytdIncome)+'</div></div>';
@@ -3497,19 +3549,23 @@ function render(){
 
   acctNames.forEach(function(acct){
     var grp=acctMap[acct];
-    h+='<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px">';
+    var collapsedAcct = _isCardCollapsed('accounts', acct);
+    h+='<div class="acct-card'+(collapsedAcct?' collapsed':'')+'" style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:'+(collapsedAcct?'10px':'16px')+';margin-bottom:12px;transition:padding .15s">';
     var acctSynced = _isSyncedAccount(acct);
     var acctSyncBadge = acctSynced ? '<span class="src-tag-acct" title="Mapped to SnapTrade — lots here may be overwritten on next sync.">&#128279; SnapTrade</span>' : '';
     var acctEsc = acct.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    var acctUpdateLbl = _acctLastUpdateLabel(acct);
-    var acctUpdateHTML = acctUpdateLbl ? '<span style="font-size:10px;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--mono)" title="Last update for this account">'+acctUpdateLbl+'</span>' : '';
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">';
-    h+='<div style="font-weight:700;font-size:14px;font-family:var(--mono)"><span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+acctUpdateHTML+'</div>';
+    var acctUpdateInfo = _acctLastUpdateInfo(acct);
+    var acctUpdateHTML = acctUpdateInfo.label ? '<span style="font-size:10px;color:var(--muted);font-weight:500;margin-left:8px;font-family:var(--mono)" title="'+(acctUpdateInfo.ts?'Last update: '+_absTimeTitle(acctUpdateInfo.ts):'Last update for this account')+'">'+acctUpdateInfo.label+'</span>' : '';
+    var chev = '<span class="collapse-chev" style="margin-right:6px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;color:var(--muted);font-size:13px;line-height:1;cursor:pointer;'+(collapsedAcct?'transform:rotate(-90deg);':'')+'transition:transform .2s ease">▾</span>';
+    h+='<div class="acct-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:'+(collapsedAcct?'0':'10px')+';flex-wrap:wrap;gap:6px;cursor:pointer" onclick="toggleAccountCard(\''+acctEsc+'\',event)">';
+    h+='<div style="font-weight:700;font-size:14px;font-family:var(--mono);display:flex;align-items:center;flex-wrap:wrap;gap:4px">'+chev+'<span class="badge badge-purple" style="font-size:11px;margin-right:6px">'+acct+'</span>'+acctSyncBadge+' '+grp.stocks.length+' stock'+(grp.stocks.length!==1?'s':'')+acctUpdateHTML+'</div>';
     h+='<div style="display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap">';
     h+='<span class="mono accent2">'+fm(grp.totalVal)+'</span>'+(grp.totalInc>0?'<span class="mono green">'+fm(grp.totalInc)+'/yr</span>':'');
     h+='<button class="btn btn-outline" onclick="event.stopPropagation();renameAccount(\''+acctEsc+'\')" style="font-size:9.5px;padding:3px 8px" title="Rename this account — updates all lots assigned to it">Rename</button>';
     h+='<button class="btn btn-outline" onclick="event.stopPropagation();deleteAccount(\''+acctEsc+'\')" style="font-size:9.5px;padding:3px 8px;color:var(--red);border-color:var(--red-dim)" title="Delete this account — choose to drop the lots too or just unassign them">&#128465; Delete</button>';
     h+='</div></div>';
+    // Body wrapper — hidden via inline `display:none` when card is collapsed
+    h+='<div class="acct-body"'+(collapsedAcct?' style="display:none"':'')+'>';
     h+='<div style="display:grid;grid-template-columns:auto 1fr 1fr auto;gap:3px 12px;font-size:11px;align-items:center">';
     h+='<div class="muted" style="font-size:9px;text-transform:uppercase">Ticker</div><div class="muted" style="font-size:9px;text-transform:uppercase">Shares</div><div class="muted" style="font-size:9px;text-transform:uppercase">Value</div><div class="muted" style="font-size:9px;text-transform:uppercase">Added</div>';
     grp.stocks.forEach(function(s){
@@ -3518,7 +3574,7 @@ function render(){
       h+='<span class="mono accent2">'+fm(s.val)+'</span>';
       h+='<span class="muted" style="font-size:10px">'+(s.added?new Date(s.added).toLocaleDateString():'—')+'</span>';
     });
-    h+='</div></div>';
+    h+='</div></div></div>';
   });
   if(!acctNames.length)h='<div class="muted" style="text-align:center;padding:30px">No accounts with holdings</div>';
   G('acctBody').innerHTML=h;
@@ -3545,10 +3601,11 @@ function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 // ═════════════════════════════════════════════════
 // THEME + TEXT SIZE
 // ═════════════════════════════════════════════════
-// Build / update the marquee ticker above the tabs. Uses PR (which is the
-// runtime price store fed by livePrices). Dedupes by ticker, hides when no
-// prices have been fetched yet, and duplicates the track once so the CSS
-// translateX(-50%) marquee animation loops seamlessly.
+// Build / update the marquee ticker that sits below the header. Uses PR
+// (price store fed by livePrices) and liveChanges (today's % change). Dedupes
+// by ticker, hides when no prices have been fetched yet, and duplicates the
+// track once so the CSS translateX(-50%) marquee animation loops seamlessly.
+// Each item shows: TICKER  $price  ▲ +1.23%  (or ▼ in red if down).
 function renderPortfolioTicker(){
   var bar = G('pfTicker'), track = G('pfTickerTrack');
   if(!bar || !track) return;
@@ -3559,11 +3616,20 @@ function renderPortfolioTicker(){
     seen[t] = 1;
     var px = PR[t]||0;
     if(px<=0) return;
-    items.push('<span class="tk-ticker-item"><span class="tk-ticker-sym">'+t+'</span><span class="tk-ticker-px">'+fm(px)+'</span></span>');
+    var ch = (typeof liveChanges !== 'undefined' && liveChanges[t]!=null) ? liveChanges[t] : null;
+    var chHTML = '';
+    if(ch != null){
+      var dir = ch > 0.005 ? 'up' : (ch < -0.005 ? 'dn' : 'flat');
+      var arrow = dir==='up' ? '▲' : dir==='dn' ? '▼' : '▬';
+      var sign = ch>=0 ? '+' : '';
+      chHTML = '<span class="tk-ticker-ch '+dir+'"><span class="tk-ticker-arrow">'+arrow+'</span>'+sign+ch.toFixed(2)+'%</span>';
+    }
+    items.push('<span class="tk-ticker-item"><span class="tk-ticker-sym">'+t+'</span><span class="tk-ticker-px">'+fm(px)+'</span>'+chHTML+'</span>');
   });
   if(items.length===0){
     bar.style.display='none';
     track.innerHTML='';
+    if(typeof syncStickyTop==='function') syncStickyTop();
     return;
   }
   bar.style.display='flex';
@@ -3571,6 +3637,9 @@ function renderPortfolioTicker(){
   // of the second copy lands exactly where the first started.
   var inner = items.join('') + items.join('');
   track.innerHTML = inner;
+  // Re-measure since the ticker just toggled visibility — the table thead's
+  // sticky-top depends on whether the ticker is shown.
+  if(typeof syncStickyTop==='function') syncStickyTop();
 }
 function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t;_syncQuickToggleStates()}
 function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s;_syncQuickToggleStates()}
@@ -3593,7 +3662,27 @@ function _syncQuickToggleStates(){
   var s=G('hdrTextBtn'); if(s) s.classList.toggle('active', p.textSize==='lg'||p.textSize==='xl');
 }
 function setCompact(on){document.body.classList.toggle('compact',!!on);var p=loadPrefs();p.compact=!!on;savePrefs(p);var el=G('sCompact');if(el)el.checked=!!on}
-function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl');if(p.compact)document.body.classList.add('compact');var cb=G('sCompact');if(cb)cb.checked=!!p.compact}
+// Ticker scroll speed — `seconds` is the full marquee loop duration (higher
+// = slower scroll). Saved to prefs.tickerSpeed; applied via the --ticker-speed
+// CSS variable. `liveOnly` skips the savePrefs/toast during slider drag.
+function setTickerSpeed(seconds, liveOnly){
+  var v = Math.max(60, Math.min(300, parseInt(seconds)||150));
+  document.documentElement.style.setProperty('--ticker-speed', v+'s');
+  var lbl = G('sTickerSpeedLabel'); if(lbl) lbl.textContent = v+'s';
+  var el = G('sTickerSpeed'); if(el && el.value!=String(v)) el.value = v;
+  if(liveOnly) return;
+  var p = loadPrefs();
+  p.tickerSpeed = v;
+  savePrefs(p);
+}
+function loadTickerSpeed(){
+  var p = loadPrefs();
+  var v = parseInt(p.tickerSpeed) || 150;
+  setTickerSpeed(v, true);
+  // Force the input to match (might have been initialized with default 150)
+  var el = G('sTickerSpeed'); if(el) el.value = v;
+}
+function loadThemePrefs(){var p=loadPrefs();if(p.theme==='light')document.body.classList.add('light');if(p.textSize==='lg')document.body.classList.add('text-lg');if(p.textSize==='xl')document.body.classList.add('text-xl');if(p.compact)document.body.classList.add('compact');var cb=G('sCompact');if(cb)cb.checked=!!p.compact;if(typeof loadTickerSpeed==='function')loadTickerSpeed()}
 
 // ═════════════════════════════════════════════════
 // TAX FORMS — stocks with special tax considerations
@@ -4013,6 +4102,151 @@ function rmT(t){tks=tks.filter(function(x){return x!==t});delete lots[t];compute
 // ═════════════════════════════════════════════════
 // SETTINGS: Account management
 // ═════════════════════════════════════════════════
+// Collapsible card state — persisted to prefs.uiCollapsed so the choice
+// survives reloads. Two scopes: 'brokers' (keyed by SnapTrade acct.id) and
+// 'accounts' (keyed by account name). Returns true if the given key is
+// currently in the collapsed set for that scope.
+function _isCardCollapsed(scope, key){
+  var p = loadPrefs();
+  return !!(p.uiCollapsed && p.uiCollapsed[scope] && p.uiCollapsed[scope][key]);
+}
+function _setCardCollapsed(scope, key, collapsed){
+  var p = loadPrefs();
+  if(!p.uiCollapsed) p.uiCollapsed = {};
+  if(!p.uiCollapsed[scope]) p.uiCollapsed[scope] = {};
+  if(collapsed) p.uiCollapsed[scope][key] = true;
+  else delete p.uiCollapsed[scope][key];
+  savePrefs(p);
+}
+function toggleBrokerCard(acctId, ev){
+  if(ev){ ev.stopPropagation(); }
+  _setCardCollapsed('brokers', acctId, !_isCardCollapsed('brokers', acctId));
+  renderBrokersTab();
+}
+function toggleAccountCard(acctName, ev){
+  if(ev){ ev.stopPropagation(); }
+  _setCardCollapsed('accounts', acctName, !_isCardCollapsed('accounts', acctName));
+  render();
+}
+// Bulk collapse/expand for the Brokers tab cards
+function collapseAllBrokers(){
+  var p=loadPrefs();
+  if(!p.uiCollapsed)p.uiCollapsed={};
+  p.uiCollapsed.brokers={};
+  (stApiState.accounts||[]).forEach(function(a){p.uiCollapsed.brokers[a.id]=true});
+  savePrefs(p);renderBrokersTab();
+}
+function expandAllBrokers(){
+  var p=loadPrefs();
+  if(p.uiCollapsed)p.uiCollapsed.brokers={};
+  savePrefs(p);renderBrokersTab();
+}
+function collapseAllAccounts(){
+  var p=loadPrefs();
+  if(!p.uiCollapsed)p.uiCollapsed={};
+  p.uiCollapsed.accounts={};
+  // Use getBrokerList to get every account name in scope
+  getBrokerList().forEach(function(n){p.uiCollapsed.accounts[n]=true});
+  // Also "Unassigned" key (lots with no broker)
+  p.uiCollapsed.accounts['Unassigned']=true;
+  savePrefs(p);render();
+}
+function expandAllAccounts(){
+  var p=loadPrefs();
+  if(p.uiCollapsed)p.uiCollapsed.accounts={};
+  savePrefs(p);render();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PNG SHARING — uses html2canvas (loaded via <script> in head) to capture
+// any DOM element and download it as a PNG. The "share card" approach for
+// news builds a styled standalone card off-screen then captures that, so
+// the exported image looks clean even if the in-page row layout doesn't
+// translate well to a square / portrait aspect ratio.
+// ─────────────────────────────────────────────────────────────────
+function _sharePanelAsPNG(el, filename, label){
+  if(!el){ showToast('Element not found','error'); return; }
+  if(typeof html2canvas !== 'function'){
+    showToast('Image library still loading… try again in a second','warn');
+    return;
+  }
+  showToast('Generating PNG…');
+  var bg = getComputedStyle(document.body).backgroundColor || '#0d1117';
+  html2canvas(el, { backgroundColor: bg, scale: 2, logging: false, useCORS: true }).then(function(canvas){
+    canvas.toBlob(function(blob){
+      if(!blob){ showToast('PNG generation failed','error'); return; }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'stockfolio-'+(filename||'panel')+'-'+new Date().toISOString().slice(0,10)+'.png';
+      a.click();
+      setTimeout(function(){URL.revokeObjectURL(url)}, 1000);
+      showToast('PNG saved');
+      if(typeof logActivity==='function') logActivity('data.share.png', 'Shared '+(label||filename||'panel')+' as PNG');
+    }, 'image/png');
+  }).catch(function(e){
+    console.error('html2canvas failed:', e);
+    showToast('PNG generation failed: '+(e.message||e),'error');
+  });
+}
+// Share an All-tab panel by element id. The element must already be in the
+// DOM (e.g. .snap-history sub-panel).
+function shareElementById(elId, filename, label){
+  _sharePanelAsPNG(document.getElementById(elId), filename, label);
+}
+// Build a standalone "news card" for sharing. Pulls the news data by index
+// and renders a fresh styled DIV off-screen so the PNG looks like a polished
+// social-share image regardless of the table row layout.
+function shareNewsAsPNG(idx){
+  // Find the news entry from the global "all" array isn't accessible here —
+  // grab it from the rendered row instead (the only real source of truth at
+  // this point in the lifecycle).
+  var clickRow = document.getElementById('n'+idx);
+  if(!clickRow){ showToast('News row not found','error'); return; }
+  var prevRow = clickRow.previousElementSibling;
+  if(!prevRow){ showToast('Could not capture news data','error'); return; }
+  var cells = prevRow.querySelectorAll('td');
+  var ticker = (prevRow.querySelector('.badge.badge-accent')||{}).textContent || '';
+  var date = cells[1] ? cells[1].textContent.trim() : '';
+  var price = cells[2] ? cells[2].textContent.trim() : '';
+  var headline = cells[3] ? cells[3].textContent.trim() : '';
+  var source = cells[4] ? cells[4].textContent.trim() : '';
+  // Get summary from the expanded row's <p>
+  var summaryEl = clickRow.querySelector('.xp p');
+  var summary = summaryEl ? summaryEl.textContent.trim() : '';
+  var linkEl = clickRow.querySelector('.xp a[href]');
+  var link = linkEl ? linkEl.href : '';
+  // Build off-screen card
+  var card = document.createElement('div');
+  card.id = '_share-news-card';
+  card.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;background:'+(getComputedStyle(document.body).backgroundColor||'#0d1117')+';color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:32px;border-radius:16px;border:1px solid #30363d;box-sizing:border-box';
+  card.innerHTML =
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">'+
+      '<div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#2f81f7,#388bfd);display:flex;align-items:center;justify-content:center;color:#fff">'+
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="5" y="9" width="3" height="9" rx=".7"/><line x1="6.5" y1="6" x2="6.5" y2="9"/><line x1="6.5" y1="18" x2="6.5" y2="20"/><rect x="10.5" y="6" width="3" height="13" rx=".7"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="19" x2="12" y2="21"/><rect x="16" y="11" width="3" height="7" rx=".7"/><line x1="17.5" y1="8" x2="17.5" y2="11"/><line x1="17.5" y1="18" x2="17.5" y2="20"/></svg>'+
+      '</div>'+
+      '<div style="font-weight:700;font-size:16px;letter-spacing:-.4px">Stockfolio</div>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'+
+      '<span style="background:#2f81f725;color:#2f81f7;padding:4px 10px;border-radius:5px;font-family:SFMono-Regular,Consolas,monospace;font-size:13px;font-weight:700">'+ticker+'</span>'+
+      (price?'<span style="font-family:SFMono-Regular,Consolas,monospace;font-size:13px;color:#388bfd">'+price+'</span>':'')+
+      '<span style="color:#7d8590;font-family:SFMono-Regular,Consolas,monospace;font-size:11px">'+date+'</span>'+
+    '</div>'+
+    '<h2 style="margin:0 0 14px;font-size:22px;line-height:1.35;font-weight:600">'+(headline||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</h2>'+
+    (summary?'<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#c9d1d9">'+summary.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</p>':'')+
+    '<div style="border-top:1px solid #30363d;padding-top:14px;display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:#7d8590;font-family:SFMono-Regular,Consolas,monospace">'+
+      '<span>'+(source||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</span>'+
+      '<span>stockfolio · '+new Date().toLocaleDateString()+'</span>'+
+    '</div>';
+  document.body.appendChild(card);
+  _sharePanelAsPNG(card, 'news-'+ticker, 'news article '+ticker);
+  // Remove the off-screen card after a short delay (html2canvas runs async)
+  setTimeout(function(){
+    var c = document.getElementById('_share-news-card');
+    if(c) c.remove();
+  }, 4000);
+}
+
 // Friendly relative-time label ("just now", "5m ago", "2h ago", "Apr 30")
 // for surface-level "when was this last touched" displays.
 function _relTimeShort(ts){
@@ -4027,12 +4261,14 @@ function _relTimeShort(ts){
 }
 // "Last update" label for an account. SnapTrade-synced accounts report the
 // global last-fetched timestamp from stApiState.lastFetched; non-synced
-// accounts report the most-recent lot.added date among their lots.
-function _acctLastUpdateLabel(acctName){
-  if(!acctName) return '';
+// accounts report the most-recent lot.added date among their lots. Returns
+// {label, ts} so callers can render the friendly relative label as text and
+// the absolute date+time as a hover tooltip.
+function _acctLastUpdateInfo(acctName){
+  if(!acctName) return { label:'', ts:0 };
   if(_isSyncedAccount(acctName)){
-    if(stApiState && stApiState.lastFetched) return 'synced '+_relTimeShort(stApiState.lastFetched);
-    return 'synced — never';
+    if(stApiState && stApiState.lastFetched) return { label:'synced '+_relTimeShort(stApiState.lastFetched), ts:stApiState.lastFetched };
+    return { label:'synced — never', ts:0 };
   }
   // Manual / M1 CSV / other — find the latest lot.added at this account
   var maxTs = 0;
@@ -4044,8 +4280,15 @@ function _acctLastUpdateLabel(acctName){
       }
     });
   });
-  if(!maxTs) return '';
-  return 'modified '+_relTimeShort(maxTs);
+  if(!maxTs) return { label:'', ts:0 };
+  return { label:'modified '+_relTimeShort(maxTs), ts:maxTs };
+}
+// Backwards-compatible label-only accessor (some callers don't need the ts).
+function _acctLastUpdateLabel(acctName){ return _acctLastUpdateInfo(acctName).label; }
+// Format an absolute timestamp for a tooltip ("synced just now" → exact time).
+function _absTimeTitle(ts){
+  if(!ts) return '';
+  return new Date(ts).toLocaleString();
 }
 // Returns true if any lot at this account name has src:'snaptrade', or if the
 // account name appears in prefs.snaptradeAccountMap values (meaning a SnapTrade
@@ -4070,10 +4313,10 @@ function renderSettingsAccts(){
   var h='';
   list.forEach(function(acct,i){
     var synced=_isSyncedAccount(acct);
-    var updLbl=_acctLastUpdateLabel(acct);
+    var updInfo=_acctLastUpdateInfo(acct);
     h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">';
     h+='<span class="badge badge-purple" style="font-size:11px;min-width:60px;text-align:center">'+acct+(synced?'<span class="src-tag-acct" title="This account is mapped to a SnapTrade brokerage. Lots here may be overwritten on next sync.">&#128279;</span>':'')+'</span>';
-    if(updLbl) h+='<span class="muted" style="font-size:10px;font-family:var(--mono)" title="Last update for this account">'+updLbl+'</span>';
+    if(updInfo.label) h+='<span class="muted" style="font-size:10px;font-family:var(--mono)" title="'+(updInfo.ts?'Last update: '+_absTimeTitle(updInfo.ts):'Last update for this account')+'">'+updInfo.label+'</span>';
     h+='<div style="margin-left:auto;display:flex;gap:6px">';
     h+='<button class="btn btn-outline" onclick="renameAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px;padding:3px 8px">Rename</button>';
     h+='<button class="rb" onclick="deleteAccount(\''+acct.replace(/'/g,"\\'")+'\')" style="font-size:10px">Delete</button>';
@@ -5615,6 +5858,9 @@ function renderBrokersTab(){
   var el=G('bBrokers');if(!el)return;
   // Tab counter
   var cnt=G('cBk');if(cnt)cnt.textContent=stApiState.accounts.length;
+  // Toggle the collapse-all toolbar visibility based on whether any cards exist
+  var toolbar=G('bCollToolbar');
+  if(toolbar) toolbar.style.display = (stApiState.accounts && stApiState.accounts.length>0) ? 'flex' : 'none';
   if(!currentUser){
     el.innerHTML='<div class="muted" style="text-align:center;padding:30px">Sign in with Google to view connected brokerages.</div>';
     return;
@@ -5654,11 +5900,12 @@ function renderBrokersTab(){
       var q=p.units||p.quantity||0;
       return q>0;
     });
-    html+='<div class="broker-card">';
+    var collapsed = _isCardCollapsed('brokers', acct.id);
+    html+='<div class="broker-card'+(collapsed?' collapsed':'')+'" id="broker-card-'+acct.id+'">';
     // Two-row left side (logo + name/meta stack), totals on the right.
-    var acctSyncLabel = (stApiState && stApiState.lastFetched) ? ' &middot; <span style="color:var(--accent2)">synced '+_relTimeShort(stApiState.lastFetched)+'</span>' : '';
-    html+='<div class="broker-header">';
-    html+='<div class="broker-header-left">'+brokerageLogoHTML(acct)+'<div style="min-width:0"><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+acctSyncLabel+'</div></div></div>';
+    var acctSyncLabel = (stApiState && stApiState.lastFetched) ? ' &middot; <span style="color:var(--accent2)" title="Synced at '+_absTimeTitle(stApiState.lastFetched)+'">synced '+_relTimeShort(stApiState.lastFetched)+'</span>' : '';
+    html+='<div class="broker-header" onclick="toggleBrokerCard(\''+acct.id.replace(/\\/g,'\\\\').replace(/\'/g,"\\'")+'\',event)">';
+    html+='<div class="broker-header-left"><span class="collapse-chev" title="Click to expand/collapse">▾</span>'+brokerageLogoHTML(acct)+'<div style="min-width:0"><div class="broker-name">'+(acct.name||acct.id||'Account')+'</div><div class="broker-meta">'+(acct.institution_name||acct.brokerage||acct.brokerage_authorization||'')+' &middot; '+positions.length+' position'+(positions.length!==1?'s':'')+acctSyncLabel+'</div></div></div>';
     var bal=(acct.balance&&acct.balance.total&&typeof acct.balance.total.amount==='number')?acct.balance.total.amount:null;
     if(bal!==null)html+='<div class="broker-bal">'+fm(bal)+'</div>';
     html+='</div>';
@@ -5759,9 +6006,14 @@ setInterval(tickLocalClock,1000);
 // thead sits behind the header (z-index 90 < 100) and looks "stuck behind."
 function syncStickyTop(){
   var h = document.querySelector('.header');
-  if(!h) return;
-  var px = Math.max(60, Math.ceil(h.getBoundingClientRect().height) + 2);
-  document.documentElement.style.setProperty('--sticky-top', px+'px');
+  var hdrPx = h ? Math.max(60, Math.ceil(h.getBoundingClientRect().height) + 2) : 90;
+  document.documentElement.style.setProperty('--sticky-top', hdrPx+'px');
+  // Ticker (when visible) stacks below header — bump --thead-top accordingly
+  // so table headers don't slide under the ticker when scrolling.
+  var tk = document.getElementById('pfTicker');
+  var tkPx = (tk && tk.style.display && tk.style.display !== 'none') ? Math.ceil(tk.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty('--ticker-h', tkPx+'px');
+  document.documentElement.style.setProperty('--thead-top', (hdrPx + tkPx)+'px');
 }
 syncStickyTop();
 window.addEventListener('resize', syncStickyTop);
