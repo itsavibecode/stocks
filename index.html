@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.38</title>
+<title>Stockfolio v0.7.39</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -996,26 +996,12 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; News Notifications</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Toast notification with sound when new articles arrive. Enabled by default.</p>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
-            <input type="checkbox" id="sNotifEnabled" onchange="savePref()"> Enable news notifications
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer">
-            <input type="checkbox" id="sSoundMuted" onchange="savePref()"> Mute sound
-          </label>
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin-top:4px">
-            <span style="color:var(--muted)">Sound:</span>
-            <select id="sSoundChoice" class="mi" onchange="savePref();previewSound()" style="width:160px;margin-bottom:0;padding:6px 8px;font-size:12px">
-              <option value="chime">Chime</option>
-              <option value="ding">Ding</option>
-              <option value="pop">Pop</option>
-              <option value="bell">Bell</option>
-            </select>
-            <button class="btn btn-outline" onclick="previewSound()" style="font-size:10px;padding:4px 10px">&#9654; Test</button>
-          </div>
-        </div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">&#128266; Sound Settings</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:12px">Three independent channels — pick a sound and volume for each. Master mute silences everything. Volumes save automatically.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:14px;padding:8px 10px;background:var(--card2);border-radius:6px">
+          <input type="checkbox" id="sSoundMasterMute" onchange="saveSoundPrefs()"> <span style="font-weight:600">🔇 Master mute</span> <span class="muted" style="font-size:10.5px">— silences all three channels regardless of their individual settings</span>
+        </label>
+        <div id="sSoundChannels" style="display:flex;flex-direction:column;gap:12px"></div>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
@@ -1118,7 +1104,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.38 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.39 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1205,7 +1191,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.38";
+var VERSION = "0.7.39";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1456,7 +1442,7 @@ function runReminderCheck(){
             while(bdt.getDay()===0||bdt.getDay()===6)bdt.setDate(bdt.getDate()-1);
             var buyBy=bdt.toISOString().slice(0,10);
             var msg=t+' ex-date '+(daysToEx===0?'today':'in '+daysToEx+' day'+(daysToEx!==1?'s':''))+' ('+d.ex+') — buy by close on '+buyBy+' to qualify';
-            showToast(msg);playNotifSound();
+            showToast(msg,'',{silent:true});playSound('reminder');
             logActivity('reminder.exdate',msg);
             notified[key]=todayMs;
             fired.push(key);
@@ -1474,7 +1460,7 @@ function runReminderCheck(){
           if(!notified[key]){
             var amount=d.np*s;
             var msg=t+' pay-date '+(daysToPay===0?'today':'in '+daysToPay+' day'+(daysToPay!==1?'s':''))+' ('+d.pd+') — '+(amount>0?fm(amount)+' incoming':'~$'+d.np+'/sh');
-            showToast(msg);playNotifSound();
+            showToast(msg,'',{silent:true});playSound('reminder');
             logActivity('reminder.paydate',msg);
             notified[key]=todayMs;
             fired.push(key);
@@ -4770,18 +4756,69 @@ function savePrefs(p){
 }
 function savePref(){
   var prefs=loadPrefs();
-  prefs.notifEnabled=G('sNotifEnabled').checked;
-  prefs.soundMuted=G('sSoundMuted').checked;
-  prefs.soundChoice=G('sSoundChoice').value;
   prefs.theme=G('sTheme').value;
   prefs.textSize=G('sTextSize').value;
   savePrefs(prefs);
 }
+// Save the v0.7.39 multi-channel sound prefs from the Settings UI.
+// Reads master-mute + each channel's enabled / sound / volume inputs and
+// writes them into prefs.sound. No toast — saving is silent (per user
+// preference: settings panels auto-save without nagging).
+function saveSoundPrefs(){
+  var prefs = _ensureSoundPrefs(loadPrefs());
+  var mm = G('sSoundMasterMute'); if(mm) prefs.sound.muted = !!mm.checked;
+  ['news','ui','reminder'].forEach(function(ch){
+    var en = G('sChEn_'+ch);
+    var snd = G('sSnd_'+ch);
+    var vol = G('sVol_'+ch);
+    if(!prefs.sound.channels[ch]) prefs.sound.channels[ch] = {};
+    if(en) prefs.sound.channels[ch].enabled = !!en.checked;
+    if(snd) prefs.sound.channels[ch].sound = snd.value;
+    if(vol) prefs.sound.channels[ch].volume = Math.max(0, Math.min(1, parseInt(vol.value)/100));
+  });
+  savePrefs(prefs);
+  // Sync the "% label" next to each slider so it stays in sync while
+  // dragging — the live oninput handler also calls this.
+  ['news','ui','reminder'].forEach(function(ch){
+    var lbl = G('sVolLbl_'+ch); var vol = G('sVol_'+ch);
+    if(lbl && vol) lbl.textContent = vol.value+'%';
+  });
+}
+// Build the 3-channel UI inside #sSoundChannels.
+function renderSoundChannels(){
+  var box = G('sSoundChannels'); if(!box) return;
+  var prefs = _ensureSoundPrefs(loadPrefs());
+  var defs = [
+    { key:'news', icon:'📰', title:'News', desc:'Plays when new articles arrive' },
+    { key:'ui',   icon:'💾', title:'UI / Save', desc:'Plays on toast notifications (saves, syncs, errors)' },
+    { key:'reminder', icon:'🔔', title:'Reminder', desc:'Plays on dividend ex-date / pay-date alerts' }
+  ];
+  var html = '';
+  defs.forEach(function(d){
+    var ch = prefs.sound.channels[d.key];
+    var vol100 = Math.round((ch.volume||0.5)*100);
+    var soundOpts = SOUND_LIST.map(function(s){
+      return '<option value="'+s.key+'"'+(ch.sound===s.key?' selected':'')+'>'+s.label+'</option>';
+    }).join('');
+    html += '<div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">';
+    html += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">';
+    html += '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;flex:1;min-width:0">';
+    html += '<input type="checkbox" id="sChEn_'+d.key+'"'+(ch.enabled!==false?' checked':'')+' onchange="saveSoundPrefs()" style="accent-color:var(--accent)">';
+    html += '<span style="font-weight:600">'+d.icon+' '+d.title+'</span>';
+    html += '<span class="muted" style="font-size:10.5px;font-weight:400">— '+d.desc+'</span>';
+    html += '</label>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center">';
+    html += '<select id="sSnd_'+d.key+'" class="mi" onchange="saveSoundPrefs();previewSound(\''+d.key+'\')" style="margin:0;padding:5px 8px;font-size:11.5px">'+soundOpts+'</select>';
+    html += '<div style="display:flex;align-items:center;gap:8px"><input type="range" id="sVol_'+d.key+'" min="0" max="100" step="5" value="'+vol100+'" oninput="saveSoundPrefs()" onchange="saveSoundPrefs();previewSound(\''+d.key+'\')" style="flex:1;accent-color:var(--accent)"><span class="mono" id="sVolLbl_'+d.key+'" style="font-size:10.5px;color:var(--muted);min-width:38px;text-align:right">'+vol100+'%</span></div>';
+    html += '<button class="btn btn-outline" onclick="previewSound(\''+d.key+'\')" style="font-size:10px;padding:4px 10px;white-space:nowrap">▶ Test</button>';
+    html += '</div></div>';
+  });
+  box.innerHTML = html;
+  var mm = G('sSoundMasterMute'); if(mm) mm.checked = !!prefs.sound.muted;
+}
 function loadPrefUI(){
   var prefs=loadPrefs();
-  var ne=G('sNotifEnabled');if(ne)ne.checked=prefs.notifEnabled!==false;
-  var sm=G('sSoundMuted');if(sm)sm.checked=!!prefs.soundMuted;
-  var sc=G('sSoundChoice');if(sc)sc.value=prefs.soundChoice||'chime';
   var th=G('sTheme');if(th)th.value=prefs.theme||'dark';
   var ts=G('sTextSize');if(ts)ts.value=prefs.textSize||'normal';
   var ak=G('sApiKey');if(ak)ak.value=prefs.finnhubKey||'';
@@ -4794,36 +4831,100 @@ function loadPrefUI(){
   if(typeof loadReminderPrefsUI==='function')loadReminderPrefsUI();
   if(typeof loadDivGoalUI==='function')loadDivGoalUI();
   if(typeof loadTaxPrefsUI==='function')loadTaxPrefsUI();
+  if(typeof renderSoundChannels==='function')renderSoundChannels();
 }
 
 // ═════════════════════════════════════════════════
-// NOTIFICATION SOUNDS (embedded base64 audio)
+// NOTIFICATION SOUNDS — three independent channels (news / ui / reminder),
+// each with its own sound choice + volume slider. SOUNDS.<name>(volume) takes
+// a 0–1 multiplier on the base gain so per-channel volume sliders work.
 // ═════════════════════════════════════════════════
 var SOUNDS={};
 (function(){
-  // Generate simple sounds using Web Audio API
   var ctx;
   function getCtx(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();return ctx}
-  SOUNDS.chime=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(880,c.currentTime);o.frequency.setValueAtTime(1100,c.currentTime+0.1);g.gain.setValueAtTime(0.3,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.4);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.4)};
-  SOUNDS.ding=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(1200,c.currentTime);g.gain.setValueAtTime(0.25,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.3)};
-  SOUNDS.pop=function(){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(600,c.currentTime);o.frequency.exponentialRampToValueAtTime(200,c.currentTime+0.15);g.gain.setValueAtTime(0.4,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.15);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.15)};
-  SOUNDS.bell=function(){var c=getCtx(),o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(830,c.currentTime);o2.type='sine';o2.frequency.setValueAtTime(1245,c.currentTime);g.gain.setValueAtTime(0.2,c.currentTime);g.gain.exponentialRampToValueAtTime(0.01,c.currentTime+0.6);o.connect(g);o2.connect(g);g.connect(c.destination);o.start();o2.start();o.stop(c.currentTime+0.6);o2.stop(c.currentTime+0.6)};
+  // v=volume multiplier (0–1). Each preset has its own base peak; we scale
+  // the peak by v then ramp down to silence as before.
+  SOUNDS.chime=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(880,c.currentTime);o.frequency.setValueAtTime(1100,c.currentTime+0.1);g.gain.setValueAtTime(0.3*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.4);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.4)};
+  SOUNDS.ding=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(1200,c.currentTime);g.gain.setValueAtTime(0.25*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.3)};
+  SOUNDS.pop=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(600,c.currentTime);o.frequency.exponentialRampToValueAtTime(200,c.currentTime+0.15);g.gain.setValueAtTime(0.4*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.15);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.15)};
+  SOUNDS.bell=function(v){var c=getCtx(),o=c.createOscillator(),o2=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(830,c.currentTime);o2.type='sine';o2.frequency.setValueAtTime(1245,c.currentTime);g.gain.setValueAtTime(0.2*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.6);o.connect(g);o2.connect(g);g.connect(c.destination);o.start();o2.start();o.stop(c.currentTime+0.6);o2.stop(c.currentTime+0.6)};
+  // Soft "blip" — short low square tone, good for save/UI confirmation
+  SOUNDS.blip=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.setValueAtTime(440,c.currentTime);g.gain.setValueAtTime(0.12*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.08);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.08)};
+  // Two-tone "swoosh" — descending sine, good for completion
+  SOUNDS.swoosh=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(1500,c.currentTime);o.frequency.exponentialRampToValueAtTime(400,c.currentTime+0.25);g.gain.setValueAtTime(0.18*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.25);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.25)};
+  // "Click" — barely-audible UI feedback
+  SOUNDS.click=function(v){var c=getCtx(),o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(2000,c.currentTime);g.gain.setValueAtTime(0.06*v,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.04);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.04)};
 })();
-function playNotifSound(){
-  var prefs=loadPrefs();
-  if(prefs.soundMuted)return;
-  var fn=SOUNDS[prefs.soundChoice||'chime'];
-  if(fn)try{fn()}catch(e){}
+var SOUND_LIST = [
+  {key:'chime', label:'Chime'},
+  {key:'ding', label:'Ding'},
+  {key:'pop', label:'Pop'},
+  {key:'bell', label:'Bell'},
+  {key:'blip', label:'Blip'},
+  {key:'swoosh', label:'Swoosh'},
+  {key:'click', label:'Click'}
+];
+// Migrate / fill defaults for the v0.7.39 multi-channel sound prefs. Older
+// prefs had a single soundChoice + soundMuted; map those forward so existing
+// users don't lose their preference. New defaults give each channel a
+// distinct sound so the user can tell them apart out of the box.
+function _ensureSoundPrefs(prefs){
+  if(!prefs.sound || typeof prefs.sound !== 'object'){
+    var legacy = prefs.soundChoice || 'chime';
+    prefs.sound = {
+      muted: !!prefs.soundMuted,
+      channels: {
+        news:     { sound: legacy,   volume: 0.6, enabled: prefs.notifEnabled !== false },
+        ui:       { sound: 'blip',   volume: 0.35, enabled: true },
+        reminder: { sound: 'bell',   volume: 0.55, enabled: true }
+      }
+    };
+  } else {
+    // Ensure all 3 channels exist (defensive — corrupted prefs)
+    if(!prefs.sound.channels) prefs.sound.channels = {};
+    if(!prefs.sound.channels.news) prefs.sound.channels.news = { sound:'chime', volume:0.6, enabled:true };
+    if(!prefs.sound.channels.ui) prefs.sound.channels.ui = { sound:'blip', volume:0.35, enabled:true };
+    if(!prefs.sound.channels.reminder) prefs.sound.channels.reminder = { sound:'bell', volume:0.55, enabled:true };
+  }
+  return prefs;
 }
-function previewSound(){
-  var choice=G('sSoundChoice').value;
-  var fn=SOUNDS[choice||'chime'];
-  if(fn)try{fn()}catch(e){}
+// Play the configured sound on a given channel, respecting master mute,
+// channel-enabled flag, and channel volume. Catches all errors so a sound
+// failure never blocks the calling toast / fetch / reminder.
+function playSound(channel){
+  try {
+    var prefs = _ensureSoundPrefs(loadPrefs());
+    if(prefs.sound.muted) return;
+    var ch = prefs.sound.channels[channel];
+    if(!ch || ch.enabled === false) return;
+    var vol = (typeof ch.volume === 'number') ? Math.max(0, Math.min(1, ch.volume)) : 0.5;
+    if(vol <= 0.001) return;
+    var fn = SOUNDS[ch.sound] || SOUNDS.chime;
+    if(fn) fn(vol);
+  } catch(e){}
+}
+// Back-compat: the old function name still exists; routes to the news channel.
+function playNotifSound(){ playSound('news'); }
+// Test button on each channel — uses the live values from the UI inputs so
+// you can preview a slider position before committing.
+function previewSound(channel){
+  try {
+    var sndEl = G('sSnd_'+channel);
+    var volEl = G('sVol_'+channel);
+    var snd = sndEl ? sndEl.value : 'chime';
+    var vol = volEl ? (parseInt(volEl.value)/100) : 0.5;
+    var fn = SOUNDS[snd] || SOUNDS.chime;
+    if(fn) fn(vol);
+  } catch(e){}
 }
 
 // Enhanced toast with type. Warn/error toasts hold longer so the user can
 // actually read them (and not miss them when looking elsewhere on screen).
-function showToast(msg,type){
+// Plays the UI sound channel by default; pass opts={silent:true} when the
+// caller will fire its own sound (news / reminders) so the user doesn't
+// hear two stacked tones.
+function showToast(msg, type, opts){
   var t=document.getElementById('svt');
   t.textContent=msg;
   t.style.background=type==='warn'?'var(--yellow)':type==='error'?'var(--red)':'var(--green)';
@@ -4832,6 +4933,9 @@ function showToast(msg,type){
   clearTimeout(svTO);
   var holdMs = (type==='warn'||type==='error') ? 5500 : 2500;
   svTO=setTimeout(function(){t.classList.remove('show');t.style.background='';t.style.color=''},holdMs);
+  // UI sound channel fires on every toast unless the caller asked for silence
+  // (used by reminder + news code that plays its own channel sound).
+  if(!(opts && opts.silent) && typeof playSound==='function') playSound('ui');
 }
 
 // ═════════════════════════════════════════════════
@@ -6242,13 +6346,12 @@ fetchAllNews=function(){
       if(cnt>(prevNewsByTicker[t]||0))newTickers.push(t);
     });
     if(after>prevNewsCount&&prevNewsCount>0){
-      var prefs=loadPrefs();
-      if(prefs.notifEnabled!==false){
-        var diff=after-prevNewsCount;
-        var msg=diff+' new article'+(diff!==1?'s':'')+': '+newTickers.join(', ');
-        showToast(msg);
-        playNotifSound();
-      }
+      // News-channel sound on new articles (separate from UI/save toasts so
+      // users can mute one without the other in Settings → Sound Settings).
+      var diff=after-prevNewsCount;
+      var msg=diff+' new article'+(diff!==1?'s':'')+': '+newTickers.join(', ');
+      showToast(msg,'',{silent:true});
+      playSound('news');
       prevNewsCount=after;
       tks.forEach(function(t){prevNewsByTicker[t]=(liveNews[t]||[]).length});
     }

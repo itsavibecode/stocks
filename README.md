@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.7.38**
+**Current Version: v0.7.39**
 
 ---
 
 ## Changelog
+
+### v0.7.39 — 2026-05-05 — 🔊 Sound Settings — three independent channels
+- **Settings → Sound Settings** replaces the old "News Notifications" card. Three independent channels — News, UI/Save, Reminder — each with its own enabled toggle, sound picker, and volume slider (0–100%, saved to prefs as `prefs.sound.channels.<channel>.{enabled,sound,volume}`). A master mute toggle at the top silences everything regardless of per-channel state. All values save automatically on change; per-channel slider updates the live label as you drag and plays the test sound on release.
+- **Three more sound presets** added — `blip` (short low square tone, default for UI/Save), `swoosh` (descending sine, two-tone), `click` (barely-audible UI feedback). Together with the existing chime/ding/pop/bell that's seven options per channel.
+- **Volume slider per channel.** `SOUNDS.<name>(v)` now takes a 0–1 multiplier so each channel's slider position scales the gain independently — turn UI down to 20% but keep News at 80% if save toasts are noisier than article alerts.
+- **Toasts now play the UI channel by default;** news fetches play the News channel; ex-date/pay-date reminders play the Reminder channel. Calls that were producing two stacked sounds (e.g. `showToast(); playNotifSound();` on a reminder) now use `showToast(msg, '', {silent:true})` + `playSound('reminder')` so only the reminder tone fires.
+- **Migration from old prefs is automatic.** Existing `prefs.notifEnabled` / `prefs.soundMuted` / `prefs.soundChoice` are read once on first load by `_ensureSoundPrefs()` and seed the new `prefs.sound` structure with sensible defaults — News inherits the user's old single sound choice; UI gets `blip` at 35%; Reminder gets `bell` at 55%. Legacy fields stay in prefs for backwards-compat with older clients.
+- **Per-channel test button** previews the live slider value (so you can drag the volume to "5%" and click test before committing).
 
 ### v0.7.38 — 2026-05-05 — 🎯 Insights tab — dividend expansion ranking
 - **New "🎯 Insights" tab** between All and Settings. Ranks every dividend stock you own by how efficiently each one would close the gap to your annual dividend goal. Pure local computation — no extra API calls; reads `tks` / `sh` / `lots` / `DV` / `PR` and `prefs.dividendGoal` / `prefs.taxBracket`.
