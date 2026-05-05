@@ -1,10 +1,13 @@
 # Portfolio Command Center
 
-**Current Version: v0.7.31**
+**Current Version: v0.7.32**
 
 ---
 
 ## Changelog
+
+### v0.7.32 — 2026-05-05 — Auto-refresh SnapTrade on page load
+- **SnapTrade Brokers tab + "N connected accounts" line on the Settings card now populate automatically on every page load** (when a userSecret is stored). Previously `stApiState.accounts` reset to `[]` on each reload and only repopulated when the user clicked Refresh — which made the Brokers tab look broken right after a hard reload even though the SnapTrade-side connection was alive. Fix: fire-and-forget call to `snapTradeRefresh()` immediately after `loadFromCloud()` resolves, when `stApiState.userSecret` is present. Failures surface in the existing red error block on the Brokers tab + Settings card.
 
 ### v0.7.31 — 2026-05-05 — Real account delete (with lots) + per-card delete button
 - **Rename + Delete buttons on each account card on the Accounts tab.** Previously you had to bounce to Settings → Manage Accounts to do either, but Accounts is where you actually look at the data — so the controls live there now (along with the existing per-card sync badge and totals).

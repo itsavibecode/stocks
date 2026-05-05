@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Portfolio Command Center v0.7.31</title>
+<title>Portfolio Command Center v0.7.32</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -497,7 +497,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div>
         <div class="logo-title">Portfolio Command Center</div>
         <div class="logo-sub" id="hSub"></div>
-        <div class="logo-ver">v0.7.31</div>
+        <div class="logo-ver">v0.7.32</div>
       </div>
     </div>
     <div class="header-actions">
@@ -915,7 +915,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Portfolio Command Center v0.7.31 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Portfolio Command Center v0.7.32 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1002,7 +1002,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.31";
+var VERSION = "0.7.32";
 
 // ═════════════════════════════════════════════════
 // FIREBASE CONFIG — REPLACE WITH YOUR VALUES
@@ -1344,6 +1344,14 @@ if (firebaseReady) {
     updateAuthUI();
     if (user) {
       loadFromCloud().then(function(){
+        // Auto-refresh SnapTrade-side account list when a userSecret is present.
+        // Without this, the Brokers tab + SnapTrade card both show "0 connected"
+        // until you click Refresh manually, since stApiState.accounts resets to
+        // [] on every page load. Fire-and-forget — failures surface via the
+        // existing error block on the Brokers tab.
+        if (stApiState && stApiState.userSecret && typeof snapTradeRefresh === 'function') {
+          try { snapTradeRefresh(); } catch (e) { console.error('SnapTrade auto-refresh error:', e); }
+        }
         // Daily auto-sync runs after cloud load so prefs + userSecret are populated
         if (typeof maybeRunAutoSync === 'function') maybeRunAutoSync();
         // Record today's portfolio snapshot (once per day per signed-in session)
