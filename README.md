@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.39**
+**Current Version: v0.7.40**
 
 ---
 
 ## Changelog
+
+### v0.7.40 — 2026-05-06 — Header/ticker gap + Settings sync fix
+- **Gap between header and scrolling ticker eliminated.** Was ~2px on desktop, much wider on mobile when the header wraps into multiple rows (logo + clock + portfolio-value + annual-income + 4 market boxes + 3 toggles all wrapping). Two fixes: (1) `syncStickyTop` no longer adds a +2 buffer to the measured header height — the ticker now sticks flush at exactly `top:headerHeight`. (2) `syncStickyTop()` is called from `render()` so the sticky offset re-measures every time stat boxes / market tickers populate or wrap to new rows. Also fires from `sTab()` on tab switch so layout shifts there don't strand the ticker.
+- **Settings inputs re-populate from prefs on every open of the Settings tab.** If the auth callback / cloud sync completed *after* the page initially rendered the Settings inputs (common on mobile + slow networks), tax bracket and dividend goal could appear blank even though `prefs.taxBracket` / `prefs.dividendGoal` had synced to localStorage. `sTab('settings')` now calls `loadPrefUI()` on entry to refresh every Settings input from the latest prefs — opening the Settings tab is now the manual recovery path if values ever look out of sync.
 
 ### v0.7.39 — 2026-05-05 — 🔊 Sound Settings — three independent channels
 - **Settings → Sound Settings** replaces the old "News Notifications" card. Three independent channels — News, UI/Save, Reminder — each with its own enabled toggle, sound picker, and volume slider (0–100%, saved to prefs as `prefs.sound.channels.<channel>.{enabled,sound,volume}`). A master mute toggle at the top silences everything regardless of per-channel state. All values save automatically on change; per-channel slider updates the live label as you drag and plays the test sound on release.

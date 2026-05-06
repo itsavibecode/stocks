@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.39</title>
+<title>Stockfolio v0.7.40</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1104,7 +1104,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.39 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.40 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1191,7 +1191,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.39";
+var VERSION = "0.7.40";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2930,6 +2930,10 @@ function render(){
   renderPortfolioTicker();
   // Insights tab — recomputes ranking when portfolio / prices / DV change
   if(typeof renderInsights==='function') try{renderInsights()}catch(e){console.error('Insights render error:',e)}
+  // Re-sync sticky offsets after any DOM changes — header height can grow
+  // when stat boxes / market tickers populate, especially on mobile where
+  // they wrap onto multiple rows.
+  if(typeof syncStickyTop==='function') try{syncStickyTop()}catch(e){}
 
   // NEWS
   var q=(G('nQ').value||'').toLowerCase();
@@ -4279,7 +4283,20 @@ var BUILTIN_TICKERS={};
 try{var cdv=JSON.parse(localStorage.getItem('pf_dv_custom'));if(cdv){Object.keys(cdv).forEach(function(t){DV[t]=cdv[t]})}}catch(e){}
 
 
-function sTab(id){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active')});document.querySelector('.tab[data-tab="'+id+'"]').classList.add('active');G('content-'+id).classList.add('active')}
+function sTab(id){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active')});
+  document.querySelector('.tab[data-tab="'+id+'"]').classList.add('active');
+  G('content-'+id).classList.add('active');
+  // Re-populate Settings inputs from the latest prefs each time the tab
+  // opens. This catches cases where the user signs in, the cloud sync
+  // populates prefs, but the Settings inputs were rendered before sync
+  // completed (mobile + slow networks especially) — open Settings → all
+  // values now match cloud. Also re-syncs sticky-top in case header
+  // dimensions changed.
+  if(id==='settings' && typeof loadPrefUI==='function'){ try{loadPrefUI()}catch(e){} }
+  if(typeof syncStickyTop==='function') try{syncStickyTop()}catch(e){}
+}
 function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.style.display='';b.classList.add('active')}else{p.style.display='none';b.classList.remove('active')}}
 function cpRSS(){navigator.clipboard.writeText(gRSS()).then(function(){var b=G('cpB');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy XML'},2e3)})}
 function openMod(){
@@ -6404,7 +6421,10 @@ setInterval(tickLocalClock,1000);
 // thead sits behind the header (z-index 90 < 100) and looks "stuck behind."
 function syncStickyTop(){
   var h = document.querySelector('.header');
-  var hdrPx = h ? Math.max(60, Math.ceil(h.getBoundingClientRect().height) + 2) : 90;
+  // Drop the +2 buffer — was leaving a 2px gap that compounded on mobile
+  // when the header wrapped into multiple rows. Use the exact measured
+  // height so the ticker sticks flush with the header's bottom edge.
+  var hdrPx = h ? Math.max(60, Math.ceil(h.getBoundingClientRect().height)) : 90;
   document.documentElement.style.setProperty('--sticky-top', hdrPx+'px');
   // Ticker (when visible) stacks below header — bump --thead-top accordingly
   // so table headers don't slide under the ticker when scrolling.
