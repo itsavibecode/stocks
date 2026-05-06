@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.43**
+**Current Version: v0.7.44**
 
 ---
 
 ## Changelog
+
+### v0.7.44 — 2026-05-06 — Header/ticker flush stack
+- **Header/ticker gap (still visible after v0.7.40) closed for real.** Two compounding issues: (1) `Math.ceil(getBoundingClientRect().height)` rounded sub-pixel header heights UP, pushing the ticker ~0.5px below where the header actually rendered. Switched to `offsetHeight` which the browser snaps to the integer device-pixel grid, matching exactly where the next element starts in flow. (2) Even with perfect measurement, browser sub-pixel rendering can vary between paint frames, so the ticker now uses `top: calc(var(--sticky-top) - 1px)` and `margin-top:-1px` to force a 1px overlap with the header bottom. Better to overlap by a hair than leave any gap visible.
 
 ### v0.7.43 — 2026-05-06 — SnapTrade ignore list
 - **Per-user SnapTrade ticker ignore list** in Settings → Connect Brokerages. Comma- or space-separated, case-insensitive. Tickers in the list are filtered out of `_stBuildDiffForAccount` before the diff modal renders — so cash-account pseudo-tickers (FCASH, SPAXX, CASH, etc.) and any other non-stock entries SnapTrade reports never prompt you to sync them again. Stored in `prefs.snaptradeIgnoreTickers` (Firestore-synced across devices). Same list also suppresses the cross-account duplicate warning since ignored tickers don't generate ADD rows.

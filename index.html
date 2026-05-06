@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.43</title>
+<title>Stockfolio v0.7.44</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -148,10 +148,13 @@ input,button,select{font-family:inherit}
    Sticky-stacked under the header — top:var(--sticky-top) so it sits
    exactly below the header, and the table thead's stick-top is bumped to
    --thead-top to clear both. */
-.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:sticky;top:var(--sticky-top,90px);z-index:90;height:32px;display:flex;align-items:center;margin-top:0;border-top:0}
-/* Margin reset to neutralize any default gap between the sticky header
-   and this sticky ticker — they should sit flush. */
-header.header + .tk-ticker{margin-top:0}
+/* Ticker sticks 1px ABOVE its measured target — guarantees a tiny overlap
+   with the header bottom edge instead of risking a 1px gap from sub-pixel
+   browser rendering. Negative margin pulls it up in normal flow too, so
+   the visual is consistent both at rest (no scroll) and stuck (scrolled). */
+.tk-ticker{background:var(--card);border-bottom:1px solid var(--border);overflow:hidden;white-space:nowrap;position:sticky;top:calc(var(--sticky-top,90px) - 1px);z-index:90;height:32px;display:flex;align-items:center;margin-top:-1px;border-top:0}
+/* Margin reset on the header→ticker boundary already handled by the
+   ticker's own margin-top:-1px above (defensive overlap). */
 .tk-ticker:before,.tk-ticker:after{content:"";position:absolute;top:0;bottom:0;width:30px;z-index:2;pointer-events:none}
 .tk-ticker:before{left:0;background:linear-gradient(90deg,var(--card),transparent)}
 .tk-ticker:after{right:0;background:linear-gradient(-90deg,var(--card),transparent)}
@@ -1129,7 +1132,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.43 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.44 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1216,7 +1219,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.43";
+var VERSION = "0.7.44";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -6708,15 +6711,19 @@ setInterval(tickLocalClock,1000);
 // thead sits behind the header (z-index 90 < 100) and looks "stuck behind."
 function syncStickyTop(){
   var h = document.querySelector('.header');
-  // Drop the +2 buffer — was leaving a 2px gap that compounded on mobile
-  // when the header wrapped into multiple rows. Use the exact measured
-  // height so the ticker sticks flush with the header's bottom edge.
-  var hdrPx = h ? Math.max(60, Math.ceil(h.getBoundingClientRect().height)) : 90;
+  // Use offsetHeight — integer pixels, includes padding + border, matches
+  // exactly where the next element starts in flow. Math.ceil on
+  // getBoundingClientRect().height was rounding sub-pixel heights UP, which
+  // pushed the ticker slightly below the header's actual visible bottom and
+  // showed a thin "gap" where tab content peeked through during scroll.
+  // offsetHeight is browser-rounded to the device's actual pixel grid, so
+  // there's no sub-pixel mismatch.
+  var hdrPx = h ? Math.max(60, h.offsetHeight) : 90;
   document.documentElement.style.setProperty('--sticky-top', hdrPx+'px');
   // Ticker (when visible) stacks below header — bump --thead-top accordingly
   // so table headers don't slide under the ticker when scrolling.
   var tk = document.getElementById('pfTicker');
-  var tkPx = (tk && tk.style.display && tk.style.display !== 'none') ? Math.ceil(tk.getBoundingClientRect().height) : 0;
+  var tkPx = (tk && tk.style.display && tk.style.display !== 'none') ? tk.offsetHeight : 0;
   document.documentElement.style.setProperty('--ticker-h', tkPx+'px');
   document.documentElement.style.setProperty('--thead-top', (hdrPx + tkPx)+'px');
 }
