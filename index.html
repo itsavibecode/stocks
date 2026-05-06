@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.45</title>
+<title>Stockfolio v0.7.46</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -103,11 +103,28 @@ input,button,select{font-family:inherit}
 .ins-summary-item{flex:1;min-width:130px}
 .ins-summary-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
 .ins-summary-val{font-size:18px;font-weight:700;font-family:var(--mono);margin-top:2px}
+/* Goal Status block — wider than a normal stat (since it has a progress
+   bar inside) and renders inline with the other summary items. */
+.ins-summary-goal{flex:2;min-width:230px;display:flex;flex-direction:column;gap:6px}
+.ins-goal-headline{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ins-goal-amounts{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text)}
+.ins-goal-amounts .ins-goal-current{color:var(--green)}
+.ins-goal-amounts .ins-goal-target{color:var(--muted)}
+.ins-goal-pct{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent2)}
+.ins-goal-bar{height:8px;background:var(--card3);border-radius:4px;overflow:hidden}
+.ins-goal-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--accent2));border-radius:4px;transition:width .25s}
+.ins-goal-fill.reached{background:linear-gradient(90deg,var(--green),var(--green))}
+.ins-goal-foot{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.ins-goal-foot strong{color:var(--text2);font-weight:600}
+.ins-goal-empty{display:flex;flex-direction:column;justify-content:center;height:100%;gap:4px}
+.ins-goal-empty-label{font-size:11px;color:var(--muted);line-height:1.45}
+.ins-goal-empty-cta{align-self:flex-start;background:var(--accent);color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.ins-goal-empty-cta:hover{opacity:.85}
 /* Insights ranking card. Grid columns:
-   rank · ticker · yield · current cashflow · reason · suggested-add · score
-   "current cashflow" shows what this ticker pays today in annual divs +
-   a small monthly-average sub-line so users can compare at-a-glance which
-   positions are pulling weight vs. which are dead weight relative to size. */
+   rank · ticker · yield · annual income · reason · suggested-add · score
+   "Annual income" = your dividend $ from this position (shares × per-share
+   div). NOT to be confused with the company's operating cash flow (that's
+   in the expanded detail row). */
 .ins-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;display:grid;grid-template-columns:34px 40px 50px 95px 1fr 100px 78px;gap:10px;align-items:center}
 .ins-card:hover{border-color:var(--accent)}
 .ins-card.expanded{cursor:default}
@@ -1135,7 +1152,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.45 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.46 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1222,7 +1239,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.45";
+var VERSION = "0.7.46";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -4050,12 +4067,31 @@ function renderInsights(){
     body.innerHTML = '<div class="muted" style="text-align:center;padding:30px;font-size:12.5px">No dividend stocks match the current filters. Add dividend tickers to your portfolio (or relax the filters above) to see expansion suggestions.</div>';
     return;
   }
-  // Summary stats up top
-  var goalText = data.goalAmt>0 ? fm(data.goalGap)+' gap to '+fm(data.goalAmt)+' target' : 'Set a goal in Settings → Annual Dividend Goal to see goal-aware ranking';
-  var goalCls = data.goalAmt>0 ? (data.goalGap===0?'green':'accent') : 'muted';
+  // Summary stats up top — Goal Status gets its own wider block with an
+  // actual progress bar instead of a stat-style line of text.
   var html = '<div class="ins-summary">';
   html += '<div class="ins-summary-item"><div class="ins-summary-label">Current annual</div><div class="ins-summary-val" style="color:var(--green)">'+fm(data.currentAnnualIncome)+'</div></div>';
-  html += '<div class="ins-summary-item"><div class="ins-summary-label">Goal status</div><div class="ins-summary-val" style="color:var(--'+goalCls+')">'+goalText+'</div></div>';
+  // Goal Status — progress bar with current/target + % + "to go" line, or
+  // a CTA when no goal is set.
+  html += '<div class="ins-summary-item ins-summary-goal">';
+  html += '<div class="ins-summary-label">Goal Progress</div>';
+  if (data.goalAmt > 0) {
+    var pct = Math.min(100, (data.currentAnnualIncome / data.goalAmt) * 100);
+    var reached = data.goalGap === 0;
+    var fillCls = reached ? 'ins-goal-fill reached' : 'ins-goal-fill';
+    html += '<div class="ins-goal-headline">';
+    html += '<span class="ins-goal-amounts"><span class="ins-goal-current">'+fm(data.currentAnnualIncome)+'</span> <span class="ins-goal-target">/ '+fm(data.goalAmt)+'</span></span>';
+    html += '<span class="ins-goal-pct">'+pct.toFixed(1)+'%</span>';
+    html += '</div>';
+    html += '<div class="ins-goal-bar"><div class="'+fillCls+'" style="width:'+pct.toFixed(1)+'%"></div></div>';
+    html += '<div class="ins-goal-foot">' + (reached ? '🎉 <strong>Goal reached</strong> — every additional dividend is gravy.' : '<strong>'+fm(data.goalGap)+'</strong> remaining · ranking below shows how to close it fastest') + '</div>';
+  } else {
+    html += '<div class="ins-goal-empty">';
+    html += '<span class="ins-goal-empty-label">No goal set yet — set one to see how each stock contributes to closing the gap.</span>';
+    html += '<button class="ins-goal-empty-cta" onclick="sTab(\'settings\');setTimeout(function(){var el=document.getElementById(\'sDivGoal\');if(el){el.scrollIntoView({block:\'center\'});el.focus()}},80)">+ Set Annual Dividend Goal</button>';
+    html += '</div>';
+  }
+  html += '</div>';
   html += '<div class="ins-summary-item"><div class="ins-summary-label">Stocks ranked</div><div class="ins-summary-val">'+rows.length+'</div></div>';
   html += '<div class="ins-summary-item"><div class="ins-summary-label">Avg score</div><div class="ins-summary-val accent">'+(rows.reduce(function(s,r){return s+r.score},0)/rows.length).toFixed(0)+'</div></div>';
   html += '</div>';
@@ -4066,7 +4102,7 @@ function renderInsights(){
   html += '<span style="text-align:center">#</span>';
   html += '<span>Ticker</span>';
   html += '<span style="text-align:right">Yield</span>';
-  html += '<span style="text-align:right">Current Cashflow</span>';
+  html += '<span style="text-align:right">Annual Income</span>';
   html += '<span>Why</span>';
   html += '<span style="text-align:right">Suggested Add</span>';
   html += '<span style="text-align:right">Score</span>';

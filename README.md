@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.45**
+**Current Version: v0.7.46**
 
 ---
 
 ## Changelog
+
+### v0.7.46 — 2026-05-06 — Insights label cleanup + Goal Progress bar
+- **Renamed Insights column "Current Cashflow" → "Annual Income".** That column shows your dividend dollars from each position (`shares × per-share div`) — confusing it with "cashflow" overloaded the term, since real cashflow (operating cash flow, the company-level metric) lives in the expanded detail row beneath each card. Annual Income is unambiguous.
+- **Goal Status redesigned as a real progress bar.** Was a single line of text reading "$3,070 gap to $8,100 target" — readable but ugly and underused the slot. Now: current/target amounts on top with the % progress on the right, a horizontal gradient progress bar below it, and a footer line ("$3,070 remaining · ranking below shows how to close it fastest" or 🎉 reached). When no goal is set, an inline CTA button jumps to Settings → Annual Dividend Goal and focuses the input.
 
 ### v0.7.45 — 2026-05-06 — Ticker/thead flush stack (next layer down)
 - **Same gap fix applied to the ticker→thead boundary.** v0.7.44 closed header→ticker; the ticker→thead seam still showed a 1–2px gap at certain scroll positions because the ticker's `margin-top:-1px` overlap meant its actual visual bottom was 1px above where `--thead-top` was computed to start. Two fixes mirror the header→ticker pattern: (1) `syncStickyTop` now sets `--thead-top` to `headerHeight + tickerHeight - 1` (subtracting the ticker's overlap shift). (2) Table thead's CSS uses `top: calc(var(--thead-top) - 1px)` for an additional defensive 1px overlap with the ticker bottom. The whole sticky stack — header, ticker, thead — now overlaps adjacent rows by 1px each so no sub-pixel rendering drift can show a gap.
