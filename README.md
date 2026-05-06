@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.40**
+**Current Version: v0.7.41**
 
 ---
 
 ## Changelog
+
+### v0.7.41 — 2026-05-06 — Insights: current cashflow column
+- **New "Current Cashflow" column** on each Insights ranking card. Shows annual dividend income from the position (`shares × per-share annual div`) plus a smaller "$X/mo avg" sub-line so you can compare at-a-glance which positions pull weight in cashflow vs. which are dead weight relative to their size. Hover for the full math (shares × per-share = total). Stocks with zero shares show "—".
+- **Column header row** added above the cards labeling each column (rank / ticker / yield / cashflow / why / suggested add / score). Helps when the rows blur together. Header collapses on mobile (≤760px) along with yield/why/suggested-add columns; cashflow + score stay visible on small screens since they're the most important comparison metrics.
+- **Mobile layout polish** for the Insights cards — cashflow is left-aligned on mobile (was right-aligned on desktop) so it sits naturally next to the ticker symbol.
 
 ### v0.7.40 — 2026-05-06 — Header/ticker gap + Settings sync fix
 - **Gap between header and scrolling ticker eliminated.** Was ~2px on desktop, much wider on mobile when the header wraps into multiple rows (logo + clock + portfolio-value + annual-income + 4 market boxes + 3 toggles all wrapping). Two fixes: (1) `syncStickyTop` no longer adds a +2 buffer to the measured header height — the ticker now sticks flush at exactly `top:headerHeight`. (2) `syncStickyTop()` is called from `render()` so the sticky offset re-measures every time stat boxes / market tickers populate or wrap to new rows. Also fires from `sTab()` on tab switch so layout shifts there don't strand the ticker.
