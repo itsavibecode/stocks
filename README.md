@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.42**
+**Current Version: v0.7.43**
 
 ---
 
 ## Changelog
+
+### v0.7.43 — 2026-05-06 — SnapTrade ignore list
+- **Per-user SnapTrade ticker ignore list** in Settings → Connect Brokerages. Comma- or space-separated, case-insensitive. Tickers in the list are filtered out of `_stBuildDiffForAccount` before the diff modal renders — so cash-account pseudo-tickers (FCASH, SPAXX, CASH, etc.) and any other non-stock entries SnapTrade reports never prompt you to sync them again. Stored in `prefs.snaptradeIgnoreTickers` (Firestore-synced across devices). Same list also suppresses the cross-account duplicate warning since ignored tickers don't generate ADD rows.
 
 ### v0.7.42 — 2026-05-06 — Company cash flow + shared fundamentals cache
 - **Company-level cash flow integrated into Insights.** Each card's expanded detail now shows operating cash flow, free cash flow, dividends paid, and the **OCF/dividends coverage ratio** for the most recent annual period — color-coded green (≥2× comfortable) / yellow (1–2× tight) / red (<1× at risk). Sourced from AlphaVantage's `CASH_FLOW` endpoint.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.42</title>
+<title>Stockfolio v0.7.43</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -876,6 +876,18 @@ body.text-xl .sc .scv{font-size:24px}
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Connect Brokerages (SnapTrade)</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Sync positions from your real brokerages. Free tier supports up to 5 connected accounts. Your connection authenticates through SnapTrade — we never see your brokerage password.</p>
         <div id="snaptradeCardBody"></div>
+        <!-- Ignore list — tickers SnapTrade reports that we should never
+             surface in the sync diff. Common case: FCASH and similar cash-
+             account pseudo-tickers. Stored in prefs.snaptradeIgnoreTickers
+             (Firestore-synced). Comma- or space-separated, case-insensitive. -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:11.5px;font-weight:600">🚫 Ignore tickers from sync</span>
+            <span class="muted" style="font-size:10px">comma or space-separated, case-insensitive</span>
+          </div>
+          <input class="mi" type="text" id="sStIgnore" placeholder="e.g. FCASH, SPAXX, CASH" oninput="saveSnapTradeIgnore()" onchange="saveSnapTradeIgnore()" style="margin:0;width:100%;font-size:11.5px;padding:7px 10px">
+          <p style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5">Use this for cash positions or pseudo-tickers SnapTrade reports that you don't want to track as holdings. Listed tickers won't appear in the sync diff modal — no more repeated prompts.</p>
+        </div>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
@@ -1117,7 +1129,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.42 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.43 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1204,7 +1216,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.42";
+var VERSION = "0.7.43";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1369,6 +1381,20 @@ function saveDivGoal(){
 function loadDivGoalUI(){
   var p=loadPrefs();
   var el=G('sDivGoal');if(el)el.value=p.dividendGoal||'';
+}
+// Persist the SnapTrade ticker ignore-list into prefs. Stored as the raw
+// user-entered string (so we can roundtrip whatever they typed back into
+// the input on next load); _isSnapTradeIgnored() handles parsing.
+function saveSnapTradeIgnore(){
+  var p = loadPrefs();
+  var el = G('sStIgnore');
+  p.snaptradeIgnoreTickers = el ? el.value.trim() : '';
+  savePrefs(p);
+}
+function loadSnapTradeIgnoreUI(){
+  var p = loadPrefs();
+  var el = G('sStIgnore');
+  if(el) el.value = p.snaptradeIgnoreTickers || '';
 }
 function saveTaxPrefs(){
   var p=loadPrefs();
@@ -5092,6 +5118,7 @@ function loadPrefUI(){
   if(typeof loadReminderPrefsUI==='function')loadReminderPrefsUI();
   if(typeof loadDivGoalUI==='function')loadDivGoalUI();
   if(typeof loadTaxPrefsUI==='function')loadTaxPrefsUI();
+  if(typeof loadSnapTradeIgnoreUI==='function')loadSnapTradeIgnoreUI();
   if(typeof renderSoundChannels==='function')renderSoundChannels();
 }
 
@@ -5923,12 +5950,28 @@ function _stAcctAutoName(acct){
   if(inst&&name)return inst+' - '+name;
   return inst||name||('Account '+(acct.id||'').slice(0,6));
 }
+// Returns true if a ticker is on the user's SnapTrade ignore list.
+// Stored as a comma- or whitespace-separated string in prefs.snaptradeIgnoreTickers
+// for easy editing in Settings; matched case-insensitively after trim.
+function _isSnapTradeIgnored(ticker){
+  if(!ticker) return false;
+  var prefs = loadPrefs();
+  var raw = prefs.snaptradeIgnoreTickers || '';
+  if(!raw) return false;
+  var list = String(raw).split(/[\s,]+/).map(function(s){return s.trim().toUpperCase()}).filter(Boolean);
+  return list.indexOf(String(ticker).toUpperCase()) >= 0;
+}
 function _stBuildDiffForAccount(acct,mappedAccountName){
   var rows=[];
   (acct.positions||[]).forEach(function(pos){
     var tk=_stExtractTicker(pos);
     var snapShares=pos.units||pos.quantity||0;
     if(!tk||snapShares<=0)return;
+    // Blacklist check — skip tickers the user has flagged in Settings →
+    // SnapTrade Ignore List (e.g. FCASH cash positions, or any non-stock
+    // pseudo-ticker SnapTrade reports). They never appear in the diff
+    // modal, so the user isn't repeatedly prompted on every sync.
+    if(_isSnapTradeIgnored(tk)) return;
     var existingLots=(lots[tk]||[]).filter(function(l){return l.b===mappedAccountName});
     var snapPrice=pos.price||0;
     // Duplicate-detection: when proposing to ADD to a new account, check if
