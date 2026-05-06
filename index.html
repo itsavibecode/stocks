@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.47</title>
+<title>Stockfolio v0.7.48</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -746,7 +746,7 @@ body.text-xl .sc .scv{font-size:24px}
     <div class="table-wrap dt"><table id="tN"><thead><tr>
       <th data-col="ticker" onclick="ds('tN','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="date" onclick="ds('tN','date')" class="sorted">Date <span class="sa">&#9660;</span></th>
-      <th data-col="price" onclick="ds('tN','price')">Price <span class="sa">&#9660;</span></th>
+      <th data-col="price" onclick="ds('tN','price')">Current Price <span class="sa">&#9660;</span></th>
       <th data-col="title" onclick="ds('tN','title')">Headline <span class="sa">&#9660;</span></th>
       <th data-col="source" onclick="ds('tN','source')">Source <span class="sa">&#9660;</span></th>
     </tr></thead><tbody id="bN"></tbody></table></div>
@@ -766,7 +766,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
     <div class="table-wrap dt"><table id="tD"><thead><tr>
       <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
-      <th data-col="price" onclick="ds('tD','price')">Price <span class="sa">&#9660;</span></th>
+      <th data-col="price" onclick="ds('tD','price')">Current Price <span class="sa">&#9660;</span></th>
       <th data-col="yield" onclick="ds('tD','yield')">Yield <span class="sa">&#9660;</span></th>
       <th data-col="annualDiv" onclick="ds('tD','annualDiv')">Annual <span class="sa">&#9660;</span></th>
       <th data-col="nextPayout" onclick="ds('tD','nextPayout')">Next Pay <span class="sa">&#9660;</span></th>
@@ -791,7 +791,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
     <div class="table-wrap dt"><table id="tG"><thead><tr>
       <th data-col="ticker" onclick="ds('tG','ticker')">Ticker <span class="sa">&#9660;</span></th>
-      <th data-col="price" onclick="ds('tG','price')">Price <span class="sa">&#9660;</span></th>
+      <th data-col="price" onclick="ds('tG','price')">Current Price <span class="sa">&#9660;</span></th>
       <th data-col="sector" onclick="ds('tG','sector')">Sector <span class="sa">&#9660;</span></th>
       <th data-col="shares" onclick="ds('tG','shares')">Shares <span class="sa">&#9660;</span></th>
       <th data-col="broker" onclick="ds('tG','broker')">Broker <span class="sa">&#9660;</span></th>
@@ -841,7 +841,7 @@ body.text-xl .sc .scv{font-size:24px}
     <div id="snapshotPanel"></div>
     <div class="table-wrap dt"><table id="tA"><thead><tr>
       <th data-col="ticker" onclick="ds('tA','ticker')">Ticker <span class="sa">&#9660;</span></th>
-      <th data-col="price" onclick="ds('tA','price')">Price <span class="sa">&#9660;</span></th>
+      <th data-col="price" onclick="ds('tA','price')">Current Price <span class="sa">&#9660;</span></th>
       <th data-col="sector" onclick="ds('tA','sector')">Sector <span class="sa">&#9660;</span></th>
       <th data-col="dividend" onclick="ds('tA','dividend')">Div <span class="sa">&#9660;</span></th>
       <th data-col="yield" onclick="ds('tA','yield')">Yield <span class="sa">&#9660;</span></th>
@@ -1152,7 +1152,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.47 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.48 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1239,7 +1239,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.47";
+var VERSION = "0.7.48";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2879,13 +2879,27 @@ function eBText(t,el,cur){
 // PANEL STATE — tracks which panels are open so render() can restore them
 // ═════════════════════════════════════════════════
 var openDesktopPanel = null; // ID of open .xr row e.g. "d_AAPL" or "g_NET"
+// News rows use index-based IDs (n0, n1, ...) which shift whenever a new
+// article arrives or prices refresh and trigger a re-render. We track the
+// stable key (ticker|title) of the open news row separately so restore can
+// find it again even if its index changed.
+var _openNewsStableKey = null;
 var openMobileTicker = null; // ticker string for open mobile card
 var openMobileTab = null;    // which tab the mobile card is in: 'div','growth','all'
 
 function tog(id){
   var r=document.getElementById(id);if(!r)return;
-  if(r.classList.contains('open')){r.classList.remove('open');openDesktopPanel=null;_clearNewsReadTimer(id)}
-  else{r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open');_clearNewsReadTimer(x.id)});r.classList.add('open');openDesktopPanel=id;_armNewsReadTimer(id, r)}
+  if(r.classList.contains('open')){r.classList.remove('open');openDesktopPanel=null;_openNewsStableKey=null;_clearNewsReadTimer(id)}
+  else{
+    r.closest('tbody').querySelectorAll('.xr.open').forEach(function(x){x.classList.remove('open');_clearNewsReadTimer(x.id)});
+    r.classList.add('open');
+    openDesktopPanel=id;
+    // Capture the stable key from the .xr row's data attribute (set by the
+    // news renderer). Restore-after-render falls back to this when the
+    // index-based ID no longer matches the same article.
+    _openNewsStableKey = r.dataset.stableKey || null;
+    _armNewsReadTimer(id, r);
+  }
 }
 // News read-tracking: when a news-row expand panel is open for ≥1.5s, mark
 // the corresponding article as read in prefs.newsRead (keyed by ticker|title
@@ -2962,10 +2976,22 @@ function togM(el){
   }
 }
 function restoreOpenPanels(){
-  // Restore desktop expand row
+  // Restore desktop expand row. For most tabs the rid is stable (d_AAPL,
+  // a_AAPL, etc) and a direct ID lookup works. For NEWS rows, the rid is
+  // index-based (n0, n1) and shifts on every re-render, so we fall back
+  // to looking up by data-stable-key (ticker|title) when the cached ID
+  // no longer points at the same article — this is what stops news rows
+  // from snapping shut every time prices refresh in the background.
   if(openDesktopPanel){
     var r=document.getElementById(openDesktopPanel);
-    if(r)r.classList.add('open');
+    if(r){ r.classList.add('open'); }
+    else if(_openNewsStableKey){
+      var found = document.querySelector('[data-stable-key="'+_openNewsStableKey.replace(/"/g,'\\"')+'"]');
+      if(found){
+        found.classList.add('open');
+        openDesktopPanel = found.id; // refresh the cached id to the new index
+      }
+    }
   }
   // Restore mobile card
   if(openMobileTicker&&openMobileTab){
@@ -3034,7 +3060,7 @@ function render(){
     if(ampm){if(ampm.toUpperCase()==='PM'&&h!==12)h+=12;if(ampm.toUpperCase()==='AM'&&h===12)h=0}
     return new Date(d+'T'+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':00').getTime();
   }
-  var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline share-btn" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share</button></div></td></tr>'});
+  var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'" data-stable-key="'+_newsKey(n.tk,n.t).replace(/"/g,'&quot;')+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline share-btn" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share</button></div></td></tr>'});
   G('bN').innerHTML=h;
   var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
   G('mN').innerHTML=mc;
@@ -3068,7 +3094,7 @@ function render(){
     h+='<span class="muted" style="font-size:9.5px">(global toggle in Settings)</span></div>';
     h+=taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></td></tr>'});
   G('bD').innerHTML=h;
-  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="info-tag"><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span><span class="info-tip">'+(RATING_INFO[d.rt]||rb(d.rt))+'</span></span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
+  mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="info-tag"><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span><span class="info-tip">'+(RATING_INFO[d.rt]||rb(d.rt))+'</span></span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Current Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mD').innerHTML=mc;
 
   // GROWTH
@@ -6687,7 +6713,7 @@ function renderBrokersTab(){
     if(bal!==null)html+='<div class="broker-bal">'+fm(bal)+'</div>';
     html+='</div>';
     if(positions.length>0){
-      html+='<table class="broker-pos"><thead><tr><th>Ticker</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead><tbody>';
+      html+='<table class="broker-pos"><thead><tr><th>Ticker</th><th>Shares</th><th>Current Price</th><th>Value</th></tr></thead><tbody>';
       positions.forEach(function(p){
         var sym='?';
         if(p.symbol&&p.symbol.symbol&&p.symbol.symbol.symbol)sym=p.symbol.symbol.symbol;

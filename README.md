@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.47**
+**Current Version: v0.7.48**
 
 ---
 
 ## Changelog
+
+### v0.7.48 — 2026-05-06 — News rows persist + Current Price column rename
+- **News-row expansion now survives re-renders.** News uses index-based row IDs (n0, n1…) which shift whenever a new article arrives or prices update — so an open article would snap shut on every background refresh, same family of bug as v0.7.47's Insights fix. Each news `.xr` row now carries a `data-stable-key="<ticker>|<title>"` attribute. `tog()` captures the key when opening; `restoreOpenPanels()` falls back to a stable-key DOM lookup when the cached row ID no longer matches (and refreshes the cached ID to the new index).
+- **"Price" columns renamed to "Current Price"** across News, Dividends, Growth, All tabs (desktop tables), the Brokers-tab positions table, and the dividend mobile-card label. Disambiguates from historical price columns elsewhere (Sells panel, DRIP history) which keep their plain "Price" header since those are *transaction-time* prices, not current.
 
 ### v0.7.47 — 2026-05-06 — Insights cards stay open during auto-warm
 - **Expanded Insights cards no longer snap shut** when the fundamentals auto-warm fires off Firestore reads in the background (~20–30s on first tab open). Two fixes: (1) tracks expanded card state in a `_expandedInsightCards` set updated by `toggleInsightCard()` and re-applied after every `renderInsights()` HTML rebuild; (2) added `renderInsightsDebounced()` — auto-warm fetch resolves and the periodic refresh-progress paints now coalesce into one repaint per ~250ms instead of ~73 thrashes during a typical portfolio's load. Click a card during a refresh; it stays open. Final post-refresh paint stays direct (not debounced) so the completed state appears immediately.
