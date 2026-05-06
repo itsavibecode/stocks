@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.41</title>
+<title>Stockfolio v0.7.42</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -855,6 +855,7 @@ body.text-xl .sc .scv{font-size:24px}
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insTaxOnly" onchange="renderInsights()"> Tax-advantaged only</label>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insHideTop" onchange="renderInsights()" checked> Hide already-large positions (&gt;15% of portfolio)</label>
+        <button class="btn btn-outline" onclick="refreshAllFundamentals(true)" style="font-size:10.5px;padding:5px 10px" title="Re-fetch operating cash flow + dividend coverage from AlphaVantage. Throttles to ~1/13s to stay under the free-tier rate limit. Results write to a shared Firestore cache so future hits (you on mobile, you tomorrow) don't re-fetch.">↻ Refresh fundamentals</button>
       </div>
     </div>
     <div id="insightsBody"></div>
@@ -1116,7 +1117,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.41 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.42 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1203,7 +1204,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.41";
+var VERSION = "0.7.42";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1809,6 +1810,17 @@ var FALLBACK_PR={NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57,MSFT:4
 var livePrices = {};
 // Day-change % from Finnhub (when available). Used to color price cells red/green.
 var liveChanges = {};
+// Fundamentals cache — keyed by ticker. Each entry: { ocf, fcf, divPaid,
+// coverage, fetchedAt, period, source }. Sourced from the SHARED Firestore
+// /fundamentals/{ticker} collection so any user's fetch benefits everyone
+// (cuts AlphaVantage API hits especially on widely-held tickers like SCHD,
+// AAPL, MSFT). Browser also caches in localStorage 'pf_fund' for instant
+// boot. Values stale after 90 days (~1 quarter); a refresh writes back to
+// the shared collection. See firestore.rules for the field-allowlist that
+// keeps user portfolio data from leaking into this collection.
+var FUND = {};
+var FUND_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+try { var _fc = localStorage.getItem('pf_fund'); if(_fc) FUND = JSON.parse(_fc); } catch(e){}
 // PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
 var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
 var pricesLastFetched = 0;
@@ -3827,6 +3839,31 @@ function _insRatingPts(rt){
   if(rt && INS_RATING_PTS[rt]!=null) return INS_RATING_PTS[rt];
   return 50; // unknown rating → middle
 }
+// Convert a dividend coverage ratio (operating cash flow / dividends paid)
+// to a 0–100 safety score. <1× is dangerous (paying dividends out of debt
+// or reserves), 1–2× is tight, 2–4× is comfortable, >4× is rock-solid.
+function _insCoveragePts(cov){
+  if(cov == null || cov <= 0) return null; // unknown — caller falls back to rating-only
+  if(cov < 0.5) return 5;
+  if(cov < 1) return 20;
+  if(cov < 1.5) return 45;
+  if(cov < 2) return 65;
+  if(cov < 3) return 80;
+  if(cov < 5) return 92;
+  return 100;
+}
+// Combined Payout Safety score — blends rating (60%) with cash flow coverage
+// (40%) when fundamentals are available. Falls back to pure rating when we
+// don't have CF data yet (e.g. AlphaVantage key not set, or first run before
+// the shared /fundamentals/ cache fills).
+function _insSafetyPts(ticker, rating){
+  var ratingPts = _insRatingPts(rating);
+  var cf = FUND[ticker];
+  if(!cf || typeof cf.coverage !== 'number') return ratingPts;
+  var covPts = _insCoveragePts(cf.coverage);
+  if(covPts == null) return ratingPts;
+  return Math.round(ratingPts * 0.6 + covPts * 0.4);
+}
 // Tax score: prefer qualified dividends (lower LT cap-gains rate) over
 // ordinary income (REIT, foreign, K-1). Uses the user's bracket if set;
 // otherwise treats qualified as "preferred" with a flat bonus.
@@ -3926,7 +3963,9 @@ function buildInsightsRows(){
     var yieldPct = d.y||0;
     var rating = d.rt||'';
     var yPts = _insYieldPts(yieldPct);
-    var sPts = _insRatingPts(rating);
+    // Safety blends rating (60%) with cash flow coverage (40%) when CF data
+    // is available — catches "rated Aristocrat but coverage now < 1×" cases.
+    var sPts = _insSafetyPts(t, rating);
     var tPts = _insTaxPts(t, prefs);
     var secPts = _insSectorPts(t, sectorTotals, totalValue);
     var iPts = _insImpactPts(t, maxYieldPer1k);
@@ -3959,7 +3998,11 @@ function buildInsightsRows(){
       yPts: yPts, sPts: sPts, tPts: tPts, secPts: secPts, iPts: iPts,
       addBudget: addBudget, addShares: addShares, addAnnualGain: addAnnualGain,
       goalGap: goalGap, goalAmt: goalAmt, currentAnnualIncome: currentAnnualIncome,
-      reason: reasonStr
+      reason: reasonStr,
+      // Company-level cash flow + dividend coverage — sourced from the
+      // shared /fundamentals/ cache, undefined if fundamentals haven't been
+      // fetched yet for this ticker. Coverage = OCF / dividends paid.
+      cf: FUND[t] || null
     });
   });
   rows.sort(function(a,b){return b.score-a.score});
@@ -4019,9 +4062,15 @@ function renderInsights(){
     // Detail row (revealed on click)
     html += '<div class="ins-detail">';
     html += '<div class="ins-comp-grid">';
+    // Safety bar label includes coverage when we have CF data so users can
+    // see when a "Strong"-rated stock has weak coverage (rating + actual = 60/40 blend).
+    var safetyLabel = 'Payout safety ('+(r.rating||'—')+')';
+    if(r.cf && r.cf.coverage > 0){
+      safetyLabel += ' · '+r.cf.coverage.toFixed(1)+'× cov';
+    }
     var bars = [
       ['Yield ('+r.yield.toFixed(2)+'%)', r.yPts, 'var(--accent2)'],
-      ['Payout safety ('+(r.rating||'—')+')', r.sPts, 'var(--green)'],
+      [safetyLabel, r.sPts, 'var(--green)'],
       ['Tax efficiency', r.tPts, 'var(--purple)'],
       ['Sector diversification ('+r.sector+')', r.secPts, 'var(--yellow)'],
       ['Goal impact ($/$1k)', r.iPts, 'var(--accent)']
@@ -4041,6 +4090,17 @@ function renderInsights(){
     html += '<div class="ins-detail-text">';
     html += posDescr+'. ';
     html += 'Adding ~<strong>'+fmSh(Math.round(r.addShares))+' shares</strong> at the current '+fm(r.price)+'/share ('+fm(r.addBudget)+' total) would generate an additional <strong style="color:var(--green)">'+fm(r.addAnnualGain)+'/year</strong>.'+goalLine;
+    // Company cash flow line — only shown when we have data. Format dollars
+    // in millions for readability (most large caps report in thousands;
+    // AlphaVantage gives raw, so we display as $XB / $XM).
+    if(r.cf && r.cf.ocf){
+      var fmtBig = function(n){ if(Math.abs(n)>=1e9) return '$'+(n/1e9).toFixed(2)+'B'; if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(1)+'M'; return fm(n); };
+      var covCls = r.cf.coverage >= 2 ? 'green' : r.cf.coverage >= 1 ? 'yellow' : 'red';
+      var covWord = r.cf.coverage >= 2 ? 'comfortable' : r.cf.coverage >= 1 ? 'tight' : 'at risk';
+      html += '<br><br><strong>Company cash flow</strong> ('+(r.cf.period||'TTM')+'): operating <strong>'+fmtBig(r.cf.ocf)+'</strong>, free <strong>'+fmtBig(r.cf.fcf)+'</strong>, dividends paid <strong>'+fmtBig(r.cf.divPaid)+'</strong>. Coverage <strong style="color:var(--'+covCls+')">'+r.cf.coverage.toFixed(2)+'×</strong> ('+covWord+').';
+    } else {
+      html += '<br><br><span class="muted" style="font-size:11px">Company cash flow data not yet fetched. Click <strong>↻ Refresh fundamentals</strong> at the top of the Insights tab (requires AlphaVantage API key in Settings).</span>';
+    }
     html += '</div>';
     html += '</div>'; // /ins-detail
     html += '</div>'; // /ins-card
@@ -4159,6 +4219,141 @@ function taxPanelHTML(t){
   var info=TAX_INFO[t];
   if(!info)return'';
   return'<div style="margin-top:10px;background:#f59e0b15;border:1px solid #f59e0b30;border-radius:8px;padding:10px 14px"><div style="font-weight:700;font-size:11px;color:var(--yellow);margin-bottom:6px">\u26a0\ufe0f Tax Information</div><div style="display:flex;flex-direction:column;gap:4px;font-size:11px"><div style="display:flex;justify-content:space-between"><span class="muted">Tax Form</span><span class="mono fw7" style="color:var(--yellow)">'+info.form+'</span></div><div style="display:flex;justify-content:space-between"><span class="muted">Classification</span><span class="fw7" style="color:var(--yellow)">'+info.tag+'</span></div><div style="color:var(--text2);font-size:10.5px;margin-top:2px">'+info.note+'</div></div></div>';
+}
+
+// ═════════════════════════════════════════════════
+// FUNDAMENTALS — operating cash flow, free cash flow, dividend coverage.
+// Read flow:
+//   1. In-memory FUND[ticker] (set from localStorage on boot or earlier fetch)
+//   2. Shared Firestore /fundamentals/{ticker} (any user's fetch benefits
+//      every user) — written with a field allowlist enforced by rules
+//   3. AlphaVantage CASH_FLOW endpoint as last resort — write back to both
+//      caches so the next caller (any user, any device) reads from cache.
+// 90-day TTL since CF is reported quarterly. Cache miss = AlphaVantage hit;
+// cache hit = no API call. See firestore.rules for the shape allowlist that
+// prevents portfolio data from leaking into the shared collection.
+// ═════════════════════════════════════════════════
+function _fundCacheValid(rec){
+  return rec && typeof rec.fetchedAt === 'number' && (Date.now() - rec.fetchedAt) < FUND_TTL_MS;
+}
+function _saveFundLocal(){
+  try { localStorage.setItem('pf_fund', JSON.stringify(FUND)); } catch(e){}
+}
+// Read /fundamentals/{ticker} from Firestore. Returns {ocf,fcf,divPaid,
+// coverage,fetchedAt,period,source} or null on miss / not-signed-in.
+function _fundReadFromFirestore(ticker){
+  if (!firebaseReady || !db) return Promise.resolve(null);
+  return db.collection('fundamentals').doc(ticker).get()
+    .then(function(snap){ return snap.exists ? snap.data() : null; })
+    .catch(function(e){ console.warn('fundamentals read failed for '+ticker+':', e); return null; });
+}
+// Write /fundamentals/{ticker} with the EXACT shape the rules accept. Any
+// extra field would be rejected; we keep the write tight on purpose.
+function _fundWriteToFirestore(ticker, rec){
+  if (!firebaseReady || !db || !currentUser) return Promise.resolve();
+  var payload = {
+    symbol: ticker,
+    ocf: typeof rec.ocf==='number' ? rec.ocf : 0,
+    fcf: typeof rec.fcf==='number' ? rec.fcf : 0,
+    divPaid: typeof rec.divPaid==='number' ? rec.divPaid : 0,
+    coverage: typeof rec.coverage==='number' ? rec.coverage : 0,
+    period: rec.period || '',
+    fetchedAt: Date.now(),
+    source: rec.source || 'alphavantage'
+  };
+  return db.collection('fundamentals').doc(ticker).set(payload)
+    .catch(function(e){ console.warn('fundamentals write failed for '+ticker+':', e); });
+}
+// AlphaVantage CASH_FLOW response shape: { annualReports:[{fiscalDateEnding,
+// operatingCashflow, capitalExpenditures, dividendPayout, ...}], ... }.
+// We use the most-recent annual report (TTM-ish — annual is a year of data).
+// Returns { ocf, fcf, divPaid, coverage, period, source } or null.
+function _fundFetchFromAlphaVantage(ticker){
+  if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
+  return fetch('https://www.alphavantage.co/query?function=CASH_FLOW&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || !Array.isArray(data.annualReports) || data.annualReports.length === 0){
+        // AlphaVantage returns {Information:"...rate limit..."} or {} when blocked
+        if(data && (data.Information || data.Note)) logApiError && logApiError('cash-flow', ticker, data.Information||data.Note);
+        return null;
+      }
+      var r = data.annualReports[0];
+      var ocf = parseFloat(r.operatingCashflow) || 0;
+      var capex = parseFloat(r.capitalExpenditures) || 0; // typically positive in this API
+      var divPaid = Math.abs(parseFloat(r.dividendPayout) || 0); // AV reports as negative; abs for ratio math
+      var fcf = ocf - Math.abs(capex);
+      var coverage = divPaid > 0 ? (ocf / divPaid) : 0;
+      return {
+        ocf: ocf,
+        fcf: fcf,
+        divPaid: divPaid,
+        coverage: coverage,
+        period: r.fiscalDateEnding || '',
+        source: 'alphavantage'
+      };
+    })
+    .catch(function(e){
+      if(typeof logApiError==='function') logApiError('cash-flow', ticker, e.message||'Failed');
+      return null;
+    });
+}
+// Public entry point. opts.force=true skips cache freshness, opts.allowFetch
+// (default false) controls whether to hit AlphaVantage on a cache miss.
+//   - Auto-warm on Insights tab open uses allowFetch:false so users on free
+//     AV tier (25/day) don't burn quota just by browsing.
+//   - The explicit "Refresh fundamentals" button uses allowFetch:true.
+function getFundamentals(ticker, opts){
+  if(!ticker) return Promise.resolve(null);
+  ticker = ticker.toUpperCase();
+  opts = opts || {};
+  // 1. In-memory cache
+  if(!opts.force && _fundCacheValid(FUND[ticker])) return Promise.resolve(FUND[ticker]);
+  // 2. Shared Firestore cache (free read for any signed-in user — benefits
+  // from any other user's earlier fetch)
+  return _fundReadFromFirestore(ticker).then(function(rec){
+    if(!opts.force && _fundCacheValid(rec)){
+      FUND[ticker] = rec;
+      _saveFundLocal();
+      return rec;
+    }
+    // 3. AlphaVantage fetch + write back — only if caller explicitly asked
+    if(!opts.allowFetch) return rec || null; // cache miss + no fetch allowed
+    return _fundFetchFromAlphaVantage(ticker).then(function(fresh){
+      if(!fresh) return rec || null; // AV refused; fall back to whatever we had
+      fresh.fetchedAt = Date.now();
+      FUND[ticker] = fresh;
+      _saveFundLocal();
+      _fundWriteToFirestore(ticker, fresh);
+      return fresh;
+    });
+  });
+}
+// Bulk refresh — used by the "Refresh fundamentals" button. Throttles to
+// 1 fetch per 13s to stay under AlphaVantage's 5/min free-tier rate limit.
+function refreshAllFundamentals(force){
+  var divTks = tks.filter(isDiv);
+  if(divTks.length === 0){ showToast('No dividend tickers to refresh'); return; }
+  showToast('Refreshing fundamentals for '+divTks.length+' tickers…');
+  var i = 0;
+  function next(){
+    if(i >= divTks.length){
+      showToast('Fundamentals refresh complete');
+      if(typeof renderInsights==='function') renderInsights();
+      return;
+    }
+    var t = divTks[i++];
+    getFundamentals(t, { force: !!force, allowFetch: true }).then(function(){
+      // Re-render insights every few tickers so progress shows up
+      if(i % 5 === 0 && typeof renderInsights==='function') renderInsights();
+      // Stay under AV 5/min rate limit. If we hit the cache (Firestore or
+      // in-memory) the throttle is unnecessary — only delay on actual fetch.
+      var rec = FUND[t];
+      var isFreshFetch = rec && rec.fetchedAt && (Date.now() - rec.fetchedAt) < 5000;
+      setTimeout(next, isFreshFetch ? 13000 : 50);
+    });
+  }
+  next();
 }
 
 // ═════════════════════════════════════════════════
@@ -4329,6 +4524,21 @@ function sTab(id){
   // values now match cloud. Also re-syncs sticky-top in case header
   // dimensions changed.
   if(id==='settings' && typeof loadPrefUI==='function'){ try{loadPrefUI()}catch(e){} }
+  // On Insights tab open, opportunistically warm the fundamentals cache
+  // from the SHARED Firestore collection only (free reads). AlphaVantage
+  // fetches are gated to the explicit "Refresh fundamentals" button so we
+  // don't burn the user's 25/day AV quota just by browsing tabs.
+  if(id==='insights' && typeof getFundamentals==='function'){
+    try {
+      tks.filter(isDiv).forEach(function(t){
+        if(!_fundCacheValid(FUND[t])){
+          getFundamentals(t, { allowFetch: false }).then(function(rec){
+            if(rec && typeof renderInsights==='function') renderInsights();
+          });
+        }
+      });
+    } catch(e){}
+  }
   if(typeof syncStickyTop==='function') try{syncStickyTop()}catch(e){}
 }
 function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.style.display='';b.classList.add('active')}else{p.style.display='none';b.classList.remove('active')}}

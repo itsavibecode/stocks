@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.7.41**
+**Current Version: v0.7.42**
 
 ---
 
 ## Changelog
+
+### v0.7.42 — 2026-05-06 — Company cash flow + shared fundamentals cache
+- **Company-level cash flow integrated into Insights.** Each card's expanded detail now shows operating cash flow, free cash flow, dividends paid, and the **OCF/dividends coverage ratio** for the most recent annual period — color-coded green (≥2× comfortable) / yellow (1–2× tight) / red (<1× at risk). Sourced from AlphaVantage's `CASH_FLOW` endpoint.
+- **Payout Safety score now blends rating + coverage ratio** (60% rating + 40% coverage). Catches the "rated Aristocrat but coverage now 0.8×" scenario where a backward-looking rating misses a forward-looking risk. Falls back to pure rating when CF data isn't available yet (e.g. AV key not set).
+- **Shared `/fundamentals/{ticker}` Firestore collection.** Public-company fundamentals are deduplicated across all signed-in users — your fetch of AAPL benefits everyone holding AAPL on every device they sign in on. New top-level Firestore collection with strict rules: read by any authenticated user, write only with the exact field allowlist (`ocf, fcf, divPaid, coverage, fetchedAt, period, symbol, source`) and `symbol` matching the doc ID. Per-user portfolio data (`/portfolios/{uid}`) is **completely separate** and remains owner-only — no risk of leakage. Source rules are checked into the repo at `firestore.rules`.
+- **Three-tier read flow** — in-memory `FUND[ticker]` (instant) → shared Firestore (free, benefits from any user's prior fetch) → AlphaVantage (last resort). Cache TTL 90 days since CF reports quarterly. Browser also persists to `localStorage.pf_fund` for instant boot before sign-in.
+- **"↻ Refresh fundamentals" button** on the Insights tab — explicit user-triggered fetch that throttles to 1 ticker per 13s to stay under AV's free-tier 5/min limit. Writes results to the shared Firestore collection so subsequent calls (you on mobile, you tomorrow, anyone else holding the same tickers) read from cache instead.
+- **Auto-warm on tab open** uses Firestore reads only (free) — never auto-hits AlphaVantage so your 25/day quota isn't burned just by browsing tabs.
 
 ### v0.7.41 — 2026-05-06 — Insights: current cashflow column
 - **New "Current Cashflow" column** on each Insights ranking card. Shows annual dividend income from the position (`shares × per-share annual div`) plus a smaller "$X/mo avg" sub-line so you can compare at-a-glance which positions pull weight in cashflow vs. which are dead weight relative to their size. Hover for the full math (shares × per-share = total). Stocks with zero shares show "—".

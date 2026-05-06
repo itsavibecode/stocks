@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Stockfolio Firestore security rules — source of truth for the
+// stockfolio-96c95 Firebase project. Apply via:
+//   1. Firebase Console → Firestore → Rules → paste this file's contents
+//   2. Or `firebase deploy --only firestore:rules` from this directory
+//      (requires firebase.json to declare these as the rules source).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user portfolio document. Owner-only read+write — nobody else can
+    // see your tickers/lots/realized/prefs/cache/dvCache/activity/etc.
+    // The auth.uid is set by Firebase ID token verification at write time.
+    match /portfolios/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Shared public-company fundamentals cache. Read by any authenticated
+    // user (lets every device benefit from one user's AlphaVantage fetch);
+    // write by any authenticated user, but ONLY with the expected shape so
+    // a malicious client can't stuff portfolio/PII data into a /fundamentals/
+    // doc. Last-writer-wins is acceptable since AlphaVantage publishes the
+    // same TTM numbers regardless of who fetches.
+    //
+    // Field allowlist enforces the shape:
+    //   ocf, fcf, divPaid, coverage, fetchedAt, period, symbol, source
+    // symbol must match the doc id (no writing AAPL data into MSFT).
+    // fetchedAt must be a number (no fake far-future timestamps to lock cache).
+    match /fundamentals/{ticker} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.data.keys().hasOnly([
+                        'ocf', 'fcf', 'divPaid', 'coverage',
+                        'fetchedAt', 'period', 'symbol', 'source'
+                      ])
+                   && request.resource.data.symbol == ticker
+                   && request.resource.data.fetchedAt is number;
+    }
+
+  }
+}
