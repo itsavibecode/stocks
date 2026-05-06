@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.46</title>
+<title>Stockfolio v0.7.47</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1152,7 +1152,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.46 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.47 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1239,7 +1239,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.46";
+var VERSION = "0.7.47";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -4174,10 +4174,36 @@ function renderInsights(){
     html += '</div>'; // /ins-card
   });
   body.innerHTML = html;
+  // Re-apply the .expanded class to any cards the user had open before the
+  // render. Without this they snap shut every time a fundamentals fetch
+  // resolves during the auto-warm burst (~20–30s). We only restore for
+  // tickers still present in the current ranked list.
+  Object.keys(_expandedInsightCards).forEach(function(tk){
+    var card = document.getElementById('ins-card-'+tk);
+    if(card) card.classList.add('expanded');
+  });
 }
+// Tracks which Insights cards the user has expanded. Persists across the
+// renderInsights() HTML rebuild that happens during fundamentals auto-warm
+// — without this, expanding a card during the ~20–30s background load
+// keeps snapping shut as each fetch resolves and re-renders the body.
+var _expandedInsightCards = {};
 function toggleInsightCard(ticker){
   var c = G('ins-card-'+ticker); if(!c) return;
   c.classList.toggle('expanded');
+  if(c.classList.contains('expanded')) _expandedInsightCards[ticker] = true;
+  else delete _expandedInsightCards[ticker];
+}
+// Debounce wrapper for renderInsights so the burst of fetch-resolve calls
+// during auto-warm coalesces into a single repaint per ~250ms instead of
+// ~73 thrashes.
+var _insRenderTimer = null;
+function renderInsightsDebounced(){
+  if(_insRenderTimer) return;
+  _insRenderTimer = setTimeout(function(){
+    _insRenderTimer = null;
+    if(typeof renderInsights==='function'){ try{renderInsights()}catch(e){} }
+  }, 250);
 }
 
 // Logo via logo.dev \u2014 graceful fallback to ticker letters if image fails to load.
@@ -4407,13 +4433,17 @@ function refreshAllFundamentals(force){
   function next(){
     if(i >= divTks.length){
       showToast('Fundamentals refresh complete');
+      // Final repaint after the whole batch — direct (not debounced) so
+      // the user sees the completed state immediately.
       if(typeof renderInsights==='function') renderInsights();
       return;
     }
     var t = divTks[i++];
     getFundamentals(t, { force: !!force, allowFetch: true }).then(function(){
-      // Re-render insights every few tickers so progress shows up
-      if(i % 5 === 0 && typeof renderInsights==='function') renderInsights();
+      // Re-render insights every few tickers so progress shows up.
+      // Debounced so quick cache-hit chains don't thrash; expanded cards
+      // are preserved by renderInsights re-applying the .expanded class.
+      if(i % 5 === 0 && typeof renderInsightsDebounced==='function') renderInsightsDebounced();
       // Stay under AV 5/min rate limit. If we hit the cache (Firestore or
       // in-memory) the throttle is unnecessary — only delay on actual fetch.
       var rec = FUND[t];
@@ -4601,7 +4631,9 @@ function sTab(id){
       tks.filter(isDiv).forEach(function(t){
         if(!_fundCacheValid(FUND[t])){
           getFundamentals(t, { allowFetch: false }).then(function(rec){
-            if(rec && typeof renderInsights==='function') renderInsights();
+            // Debounced — many fetches resolve in quick succession and we
+            // only need one repaint to reflect the new data.
+            if(rec && typeof renderInsightsDebounced==='function') renderInsightsDebounced();
           });
         }
       });

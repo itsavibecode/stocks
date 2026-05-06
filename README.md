@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.46**
+**Current Version: v0.7.47**
 
 ---
 
 ## Changelog
+
+### v0.7.47 — 2026-05-06 — Insights cards stay open during auto-warm
+- **Expanded Insights cards no longer snap shut** when the fundamentals auto-warm fires off Firestore reads in the background (~20–30s on first tab open). Two fixes: (1) tracks expanded card state in a `_expandedInsightCards` set updated by `toggleInsightCard()` and re-applied after every `renderInsights()` HTML rebuild; (2) added `renderInsightsDebounced()` — auto-warm fetch resolves and the periodic refresh-progress paints now coalesce into one repaint per ~250ms instead of ~73 thrashes during a typical portfolio's load. Click a card during a refresh; it stays open. Final post-refresh paint stays direct (not debounced) so the completed state appears immediately.
 
 ### v0.7.46 — 2026-05-06 — Insights label cleanup + Goal Progress bar
 - **Renamed Insights column "Current Cashflow" → "Annual Income".** That column shows your dividend dollars from each position (`shares × per-share div`) — confusing it with "cashflow" overloaded the term, since real cashflow (operating cash flow, the company-level metric) lives in the expanded detail row beneath each card. Annual Income is unambiguous.
