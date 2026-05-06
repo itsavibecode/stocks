@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.44**
+**Current Version: v0.7.45**
 
 ---
 
 ## Changelog
+
+### v0.7.45 — 2026-05-06 — Ticker/thead flush stack (next layer down)
+- **Same gap fix applied to the ticker→thead boundary.** v0.7.44 closed header→ticker; the ticker→thead seam still showed a 1–2px gap at certain scroll positions because the ticker's `margin-top:-1px` overlap meant its actual visual bottom was 1px above where `--thead-top` was computed to start. Two fixes mirror the header→ticker pattern: (1) `syncStickyTop` now sets `--thead-top` to `headerHeight + tickerHeight - 1` (subtracting the ticker's overlap shift). (2) Table thead's CSS uses `top: calc(var(--thead-top) - 1px)` for an additional defensive 1px overlap with the ticker bottom. The whole sticky stack — header, ticker, thead — now overlaps adjacent rows by 1px each so no sub-pixel rendering drift can show a gap.
 
 ### v0.7.44 — 2026-05-06 — Header/ticker flush stack
 - **Header/ticker gap (still visible after v0.7.40) closed for real.** Two compounding issues: (1) `Math.ceil(getBoundingClientRect().height)` rounded sub-pixel header heights UP, pushing the ticker ~0.5px below where the header actually rendered. Switched to `offsetHeight` which the browser snaps to the integer device-pixel grid, matching exactly where the next element starts in flow. (2) Even with perfect measurement, browser sub-pixel rendering can vary between paint frames, so the ticker now uses `top: calc(var(--sticky-top) - 1px)` and `margin-top:-1px` to force a 1px overlap with the header bottom. Better to overlap by a hair than leave any gap visible.

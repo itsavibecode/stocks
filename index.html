@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.44</title>
+<title>Stockfolio v0.7.45</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -457,7 +457,10 @@ table{width:100%;border-collapse:separate;border-spacing:0 2px;font-size:12px}
    thead slides under the header on scroll — but by then `top:--sticky-top`
    has already pinned it just below the header, so it stays visible. */
 :root{--sticky-top:90px;--ticker-h:0px;--thead-top:90px}
-table thead th{position:sticky;top:var(--thead-top);background:var(--bg);z-index:80;box-shadow:inset 0 -1px 0 var(--border)}
+/* Thead sticks 1px above the computed --thead-top, mirroring the header→
+   ticker overlap pattern. Closes any sub-pixel gap between the ticker's
+   visual bottom and the thead's top during scroll. */
+table thead th{position:sticky;top:calc(var(--thead-top) - 1px);background:var(--bg);z-index:80;box-shadow:inset 0 -1px 0 var(--border)}
 thead th{padding:8px 10px;text-align:left;font-weight:600;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;background:var(--bg)}
 thead th:hover{color:var(--text2)}
 thead th .sa{margin-left:3px;font-size:9px;opacity:.3}
@@ -1132,7 +1135,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.44 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.45 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1219,7 +1222,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.44";
+var VERSION = "0.7.45";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -6712,20 +6715,20 @@ setInterval(tickLocalClock,1000);
 function syncStickyTop(){
   var h = document.querySelector('.header');
   // Use offsetHeight — integer pixels, includes padding + border, matches
-  // exactly where the next element starts in flow. Math.ceil on
-  // getBoundingClientRect().height was rounding sub-pixel heights UP, which
-  // pushed the ticker slightly below the header's actual visible bottom and
-  // showed a thin "gap" where tab content peeked through during scroll.
-  // offsetHeight is browser-rounded to the device's actual pixel grid, so
-  // there's no sub-pixel mismatch.
+  // exactly where the next element starts in flow.
   var hdrPx = h ? Math.max(60, h.offsetHeight) : 90;
   document.documentElement.style.setProperty('--sticky-top', hdrPx+'px');
-  // Ticker (when visible) stacks below header — bump --thead-top accordingly
-  // so table headers don't slide under the ticker when scrolling.
+  // Ticker has margin-top:-1px so it overlaps the header bottom by 1px.
+  // That means the ticker's visual bottom edge sits at (hdrPx-1)+tkPx, NOT
+  // hdrPx+tkPx. Subtract 1 here so --thead-top points at the ticker's true
+  // visual bottom — the table thead's CSS then applies its own -1 for an
+  // additional defensive overlap, mirroring the header→ticker pattern.
   var tk = document.getElementById('pfTicker');
-  var tkPx = (tk && tk.style.display && tk.style.display !== 'none') ? tk.offsetHeight : 0;
+  var tkVisible = tk && tk.style.display && tk.style.display !== 'none';
+  var tkPx = tkVisible ? tk.offsetHeight : 0;
   document.documentElement.style.setProperty('--ticker-h', tkPx+'px');
-  document.documentElement.style.setProperty('--thead-top', (hdrPx + tkPx)+'px');
+  var theadTop = tkVisible ? (hdrPx + tkPx - 1) : hdrPx;
+  document.documentElement.style.setProperty('--thead-top', theadTop+'px');
 }
 syncStickyTop();
 window.addEventListener('resize', syncStickyTop);
