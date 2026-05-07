@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.48**
+**Current Version: v0.7.49**
 
 ---
 
 ## Changelog
+
+### v0.7.49 — 2026-05-06 — Cloud-prefs merge + manual re-sync
+- **Cloud-load now merges instead of overwriting.** `loadFromCloud` was doing `savePrefs(d.prefs)` which wholesale replaced local prefs with cloud's version. If you'd entered an API key (or set the SnapTrade ignore list, etc.) on a device *before* signing in, that pref existed locally only — and the first cloud sync after sign-in clobbered it because cloud lacked the field. Same bug on a fresh device when cloud has stale data: local-only changes died on first sync. Fix: `Object.assign({}, localPrefs, cloudPrefs)` — cloud wins on overlapping keys (cross-device source of truth) but local fills gaps for keys cloud doesn't have. The merged prefs is then saved back to cloud, so any local-only fields propagate up. Self-heals devices where prior versions had clobbered settings.
+- **"↻ Re-sync settings from cloud" button** in Settings → Finnhub API Key card. Manually re-runs `loadFromCloud` with the new merge logic. Use it any time a setting from another device hasn't shown up — pulls API keys, ignore list, tax bracket, dividend goal, sound prefs, all of it. The auto-sync on sign-in now works correctly too, but the button is the explicit recovery path.
 
 ### v0.7.48 — 2026-05-06 — News rows persist + Current Price column rename
 - **News-row expansion now survives re-renders.** News uses index-based row IDs (n0, n1…) which shift whenever a new article arrives or prices update — so an open article would snap shut on every background refresh, same family of bug as v0.7.47's Insights fix. Each news `.xr` row now carries a `data-stable-key="<ticker>|<title>"` attribute. `tog()` captures the key when opening; `restoreOpenPanels()` falls back to a stable-key DOM lookup when the cached row ID no longer matches (and refreshes the cached ID to the new index).

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.48</title>
+<title>Stockfolio v0.7.49</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1064,6 +1064,14 @@ body.text-xl .sc .scv{font-size:24px}
           <button class="btn btn-outline" onclick="resetApiKey()" style="font-size:10px">Clear Key</button>
         </div>
         <div id="apiKeyStatus" style="font-size:10px;color:var(--muted);margin-top:4px"></div>
+        <!-- Manual recovery if cloud-sync looks out of date — re-pulls every
+             pref from the user's Firestore portfolio doc and re-applies to
+             this device's localStorage + UI inputs. Useful when settings
+             entered on another device aren't showing up here. -->
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="resyncFromCloud()" style="font-size:10.5px" title="Re-pull all settings from your cloud account. Useful if a setting from another device isn't showing up here.">↻ Re-sync settings from cloud</button>
+          <span class="muted" style="font-size:10px">Pulls API keys, ignore list, tax bracket, etc. from your signed-in account.</span>
+        </div>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
@@ -1152,7 +1160,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.48 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.49 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1239,7 +1247,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.48";
+var VERSION = "0.7.49";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1807,19 +1815,28 @@ function loadFromCloud() {
           computeFromLots();
         }
       }
-      // Load prefs from cloud (includes API keys + SnapTrade userSecret)
-      if (d.prefs) {
-        savePrefs(d.prefs);
-        if (d.prefs.finnhubKey) { FINNHUB_KEY = d.prefs.finnhubKey; }
-        if (d.prefs.alphavantageKey) { ALPHAVANTAGE_KEY = d.prefs.alphavantageKey; }
-        if (d.prefs.tiingoKey) { TIINGO_KEY = d.prefs.tiingoKey; }
-        if (d.prefs.polygonKey) { POLYGON_KEY = d.prefs.polygonKey; }
-        if (d.prefs.twelvedataKey) { TWELVEDATA_KEY = d.prefs.twelvedataKey; }
-        if (d.prefs.snaptradeUserSecret) { stApiState.userSecret = d.prefs.snaptradeUserSecret; }
-        loadPrefUI();
-        renderSnapTradeCard();
-        renderBrokersTab();
-      }
+      // Merge cloud prefs with local prefs:
+      //   - cloud wins on overlapping keys (most-recent across-device source)
+      //   - local fills gaps for keys cloud doesn't have (e.g. user set their
+      //     AlphaVantage key on desktop BEFORE signing in — saved locally
+      //     only; the older code then clobbered the local value with cloud's
+      //     empty version. Now those local-only keys survive and get pushed
+      //     back to cloud via savePrefs(merged).
+      // This also self-heals any device where a previous version of the app
+      // had clobbered prefs — first cloud-load reconstitutes the union.
+      var _localPrefs = loadPrefs();
+      var _cloudPrefs = d.prefs || {};
+      var _mergedPrefs = Object.assign({}, _localPrefs, _cloudPrefs);
+      savePrefs(_mergedPrefs);
+      if (_mergedPrefs.finnhubKey) { FINNHUB_KEY = _mergedPrefs.finnhubKey; }
+      if (_mergedPrefs.alphavantageKey) { ALPHAVANTAGE_KEY = _mergedPrefs.alphavantageKey; }
+      if (_mergedPrefs.tiingoKey) { TIINGO_KEY = _mergedPrefs.tiingoKey; }
+      if (_mergedPrefs.polygonKey) { POLYGON_KEY = _mergedPrefs.polygonKey; }
+      if (_mergedPrefs.twelvedataKey) { TWELVEDATA_KEY = _mergedPrefs.twelvedataKey; }
+      if (_mergedPrefs.snaptradeUserSecret) { stApiState.userSecret = _mergedPrefs.snaptradeUserSecret; }
+      loadPrefUI();
+      renderSnapTradeCard();
+      renderBrokersTab();
       // Activity log from cloud overrides local (cloud is source of truth for signed-in users)
       if (Array.isArray(d.activity)) {
         activityLog = d.activity;
@@ -5685,6 +5702,22 @@ function importPortfolio(evt){
 // ═════════════════════════════════════════════════
 // API KEY MANAGEMENT
 // ═════════════════════════════════════════════════
+// Manual cloud re-sync — re-runs loadFromCloud which now does a proper
+// merge (cloud wins on conflict, local fills gaps) and re-applies all
+// API keys, prefs, SnapTrade userSecret, etc. Useful when a setting from
+// another device hasn't appeared on this device yet.
+function resyncFromCloud(){
+  if(!currentUser){ showToast('Sign in first','warn'); return; }
+  if(typeof loadFromCloud !== 'function'){ showToast('Cloud sync not available','warn'); return; }
+  showToast('Re-syncing settings from cloud…');
+  loadFromCloud().then(function(){
+    showToast('Settings re-synced from cloud');
+    if(typeof loadPrefUI==='function') loadPrefUI();
+    logActivity && logActivity('sync.manual','Manually re-synced prefs from cloud');
+  }).catch(function(e){
+    showToast('Re-sync failed: '+(e&&e.message||e),'error');
+  });
+}
 function saveApiKey(){
   var key=G('sApiKey').value.trim();
   if(!key){showToast('Enter an API key','warn');return}
