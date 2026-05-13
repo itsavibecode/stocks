@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.50</title>
+<title>Stockfolio v0.7.51</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -326,6 +326,13 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .settings-grid{columns:2;column-gap:14px}
 .settings-grid>div{break-inside:avoid;margin-bottom:14px;display:block}
 @media (max-width:760px){.settings-grid{columns:1}}
+/* Section headers between groups of related Settings cards. column-span:all
+   makes them stretch across both columns of the masonry-style settings-grid,
+   acting as visual section dividers. */
+.settings-section-header{column-span:all;-webkit-column-span:all;margin:18px 0 6px 0;padding:6px 4px 6px 4px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;break-inside:avoid}
+.settings-section-header:first-of-type{margin-top:0}
+.settings-section-header .ssh-icon{font-size:15px}
+.settings-section-header .ssh-desc{font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:auto;font-style:italic}
 .key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
@@ -890,123 +897,16 @@ body.text-xl .sc .scv{font-size:24px}
       <h3 style="font-size:16px;font-weight:700">&#9881; Settings</h3>
       <div class="settings-grid">
 
+      <!-- ──────── ACCOUNT ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">👤</span><span>Account</span><span class="ssh-desc">your sign-in + cloud-sync status</span></div>
+
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px" id="acctCard">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128100; Your Account</div>
         <div id="acctCardBody"></div>
       </div>
 
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Connect Brokerages (SnapTrade)</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Sync positions from your real brokerages. Free tier supports up to 5 connected accounts. Your connection authenticates through SnapTrade — we never see your brokerage password.</p>
-        <div id="snaptradeCardBody"></div>
-        <!-- Ignore list — tickers SnapTrade reports that we should never
-             surface in the sync diff. Common case: FCASH and similar cash-
-             account pseudo-tickers. Stored in prefs.snaptradeIgnoreTickers
-             (Firestore-synced). Comma- or space-separated, case-insensitive. -->
-        <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-            <span style="font-size:11.5px;font-weight:600">🚫 Ignore tickers from sync</span>
-            <span class="muted" style="font-size:10px">comma or space-separated, case-insensitive</span>
-          </div>
-          <input class="mi" type="text" id="sStIgnore" placeholder="e.g. FCASH, SPAXX, CASH" oninput="saveSnapTradeIgnore()" onchange="saveSnapTradeIgnore()" style="margin:0;width:100%;font-size:11.5px;padding:7px 10px">
-          <p style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5">Use this for cash positions or pseudo-tickers SnapTrade reports that you don't want to track as holdings. Listed tickers won't appear in the sync diff modal — no more repeated prompts.</p>
-        </div>
-      </div>
-
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; Dividend Reminders</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast + chime when an ex-date or pay-date is approaching. Each reminder fires once per occurrence — refreshing the page won't re-trigger.</p>
-        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:8px">
-          <input type="checkbox" id="sRemEnabled" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:14px;height:14px">
-          <span>Enable dividend reminders</span>
-        </label>
-        <div style="margin-left:22px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
-            <input type="checkbox" id="sRemIncludeEx" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
-            <span>Include <strong>ex-date</strong> reminders</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
-            <input type="checkbox" id="sRemIncludePay" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
-            <span>Include <strong>pay-date</strong> reminders</span>
-          </label>
-        </div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
-          <div>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>ex-date</strong></div>
-            <input class="mi" type="number" id="sRemDaysEx" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>pay-date</strong></div>
-            <input class="mi" type="number" id="sRemDaysPay" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
-          </div>
-        </div>
-        <div id="remStatus" style="font-size:10.5px;color:var(--muted);margin-top:8px"></div>
-        <p style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">Settings auto-save when you change them — no Save button needed.</p>
-      </div>
-
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127919; Annual Dividend Goal</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Set a target annual dividend income — a progress bar appears on the All-tab Portfolio Snapshot. Leave blank to hide.</p>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-size:13px;color:var(--muted)">$</span>
-          <input class="mi" type="number" id="sDivGoal" min="0" step="100" placeholder="e.g. 10000" onchange="saveDivGoal()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
-          <span style="font-size:11px;color:var(--muted)">per year</span>
-        </div>
-      </div>
-
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#129534; Tax Estimate</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Used for the projected-tax line in Tax Outlook + Realized P/L panels. Federal long-term cap-gains rate is derived from your bracket (0% if &le;12%, 20% at 37%, otherwise 15%). Wash sales, NIIT, AMT, and offsets are not modeled. Not tax advice.</p>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-          <div>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Federal marginal bracket</div>
-            <select class="mi" id="sTaxBracket" onchange="saveTaxPrefs()" style="width:170px;margin:0;padding:6px 10px;font-size:12px">
-              <option value="">(not set)</option>
-              <option value="10">10%</option>
-              <option value="12">12%</option>
-              <option value="22">22%</option>
-              <option value="24">24%</option>
-              <option value="32">32%</option>
-              <option value="35">35%</option>
-              <option value="37">37%</option>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">State income tax rate (%)</div>
-            <input class="mi" type="number" id="sStateRate" min="0" max="20" step="0.1" placeholder="e.g. 5.0 (or 0)" onchange="saveTaxPrefs()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
-          </div>
-          <div id="sTaxLtPreview" style="font-size:11px;color:var(--muted);padding-bottom:6px"></div>
-        </div>
-      </div>
-
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export &amp; Import</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Download your portfolio history as CSV for taxes, spreadsheets, or backup. Import M1 Finance Holdings CSV for brokerages SnapTrade doesn't support.</p>
-        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Export</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-          <button class="btn btn-outline" onclick="exportRealizedCSV()" style="font-size:11.5px">&#129534; Realized Sales CSV</button>
-          <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:11.5px">&#128176; Dividend History CSV</button>
-          <button class="btn btn-outline" onclick="exportPortfolio()" style="font-size:11.5px">&#128190; Full Portfolio JSON</button>
-        </div>
-        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Import</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import M1 Holdings CSV<input type="file" accept=".csv" onchange="importM1HoldingsFile(event)" style="display:none"></label>
-          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import Portfolio JSON<input type="file" accept=".json,application/json" onchange="importPortfolio(event)" style="display:none"></label>
-        </div>
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.5">
-          <strong>How to export from M1 Finance:</strong> open M1 → click the specific account under <strong>Invest</strong> → <strong>Holdings</strong> → click the <strong>⋮</strong> next to <em>Download</em> → <strong>Holdings summary</strong>.
-        </div>
-      </div>
-
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
-        <div id="settingsAcctList"></div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <input class="mi" type="text" id="newAcctName" placeholder="New account name" style="margin-bottom:0;flex:1">
-          <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
-        </div>
-      </div>
+      <!-- ──────── APPEARANCE & AUDIO ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">🎨</span><span>Appearance &amp; Audio</span><span class="ssh-desc">theme, text size, ticker speed, sounds</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127912; Appearance</div>
@@ -1051,6 +951,119 @@ body.text-xl .sc .scv{font-size:24px}
         </label>
         <div id="sSoundChannels" style="display:flex;flex-direction:column;gap:12px"></div>
       </div>
+
+      <!-- ──────── NOTIFICATIONS ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">🔔</span><span>Notifications</span><span class="ssh-desc">dividend ex-date / pay-date reminders</span></div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; Dividend Reminders</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Get a toast + chime when an ex-date or pay-date is approaching. Each reminder fires once per occurrence — refreshing the page won't re-trigger. Email reminders fire daily via the worker cron at <span class="mono">14:00 UTC</span>.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:8px">
+          <input type="checkbox" id="sRemEnabled" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:14px;height:14px">
+          <span>Enable dividend reminders</span>
+        </label>
+        <div style="margin-left:22px;display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
+            <input type="checkbox" id="sRemIncludeEx" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
+            <span>Include <strong>ex-date</strong> reminders</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:11px;cursor:pointer;color:var(--text2)">
+            <input type="checkbox" id="sRemIncludePay" onchange="saveReminderPrefs()" style="accent-color:var(--accent);width:13px;height:13px">
+            <span>Include <strong>pay-date</strong> reminders</span>
+          </label>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>ex-date</strong></div>
+            <input class="mi" type="number" id="sRemDaysEx" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Days before <strong>pay-date</strong></div>
+            <input class="mi" type="number" id="sRemDaysPay" min="0" max="60" value="1" onchange="saveReminderPrefs()" style="width:80px;margin:0;padding:5px 8px;font-size:11px">
+          </div>
+        </div>
+        <div id="remStatus" style="font-size:10.5px;color:var(--muted);margin-top:8px"></div>
+        <p style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">Settings auto-save when you change them — no Save button needed.</p>
+        <!-- Test email button — hits the worker's /run-reminders endpoint
+             which sends the same digest the daily cron sends. Restricted to
+             OWNER_UID on the server side (single-user model); other users
+             will get a clear 403 error toast. -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
+          <button class="btn btn-outline" onclick="sendTestReminderEmail()" style="font-size:11px" title="Trigger the same cron logic the worker runs at 14:00 UTC daily. Sends an email if any reminders are due today.">📨 Send test reminder email</button>
+          <p style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Runs the daily reminder logic on demand. If no ex-dates or pay-dates fall in your configured windows today, no email is sent — that's normal (the cron checks the same conditions).</p>
+        </div>
+      </div>
+
+      <!-- ──────── MONEY & TAXES ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">💰</span><span>Money &amp; Taxes</span><span class="ssh-desc">income goal + tax bracket for projections</span></div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127919; Annual Dividend Goal</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Set a target annual dividend income — a progress bar appears on the All-tab Portfolio Snapshot. Leave blank to hide.</p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">$</span>
+          <input class="mi" type="number" id="sDivGoal" min="0" step="100" placeholder="e.g. 10000" onchange="saveDivGoal()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
+          <span style="font-size:11px;color:var(--muted)">per year</span>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#129534; Tax Estimate</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Used for the projected-tax line in Tax Outlook + Realized P/L panels. Federal long-term cap-gains rate is derived from your bracket (0% if &le;12%, 20% at 37%, otherwise 15%). Wash sales, NIIT, AMT, and offsets are not modeled. Not tax advice.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Federal marginal bracket</div>
+            <select class="mi" id="sTaxBracket" onchange="saveTaxPrefs()" style="width:170px;margin:0;padding:6px 10px;font-size:12px">
+              <option value="">(not set)</option>
+              <option value="10">10%</option>
+              <option value="12">12%</option>
+              <option value="22">22%</option>
+              <option value="24">24%</option>
+              <option value="32">32%</option>
+              <option value="35">35%</option>
+              <option value="37">37%</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px">State income tax rate (%)</div>
+            <input class="mi" type="number" id="sStateRate" min="0" max="20" step="0.1" placeholder="e.g. 5.0 (or 0)" onchange="saveTaxPrefs()" style="width:140px;margin:0;padding:6px 10px;font-size:12px">
+          </div>
+          <div id="sTaxLtPreview" style="font-size:11px;color:var(--muted);padding-bottom:6px"></div>
+        </div>
+      </div>
+
+      <!-- ──────── BROKERAGE & ACCOUNTS ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">🏦</span><span>Brokerage &amp; Accounts</span><span class="ssh-desc">manual account labels + SnapTrade sync</span></div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Rename, add, or delete brokerage accounts. Deleting an account removes it from all lots but keeps the shares.</p>
+        <div id="settingsAcctList"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input class="mi" type="text" id="newAcctName" placeholder="New account name" style="margin-bottom:0;flex:1">
+          <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
+        </div>
+      </div>
+
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Connect Brokerages (SnapTrade)</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Sync positions from your real brokerages. Free tier supports up to 5 connected accounts. Your connection authenticates through SnapTrade — we never see your brokerage password.</p>
+        <div id="snaptradeCardBody"></div>
+        <!-- Ignore list — tickers SnapTrade reports that we should never
+             surface in the sync diff. Common case: FCASH and similar cash-
+             account pseudo-tickers. -->
+        <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:11.5px;font-weight:600">🚫 Ignore tickers from sync</span>
+            <span class="muted" style="font-size:10px">comma or space-separated, case-insensitive</span>
+          </div>
+          <input class="mi" type="text" id="sStIgnore" placeholder="e.g. FCASH, SPAXX, CASH" oninput="saveSnapTradeIgnore()" onchange="saveSnapTradeIgnore()" style="margin:0;width:100%;font-size:11.5px;padding:7px 10px">
+          <p style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.5">Use this for cash positions or pseudo-tickers SnapTrade reports that you don't want to track as holdings. Listed tickers won't appear in the sync diff modal — no more repeated prompts.</p>
+        </div>
+      </div>
+
+      <!-- ──────── API KEYS ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">🔑</span><span>API Keys</span><span class="ssh-desc">price + news providers, all free tiers</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
@@ -1119,20 +1132,32 @@ body.text-xl .sc .scv{font-size:24px}
         <p style="font-size:10px;color:var(--muted);margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">Quote chain: Finnhub → AlphaVantage → Tiingo → Polygon → Twelve Data. The first one to return data wins. News chain: Finnhub → AlphaVantage → Tiingo (Polygon and Twelve Data don't expose news on their free tiers). BTC always uses CoinGecko (no key needed).</p>
       </div>
 
+      <!-- ──────── DATA & ACTIVITY ──────── -->
+      <div class="settings-section-header"><span class="ssh-icon">💾</span><span>Data &amp; Activity</span><span class="ssh-desc">export, import, reset, audit trail</span></div>
+
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128229; Import / Export</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Export your entire portfolio (tickers, lots, accounts, preferences) as a JSON file. Import to restore on any device.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="exportPortfolio()">&#128230; Export Portfolio</button>
-          <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">&#128229; Import Portfolio</button>
-          <input type="file" id="importFile" accept=".json" onchange="importPortfolio(event)" style="display:none">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export &amp; Import</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Download your portfolio history as CSV for taxes, spreadsheets, or backup. Import M1 Finance Holdings CSV for brokerages SnapTrade doesn't support.</p>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Export</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-outline" onclick="exportRealizedCSV()" style="font-size:11.5px">&#129534; Realized Sales CSV</button>
+          <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:11.5px">&#128176; Dividend History CSV</button>
+          <button class="btn btn-outline" onclick="exportPortfolio()" style="font-size:11.5px">&#128190; Full Portfolio JSON</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Import</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import M1 Holdings CSV<input type="file" accept=".csv" onchange="importM1HoldingsFile(event)" style="display:none"></label>
+          <label class="btn btn-outline" style="font-size:11.5px;cursor:pointer">&#128190; Import Portfolio JSON<input type="file" accept=".json,application/json" onchange="importPortfolio(event)" style="display:none"></label>
+        </div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.5">
+          <strong>How to export from M1 Finance:</strong> open M1 → click the specific account under <strong>Invest</strong> → <strong>Holdings</strong> → click the <strong>⋮</strong> next to <em>Download</em> → <strong>Holdings summary</strong>.
         </div>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Data</div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Portfolio data auto-saves to browser. Sign in with Google to sync across devices.</p>
-        <button class="btn btn-outline" onclick="if(confirm('Clear all local data and reload?')){logActivity('data.reset','Reset local data');localStorage.clear();location.reload()}" style="color:var(--red);border-color:var(--red-dim)">Reset Local Data</button>
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--red)">&#9888;&#65039; Reset Local Data</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Wipes browser data and reloads. Cloud data is unaffected — sign back in to restore. Use this if local state gets corrupted.</p>
+        <button class="btn btn-outline" onclick="if(confirm('Clear all local data and reload?')){logActivity('data.reset','Reset local data');localStorage.clear();location.reload()}" style="color:var(--red);border-color:var(--red-dim);font-size:11px">Reset Local Data</button>
       </div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
@@ -1160,7 +1185,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.50 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.51 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1247,7 +1272,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.50";
+var VERSION = "0.7.51";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1387,6 +1412,23 @@ function renderAccountCard(){
 // ═════════════════════════════════════════════════
 // DIVIDEND REMINDERS — ex-date and pay-date proximity alerts
 // ═════════════════════════════════════════════════
+// Test the daily reminder email logic on demand. Hits the worker's
+// /run-reminders endpoint which runs the same code path as the 14:00 UTC
+// cron — checks DV cache + user's window settings, sends one digest email
+// if any reminders are due today, returns the result for display.
+// Restricted to OWNER_UID server-side; non-owners get a 403 toast.
+async function sendTestReminderEmail(){
+  if(!currentUser){ showToast('Sign in first','warn'); return; }
+  showToast('Triggering reminder check…');
+  var data = await callWorker('/run-reminders', {}, 'POST');
+  if(!data) return; // callWorker already showed a toast
+  var summary = '';
+  if(data.sent>0) summary = '📨 '+data.sent+' email(s) sent';
+  else if(data.skipped) summary = 'No reminders due today — cron would skip too';
+  else summary = 'Reminder check ran — '+JSON.stringify(data).slice(0,120);
+  showToast(summary);
+  logActivity('reminder.test', 'Manual reminder run: '+summary);
+}
 function saveReminderPrefs(){
   var p=loadPrefs();
   var en=G('sRemEnabled');var ex=G('sRemDaysEx');var pd=G('sRemDaysPay');

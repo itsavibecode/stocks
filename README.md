@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.50**
+**Current Version: v0.7.51**
 
 ---
 
 ## Changelog
+
+### v0.7.51 — 2026-05-06 — Settings reorganized + Test email button
+- **Settings tab reorganized into 6 labeled sections.** Cards were piling up in arbitrary order (~14 of them by now). New section headers using `column-span:all` so they stretch across both masonry columns: 👤 Account, 🎨 Appearance & Audio, 🔔 Notifications, 💰 Money & Taxes, 🏦 Brokerage & Accounts, 🔑 API Keys, 💾 Data & Activity. Each header has a small italic description on the right so the grouping is obvious at a glance. The cards themselves move to the section they belong in (Export & Import to Data, Manage Accounts and SnapTrade together under Brokerage, etc).
+- **Duplicate "Import / Export" card removed.** The old simpler JSON-only Import/Export card was orphaned after v0.7.34's more comprehensive Export & Import card landed; cleaned up.
+- **📨 "Send test reminder email" button** in the Dividend Reminders card. Hits the worker's existing `/run-reminders` endpoint — same code path the daily cron runs at 14:00 UTC. Returns a result summary toast ("📨 1 email(s) sent" or "No reminders due today — cron would skip too"). Restricted to `OWNER_UID` server-side per the Path B single-user model.
 
 ### v0.7.50 — 2026-05-06 — Mobile news Share button
 - **Share PNG button added to mobile news cards.** Desktop news rows had `💾 Share` in the expanded panel since v0.7.36, but the mobile `.mk` cards rendered only the "Read article →" link. The mobile loop now captures the same `i` index the desktop loop uses, and `shareNewsAsPNG(idx)` reads the article data from the desktop table row by ID — which exists in the DOM even when hidden on mobile (via `.dt{display:none}`) — so the off-screen "share card" composition still works correctly. Tapping Share builds the same polished PNG as desktop without expanding/collapsing the card (stopPropagation on the click).
