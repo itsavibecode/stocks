@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.49**
+**Current Version: v0.7.50**
 
 ---
 
 ## Changelog
+
+### v0.7.50 — 2026-05-06 — Mobile news Share button
+- **Share PNG button added to mobile news cards.** Desktop news rows had `💾 Share` in the expanded panel since v0.7.36, but the mobile `.mk` cards rendered only the "Read article →" link. The mobile loop now captures the same `i` index the desktop loop uses, and `shareNewsAsPNG(idx)` reads the article data from the desktop table row by ID — which exists in the DOM even when hidden on mobile (via `.dt{display:none}`) — so the off-screen "share card" composition still works correctly. Tapping Share builds the same polished PNG as desktop without expanding/collapsing the card (stopPropagation on the click).
 
 ### v0.7.49 — 2026-05-06 — Cloud-prefs merge + manual re-sync
 - **Cloud-load now merges instead of overwriting.** `loadFromCloud` was doing `savePrefs(d.prefs)` which wholesale replaced local prefs with cloud's version. If you'd entered an API key (or set the SnapTrade ignore list, etc.) on a device *before* signing in, that pref existed locally only — and the first cloud sync after sign-in clobbered it because cloud lacked the field. Same bug on a fresh device when cloud has stale data: local-only changes died on first sync. Fix: `Object.assign({}, localPrefs, cloudPrefs)` — cloud wins on overlapping keys (cross-device source of truth) but local fills gaps for keys cloud doesn't have. The merged prefs is then saved back to cloud, so any local-only fields propagate up. Self-heals devices where prior versions had clobbered settings.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.49</title>
+<title>Stockfolio v0.7.50</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1160,7 +1160,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.49 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.50 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1247,7 +1247,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.49";
+var VERSION = "0.7.50";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3079,7 +3079,12 @@ function render(){
   }
   var h='';all.forEach(function(n,i){var rid='n'+i;var nIdx=i;var nTime=n.ts||parseNewsTime(n.d,n.tm);var isRecent=(nowMs-nTime)<oneHrMs&&nTime<=nowMs;var rcls=isRecent?' news-recent':'';if(isNewsRead(n.tk,n.t))rcls+=' news-read';var px=PR[n.tk]||0;var pCls=priceCls(n.tk);var pCh=liveChanges[n.tk];var pTitle=(pCh!=null)?' title="Today: '+(pCh>=0?'+':'')+pCh.toFixed(2)+'%"':'';h+='<tr class="dr'+rcls+'" onclick="tog(\''+rid+'\')"><td><div style="display:inline-flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span></div></td><td><div class="mono" style="font-size:11px">'+n.d+'</div><div class="muted" style="font-size:10px">'+n.tm+'</div></td><td class="mono '+(px>0?pCls:'muted')+'" style="font-size:11px"'+pTitle+'>'+(px>0?fm(px):'\u2014')+'</td><td style="white-space:normal;max-width:420px;font-weight:500">'+n.t+'</td><td class="muted" style="font-size:10.5px">'+n.s+'</td></tr><tr class="xr" id="'+rid+'" data-stable-key="'+_newsKey(n.tk,n.t).replace(/"/g,'&quot;')+'"><td colspan="5"><div class="xp"><p style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:8px">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;flex:1">Read full article at '+n.s+' \u2192</a><button class="btn btn-outline share-btn" onclick="event.stopPropagation();shareNewsAsPNG('+nIdx+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share</button></div></td></tr>'});
   G('bN').innerHTML=h;
-  var mc='';all.forEach(function(n){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a></div></div>'});
+  // Mobile news cards \u2014 capture the same index `i` the desktop loop uses,
+  // since shareNewsAsPNG(idx) reads from the hidden desktop row by id ("n"+i).
+  // The Share button goes inside .mkd so it appears in the expanded panel
+  // (same place as Read article); stopPropagation keeps it from collapsing
+  // the card on tap.
+  var mc='';all.forEach(function(n,i){var px=PR[n.tk]||0;var pCls=priceCls(n.tk);mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div style="display:flex;align-items:center;gap:6px">'+logoHTML(n.tk,true)+'<span class="badge badge-accent mono" style="font-size:10px">'+n.tk+'</span>'+(px>0?'<span class="mono '+pCls+'" style="font-size:11px">'+fm(px)+'</span>':'')+'</div><span class="muted" style="font-size:10px">'+n.d+'<br>'+n.tm+'</span></div><div style="font-weight:600;font-size:12px;margin-bottom:2px">'+n.t+'</div><div class="muted" style="font-size:10px">'+n.s+'</div><div class="mkd"><p style="font-size:11px;color:var(--text2);line-height:1.5;margin:6px 0">'+n.sm+'</p><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><a href="'+n.u+'" target="_blank" style="color:var(--accent);font-size:11px;font-weight:600;text-decoration:none">Read article \u2192</a><button class="btn btn-outline share-btn" onclick="event.stopPropagation();shareNewsAsPNG('+i+')" style="font-size:10px;padding:4px 10px" title="Save this article as a shareable PNG">\ud83d\udcbe Share</button></div></div></div>'});
   G('mN').innerHTML=mc;
 
   // DIVIDENDS
