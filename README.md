@@ -1,10 +1,20 @@
 # Stockfolio
 
-**Current Version: v0.7.51**
+**Current Version: v0.7.52**
 
 ---
 
 ## Changelog
+
+### v0.7.52 — 2026-05-06 — 🔔 Notifications inbox + worker reminder coverage warnings
+- **Notifications inbox.** Every toast now persists to `prefs.notifInbox` (capped at 100 entries, deduped within 1s for burst spam). New 🔔 bell button in the header shows an unread badge; click to open the inbox modal with timestamped entries color-coded by type (warn/error/info). "Mark all read" + "Clear" buttons; entries auto-mark read 800ms after opening. Caller can pass `{noinbox:true}` to `showToast()` for trivial UI feedback ("PNG saved") that shouldn't pollute the inbox. Persisted to Firestore via the same `prefs` merge flow that survives reloads.
+- **Worker reminder emails now warn on weak dividend coverage.** Daily reminder cron (`stocks-worker` v0.6.0) reads each reminder's ticker from the shared `/fundamentals/{ticker}` Firestore collection (populated by v0.7.42's Insights fundamentals fetcher). When the operating-cash-flow ÷ dividends-paid coverage ratio is below 2×, the email adds an inline warning to that ticker's card:
+  - **At risk** (red): coverage < 1× — dividend funded by debt or asset sales
+  - **Tight** (yellow): coverage 1–1.5× — watch for policy changes
+  - **OK / Strong**: silent (no clutter)
+  - **No data**: silent (cache miss = no warning)
+  Stale data (>180 days old) is ignored to avoid flagging companies based on numbers that have since improved.
+- Email branding updated from "Portfolio Command Center" to "Stockfolio" in the footer.
 
 ### v0.7.51 — 2026-05-06 — Settings reorganized + Test email button
 - **Settings tab reorganized into 6 labeled sections.** Cards were piling up in arbitrary order (~14 of them by now). New section headers using `column-span:all` so they stretch across both masonry columns: 👤 Account, 🎨 Appearance & Audio, 🔔 Notifications, 💰 Money & Taxes, 🏦 Brokerage & Accounts, 🔑 API Keys, 💾 Data & Activity. Each header has a small italic description on the right so the grouping is obvious at a glance. The cards themselves move to the section they belong in (Export & Import to Data, Manage Accounts and SnapTrade together under Brokerage, etc).
