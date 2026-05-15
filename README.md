@@ -1,10 +1,17 @@
 # Stockfolio
 
-**Current Version: v0.7.53**
+**Current Version: v0.7.54**
 
 ---
 
 ## Changelog
+
+### v0.7.54 — 2026-05-15 — 🎬 Demo mode (?demo=1)
+- **Realistic sample portfolio at `?demo=1`.** Loads a 10-position mix (AAPL, MSFT, SCHD, ABBV, KO, T, VICI, BAC, AMZN, GOOG) split across two sample accounts (Roth IRA + Taxable), with 6 months of synthetic daily history on a $40k base, two realized sales for the Realized P/L panel, and pinned prices for deterministic snapshot math. Lots match the cost-basis fields so the Unrealized P/L panel shows a believable mix of winners and losers; sectors render across the snapshot doughnut.
+- **Persistence layer fully neutralized.** In demo mode, `saveLocal` / `saveToCloud` / `savePrefs` / `logActivity` all short-circuit; the Firestore handle is set to `null` so even a stray write attempt can't reach a real user's doc; `loadPrefs` returns an in-memory cache seeded with demo history. Returning to your real session is a one-click "Exit demo" button in the banner that strips `?demo` from the URL.
+- **External integrations stubbed.** `fetchAllNews`, `fetchAllPrices`, `refreshAllFundamentals`, SnapTrade card + Brokers tab all show "Demo mode" placeholders instead of network calls — no API keys consumed and no risk of malformed sample data hitting any provider.
+- **Demo banner.** Purple/cyan gradient banner at the top of the page with a pulsing dot, "🎬 Demo Mode — sample portfolio, none of your data is saved." plus an Exit demo button. Auth bar is hidden so demo mode owns the top-of-page messaging.
+- **Sign-in disabled.** `signInGoogle()` shows a toast instead of opening the popup; `onAuthStateChanged` doesn't bind in demo mode so cloud-load + reminder check + auto-sync never run.
 
 ### v0.7.53 — 2026-05-15 — 📊 SPY benchmark overlay on Portfolio Value Over Time
 - **S&P 500 (SPY) comparison line added to the Portfolio Value Over Time chart on the All tab.** The chart now plots a second dashed-yellow line showing what SPY did over the same date range as your portfolio, normalized so both lines start at the same Y — apples-to-apples percent comparison. Legend row under the chart title shows both lines' percent change side-by-side ("Your portfolio +3.2% · S&P 500 +1.8%"). Hover tooltip extends to "2026-05-12 · $123,456 · SPY $124,180".

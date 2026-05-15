@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.53</title>
+<title>Stockfolio v0.7.54</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -63,6 +63,16 @@ input,button,select{font-family:inherit}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
 .cloud-badge{background:var(--accent-dim);color:var(--accent);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600}
 .local-badge{background:var(--yellow-dim);color:var(--yellow);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:600}
+.demo-banner{background:linear-gradient(90deg,rgba(168,85,247,.16),rgba(34,211,238,.16));border-bottom:1px solid var(--purple);padding:8px 0;font-size:12px;color:var(--text)}
+.demo-banner .container{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.demo-banner .demo-label{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.demo-banner .demo-label .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--purple);box-shadow:0 0 6px var(--purple);animation:demoPulse 1.6s ease-in-out infinite}
+@keyframes demoPulse{0%,100%{opacity:.6}50%{opacity:1}}
+.demo-banner .demo-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.demo-banner .demo-btn{background:transparent;color:var(--text);border:1px solid var(--purple);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600}
+.demo-banner .demo-btn:hover{background:var(--purple);color:#fff}
+.demo-banner .demo-msg{color:var(--muted);font-size:11px}
+@media(max-width:560px){.demo-banner .demo-msg{display:none}}
 
 .header{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 0;position:sticky;top:0;z-index:100}
 .header-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
@@ -658,6 +668,16 @@ body.text-xl .sc .scv{font-size:24px}
 
 <div class="save-toast" id="svt">&#10003; Saved</div>
 
+<!-- Demo Mode Banner (only rendered when ?demo=1 — see IS_DEMO check below) -->
+<div class="demo-banner" id="demoBanner" style="display:none">
+  <div class="container">
+    <span class="demo-label"><span class="dot"></span>🎬 Demo Mode <span class="demo-msg">— sample portfolio, none of your data is saved.</span></span>
+    <span class="demo-actions">
+      <button class="demo-btn" onclick="exitDemoMode()">Exit demo</button>
+    </span>
+  </div>
+</div>
+
 <!-- Auth Bar -->
 <div class="auth-bar">
   <div class="container auth-inner">
@@ -1201,7 +1221,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.53 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.54 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1288,7 +1308,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.53";
+var VERSION = "0.7.54";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1309,6 +1329,20 @@ var db = null;
 var currentUser = null;
 var syncEnabled = false;
 
+// ═════════════════════════════════════════════════
+// DEMO MODE — ?demo=1 URL param shows a realistic sample portfolio
+// without touching localStorage or Firestore. Useful for sharing the
+// app on social / showing somebody what it looks like with data, or
+// previewing before signing in. All persistence layers (saveLocal,
+// saveToCloud, savePrefs cloud branch, activity log, history snapshot)
+// short-circuit when IS_DEMO is true so the user's real data stays safe.
+// ═════════════════════════════════════════════════
+var IS_DEMO = false;
+try {
+  var _qs = new URLSearchParams(location.search);
+  if (_qs.get('demo') === '1' || _qs.get('demo') === 'true') IS_DEMO = true;
+} catch(e){}
+
 try {
   if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY") {
     firebase.initializeApp(FIREBASE_CONFIG);
@@ -1316,11 +1350,18 @@ try {
     firebaseReady = true;
   }
 } catch(e) { console.log("Firebase not configured:", e); }
+// In demo mode, neutralize the Firestore handle entirely so no code path
+// can write to a real user's doc by accident, even if currentUser were set.
+if (IS_DEMO) db = null;
 
 // ═════════════════════════════════════════════════
 // AUTH
 // ═════════════════════════════════════════════════
 function signInGoogle() {
+  if (IS_DEMO) {
+    if (typeof showToast === 'function') showToast('Sign-in is disabled in demo mode. Click "Exit demo" in the banner to sign in.', 'info');
+    return;
+  }
   if (!firebaseReady) {
     alert("Firebase not configured yet.\n\nSee README.md for setup instructions — you need to:\n1. Create a Firebase project\n2. Enable Google sign-in\n3. Create Firestore database\n4. Paste your config into this file\n\nPortfolio still works locally without it!");
     return;
@@ -1685,7 +1726,7 @@ function forgetMyData(){
   });
 }
 
-if (firebaseReady) {
+if (firebaseReady && !IS_DEMO) {
   var _wasSignedIn = false;
   firebase.auth().onAuthStateChanged(function(user) {
     var becameSignedIn = !!user && !_wasSignedIn;
@@ -1932,6 +1973,59 @@ function loadFromCloud() {
 var DT=["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP","F","GOOG","AAPL","TSLA","TGT","KO","VICI","CMCSA","BAC","INTC","AMZN"];
 // Fallback prices — these are stale. Live prices from Finnhub override these on page load.
 var FALLBACK_PR={NET:118.42,IBM:237.15,T:21.98,PFE:25.81,LUV:33.10,RGR:57,MSFT:448.72,RTX:123.05,BP:29.60,SCHD:82.44,ABBV:204.30,AXP:285.60,F:10.49,GOOG:177.80,AAPL:232.56,TSLA:271.34,TGT:132.55,KO:70.68,VICI:33.40,CMCSA:39.74,BAC:44.44,INTC:31.65,AMZN:197.12};
+
+// ═════════════════════════════════════════════════
+// DEMO MODE SAMPLE PORTFOLIO — used when IS_DEMO is true. None of this is
+// the developer's real holdings; values are illustrative and roughly track
+// late-2025/early-2026 sector exposures (a couple aristocrats, an income ETF,
+// some growth, a single REIT, a financial). Lots are split across two
+// "Roth IRA" + "Taxable" accounts to show the account-grouping panel; one
+// position has a DRIP-reinvest lot to show the DRIP UI; two realized sales
+// populate the Realized P/L panel and Tax Outlook. History is 6 months of
+// daily values with mild drift so the chart has something interesting to show.
+// ═════════════════════════════════════════════════
+var DEMO_PORTFOLIO = {
+  tks: ["AAPL","MSFT","SCHD","ABBV","KO","T","VICI","BAC","AMZN","GOOG"],
+  lots: {
+    AAPL: [{s:25,b:"Roth IRA",p:175.40,added:"2025-11-12T00:00:00.000Z"},{s:10,b:"Taxable",p:218.12,added:"2026-02-04T00:00:00.000Z"}],
+    MSFT: [{s:15,b:"Roth IRA",p:402.18,added:"2025-12-03T00:00:00.000Z"}],
+    SCHD: [{s:80,b:"Roth IRA",p:78.94,added:"2025-10-20T00:00:00.000Z"},{s:25,b:"Taxable",p:81.30,added:"2026-01-15T00:00:00.000Z"}],
+    ABBV: [{s:20,b:"Taxable",p:189.60,added:"2025-11-27T00:00:00.000Z"}],
+    KO:   [{s:60,b:"Taxable",p:64.10,added:"2025-09-08T00:00:00.000Z"}],
+    T:    [{s:200,b:"Taxable",p:20.85,added:"2025-08-15T00:00:00.000Z"},{s:7.34,b:"Taxable",p:21.40,added:"2026-02-01T00:00:00.000Z"}],
+    VICI: [{s:90,b:"Roth IRA",p:31.20,added:"2025-10-05T00:00:00.000Z"}],
+    BAC:  [{s:50,b:"Taxable",p:41.55,added:"2025-11-18T00:00:00.000Z"}],
+    AMZN: [{s:8,b:"Taxable",p:182.40,added:"2025-12-12T00:00:00.000Z"}],
+    GOOG: [{s:18,b:"Roth IRA",p:163.80,added:"2025-10-25T00:00:00.000Z"}]
+  },
+  realized: [
+    {id:"demo-r1",ticker:"INTC",account:"Taxable",shares:30,entryPrice:43.10,sellPrice:31.80,entryDate:"2024-08-15",sellDate:"2026-01-22",holdingDays:525,longTerm:true,proceeds:954,cost:1293,gain:-339,source:"manual"},
+    {id:"demo-r2",ticker:"NVDA",account:"Taxable",shares:5,entryPrice:88.50,sellPrice:128.30,entryDate:"2025-09-04",sellDate:"2026-03-11",holdingDays:188,longTerm:false,proceeds:641.50,cost:442.50,gain:199,source:"manual"}
+  ]
+};
+// Build a 6-month synthetic history with a mild +6% drift on a $40k start,
+// plus some volatility so the chart isn't a boring straight line.
+var DEMO_HISTORY = (function(){
+  var out=[];
+  var today=new Date();
+  var startV=40000;
+  var endV=42400;
+  for(var i=180;i>=0;i--){
+    var d=new Date(today.getTime()-i*86400000);
+    var iso=d.toISOString().slice(0,10);
+    var t=(180-i)/180;
+    // Linear drift + sinusoidal wave + small noise (deterministic per-day seed)
+    var seed=parseInt(iso.replace(/-/g,''),10);
+    var noise=(((seed*9301+49297)%233280)/233280-0.5)*600;
+    var wave=Math.sin(t*Math.PI*4)*450;
+    var v=startV+(endV-startV)*t+wave+noise;
+    out.push({d:iso, v:Math.round(v*100)/100, i:Math.round(1480+t*180)});
+  }
+  return out;
+})();
+// Demo prices anchored to the lot cost bases so the Unrealized P/L panel
+// shows a believable mix of winners + losers. (Values rough as of 2026-05.)
+var DEMO_PRICES = {AAPL:226.40,MSFT:438.90,SCHD:84.20,ABBV:198.75,KO:72.30,T:23.10,VICI:34.50,BAC:46.80,AMZN:204.60,GOOG:182.40,INTC:30.95,NVDA:135.20};
 var livePrices = {};
 // Day-change % from Finnhub (when available). Used to color price cells red/green.
 var liveChanges = {};
@@ -2030,6 +2124,15 @@ function logActivity(type, detail) {
   var entry = { type: type, detail: detail || '', ts: Date.now() };
   activityLog.unshift(entry); // newest first
   if (activityLog.length > ACTIVITY_CAP) activityLog.length = ACTIVITY_CAP;
+  // Demo mode: keep the activity log in-memory only — never write to storage
+  // or cloud. The user can see their demo-session actions reflected but
+  // nothing persists past page reload.
+  if (IS_DEMO) {
+    if (typeof renderActivityCard === 'function') {
+      try { renderActivityCard(); } catch(e) {}
+    }
+    return;
+  }
   // Mirror to localStorage so the log is visible even between sessions for
   // local-only users (won't sync across devices without signin)
   try { localStorage.setItem('pf_activity', JSON.stringify(activityLog.slice(0, 100))); } catch(e) {}
@@ -2184,6 +2287,12 @@ function fetchNewsForTicker(ticker){
 }
 
 function fetchAllNews() {
+  if (IS_DEMO) {
+    // In demo mode we never hit the news API — keep the UI status muted.
+    var ns = document.getElementById('newsStatus');
+    if (ns) ns.innerHTML = '<span class="muted" style="font-size:10.5px">Demo mode — live news disabled</span>';
+    return;
+  }
   if (!anyKeySet()) {
     document.getElementById('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
     return;
@@ -2350,6 +2459,11 @@ function fetchBTC(){
 }
 
 function fetchAllPrices() {
+  if (IS_DEMO) {
+    var sx = document.getElementById('priceStatus');
+    if (sx) sx.innerHTML = '<span class="muted" style="font-size:10.5px">Demo mode</span>';
+    return;
+  }
   if (!anyKeySet()) {
     var stx = document.getElementById('priceStatus');
     if (stx) stx.innerHTML = '<span style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No key</span>';
@@ -2475,6 +2589,18 @@ function removeLot(t,idx){
   save();render();
 }
 function load(){
+  if (IS_DEMO) {
+    // Seed from constant sample dataset. No localStorage reads/writes — we
+    // never want demo data to clobber a returning user's real cache, and we
+    // never want the user's stale local data to bleed into the demo view.
+    tks = DEMO_PORTFOLIO.tks.slice();
+    lots = JSON.parse(JSON.stringify(DEMO_PORTFOLIO.lots));
+    realized = DEMO_PORTFOLIO.realized.slice();
+    // Pin prices so the snapshot math is deterministic regardless of network
+    Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
+    computeFromLots();
+    return;
+  }
   try{tks=JSON.parse(localStorage.getItem('pf_t'))||DT.slice()}catch(e){tks=DT.slice()}
   loadRealizedLocal();
   // Try loading lots first (new format)
@@ -2501,6 +2627,7 @@ function load(){
   try{localStorage.setItem('pf_lots',JSON.stringify(lots))}catch(e){}
 }
 function saveLocal(){
+  if (IS_DEMO) return; // demo never writes to localStorage
   try{
     localStorage.setItem('pf_t',JSON.stringify(tks));
     localStorage.setItem('pf_lots',JSON.stringify(lots));
@@ -4720,6 +4847,7 @@ function _spyCloseOn(date, spyDates){
 // Bulk refresh — used by the "Refresh fundamentals" button. Throttles to
 // 1 fetch per 13s to stay under AlphaVantage's 5/min free-tier rate limit.
 function refreshAllFundamentals(force){
+  if (IS_DEMO) { if (typeof showToast === 'function') showToast('Demo mode — fundamentals refresh disabled', 'info'); return; }
   var divTks = tks.filter(isDiv);
   if(divTks.length === 0){ showToast('No dividend tickers to refresh'); return; }
   showToast('Refreshing fundamentals for '+divTks.length+' tickers…');
@@ -5397,12 +5525,33 @@ getBrokerList=function(){
 // ═════════════════════════════════════════════════
 // PREFERENCES (persisted per user)
 // ═════════════════════════════════════════════════
+var _DEMO_PREFS = null;
 function loadPrefs(){
+  if (IS_DEMO) {
+    if (!_DEMO_PREFS) {
+      _DEMO_PREFS = {
+        notifEnabled:true, soundMuted:true, soundChoice:'chime',
+        theme:'dark', textSize:'normal',
+        accounts:[{name:'Roth IRA',type:'roth'},{name:'Taxable',type:'taxable'}],
+        history: DEMO_HISTORY.slice(),
+        showSpyBenchmark:true,
+        // Pretend the SnapTrade card is disconnected (just shows the connect CTA)
+        // Pretend no API keys are set so we don't hit any real endpoints
+      };
+    }
+    return _DEMO_PREFS;
+  }
   try{var p=JSON.parse(localStorage.getItem('pf_prefs'));if(p){if(p.notifEnabled===undefined)p.notifEnabled=true;if(p.soundMuted===undefined)p.soundMuted=false;if(!p.soundChoice)p.soundChoice='chime';return p}}catch(e){}
   return{notifEnabled:true,soundMuted:false,soundChoice:'chime',theme:'dark',textSize:'normal',accounts:[]};
 }
 var _inSavePrefs = false;
 function savePrefs(p){
+  if (IS_DEMO) {
+    // Demo keeps prefs in-memory only — mutate the global cache so the
+    // session feels persistent within this tab, but never touch storage.
+    _DEMO_PREFS = p;
+    return;
+  }
   try{localStorage.setItem('pf_prefs',JSON.stringify(p))}catch(e){}
   // Auto-trim before sync if approaching Firestore 1 MB limit. Guard against
   // recursion since maybeAutoTrimCloudDoc() itself calls savePrefs().
@@ -6747,6 +6896,10 @@ async function snapTradeDisconnect(){
 
 function renderSnapTradeCard(){
   var body=G('snaptradeCardBody');if(!body)return;
+  if (IS_DEMO) {
+    body.innerHTML='<div class="muted" style="font-size:11.5px;line-height:1.5">SnapTrade is disabled in demo mode.<br>Exit demo and sign in to connect a real brokerage.</div>';
+    return;
+  }
   if(!currentUser){
     body.innerHTML='<div class="muted" style="font-size:11.5px">Sign in with Google (top of page) to use SnapTrade.</div>';
     return;
@@ -7060,6 +7213,10 @@ function renderBrokersTab(){
   // Toggle the collapse-all toolbar visibility based on whether any cards exist
   var toolbar=G('bCollToolbar');
   if(toolbar) toolbar.style.display = (stApiState.accounts && stApiState.accounts.length>0) ? 'flex' : 'none';
+  if (IS_DEMO) {
+    el.innerHTML='<div class="muted" style="text-align:center;padding:30px;line-height:1.6">SnapTrade brokerage sync is disabled in demo mode.<br><span style="font-size:11px">In a real session you can connect Fidelity, Schwab, Robinhood, Vanguard, and other brokers to auto-sync positions, transactions, and DRIP detection.</span></div>';
+    return;
+  }
   if(!currentUser){
     el.innerHTML='<div class="muted" style="text-align:center;padding:30px">Sign in with Google to view connected brokerages.</div>';
     return;
@@ -7159,6 +7316,13 @@ fetchAllNews=function(){
 })();
 
 // INIT
+if (IS_DEMO) {
+  var _demoBanner = document.getElementById('demoBanner');
+  if (_demoBanner) _demoBanner.style.display = '';
+  // Hide the standard auth bar "Sign in to sync" prompt — demo mode owns that messaging.
+  var _ab = document.querySelector('.auth-bar');
+  if (_ab) _ab.style.display = 'none';
+}
 load();
 loadApiKey(); // load API key from prefs before any fetches; also seeds stApiState.userSecret
 loadThemePrefs();
@@ -7170,14 +7334,30 @@ renderBrokersTab();
 renderActivityCard();
 updateRecheckTimeUI();
 
+// Demo-mode helper: clear ?demo and reload into the user's real session.
+function exitDemoMode(){
+  try {
+    var u = new URL(location.href);
+    u.searchParams.delete('demo');
+    location.href = u.toString();
+  } catch(e) {
+    location.href = location.pathname; // last-resort fallback
+  }
+}
+
 // Set baseline news count for notifications
 prevNewsCount=0;tks.forEach(function(t){prevNewsCount+=(liveNews[t]||[]).length});
 
 // Auto-fix stocks with missing sector/dividend data
 recheckMissingData();
 
-// Fetch live news on load if API key is set and cache is stale
-if (anyKeySet() && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
+// Fetch live news on load if API key is set and cache is stale.
+// In demo mode we never hit the news API — show a static "demo mode" status
+// instead of nagging about the missing API key.
+if (IS_DEMO) {
+  var _ns = G('newsStatus');
+  if (_ns) _ns.innerHTML = '<span class="muted" style="font-size:10.5px">Demo mode — live news disabled</span>';
+} else if (anyKeySet() && (Date.now() - newsLastFetched > NEWS_CACHE_MS)) {
   fetchAllNews();
 } else if (!anyKeySet()) {
   G('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
