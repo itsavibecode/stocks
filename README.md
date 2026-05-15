@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.7.55**
+**Current Version: v0.7.56**
 
 ---
 
 ## Changelog
+
+### v0.7.56 — 2026-05-15 — 📱 Mobile UX top-to-bottom sweep
+- **iOS Safari zoom-on-focus eliminated.** Inputs/textareas/selects on phones now use 16px font (was 13–14px), which prevents Safari's mandatory auto-zoom when the user taps into a field. Covers the modal inputs, search bars, reminder day-count fields, and every form input across Settings.
+- **Floating "+ Add" button on mobile.** The Add Ticker button used to live in the tabs row, which scrolls horizontally on phones — meaning once you scrolled past "News / Dividends / Growth" it was gone. New circular FAB anchored bottom-right (52×52, accent-blue, drop shadow) is always reachable. Hidden on desktop (the original toolbar Add button is still there).
+- **Tabs row sticks to top on mobile** so you can switch tabs without scrolling back up. Sits below the header + scrolling ticker in the existing sticky stack (no overlap math needed — uses the same `var(--sticky-top)` + ticker height that the table headers already use).
+- **Header decluttered on phones.** The live clock is hidden on ≤640px (phones already show time in the system status bar); the four icon buttons (inbox / theme / text-size / RSS) now have a min 34px tap zone instead of the previous 30px borderline-pixel size.
+- **Touch targets bumped.** `.btn` minimum height bumped to 36px on mobile (was effectively 24–28px depending on padding). Apple's HIG recommends 44px; we're at 36 to keep density acceptable for users who actually do want to see a lot at once.
+- **Modal padding tightened to 16px** on phones (from 22px) so the dialog content gets a few more pixels of horizontal breathing room on 320–360px screens.
 
 ### v0.7.55 — 2026-05-15 — 💡 Light theme audit
 - **Fixed unreadable price-movement colors on light theme.** `.px-up` (small uptick) and `.px-down` (small downtick) used pale mint/pink (`#6ee7b7` / `#fca5a5`) baked into the dark-theme palette — on white they nearly disappeared. Light-theme override bumps them to the same readable green/red used for strong moves (`#059669` / `#dc2626`).
