@@ -1,10 +1,17 @@
 # Stockfolio
 
-**Current Version: v0.7.54**
+**Current Version: v0.7.55**
 
 ---
 
 ## Changelog
+
+### v0.7.55 — 2026-05-15 — 💡 Light theme audit
+- **Fixed unreadable price-movement colors on light theme.** `.px-up` (small uptick) and `.px-down` (small downtick) used pale mint/pink (`#6ee7b7` / `#fca5a5`) baked into the dark-theme palette — on white they nearly disappeared. Light-theme override bumps them to the same readable green/red used for strong moves (`#059669` / `#dc2626`).
+- **Past-month dividend bars** in the dividend timeline used a hardcoded dark-navy gradient (`#5a6e8a → #2a3548`) that looked like a wet ink stain on light theme. Switched to a muted slate gradient (`#cbd5e1 → #94a3b8`) on light theme; their white text labels also swap to dark slate so the past-month chip stays readable on a pale bar.
+- **Auth-bar Google button border** bumped from `#ddd` to `#bfc5ce` on light theme so the button doesn't visually fuse into the auth bar's pale background.
+- **Demo banner** gradient softened from 16% → 10% opacity on light theme so it doesn't dominate the page.
+- **Audited** every hardcoded `color:#`, `background:#`, and `rgba()` value across CSS + inline styles for theme-safety. Most everything else already routes through CSS variables (`--text`, `--card`, `--border`, `--accent` etc.) and switches cleanly between dark/light. The News-share PNG card is intentionally fixed-dark (it's a branded export image, not in-app UI) and was left alone.
 
 ### v0.7.54 — 2026-05-15 — 🎬 Demo mode (?demo=1)
 - **Realistic sample portfolio at `?demo=1`.** Loads a 10-position mix (AAPL, MSFT, SCHD, ABBV, KO, T, VICI, BAC, AMZN, GOOG) split across two sample accounts (Roth IRA + Taxable), with 6 months of synthetic daily history on a $40k base, two realized sales for the Realized P/L panel, and pinned prices for deterministic snapshot math. Lots match the cost-basis fields so the Unrealized P/L panel shows a believable mix of winners and losers; sectors render across the snapshot doughnut.

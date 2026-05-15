@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.54</title>
+<title>Stockfolio v0.7.55</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -614,6 +614,17 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 
 /* THEME + TEXT SIZE */
 body.light{--bg:#f0f2f5;--card:#fff;--card2:#f5f7fa;--card3:#eaecf0;--border:#d1d5db;--border2:#bfc5ce;--text:#1a1a2e;--text2:#374151;--muted:#6b7280;--accent:#2563eb;--accent2:#0891b2;--accent-dim:#2563eb25;--green:#059669;--green-dim:#05966920;--red:#dc2626;--red-dim:#dc262620;--yellow:#d97706;--yellow-dim:#d9770620;--purple:#7c3aed;--purple-dim:#7c3aed20;--gold:#b45309;--orange:#ea580c}
+/* LIGHT THEME OVERRIDES — places where the dark-theme values are hardcoded
+   (not via var) and would look washed-out or unreadable on a white background.
+   Keep this block small — only fix things that actually break, not stylistic
+   preferences. */
+body.light .px-up{color:#059669} /* pale-mint #6ee7b7 was invisible on white — bump to readable green */
+body.light .px-down{color:#dc2626} /* pale-pink #fca5a5 was invisible on white — bump to readable red */
+body.light .pct-bar.past{background:linear-gradient(90deg,#cbd5e1,#94a3b8)} /* dark navy gradient → muted slate */
+body.light .pct-bar-label{color:rgba(255,255,255,.98);text-shadow:0 1px 2px rgba(0,0,0,.45)} /* white labels still readable on green/red/blue bars */
+body.light .pct-row.past .pct-bar-label{color:rgba(30,41,59,.85);text-shadow:none} /* but past-month bars are pale, so use dark text */
+body.light .auth-btn.google{border-color:#bfc5ce} /* Google button's default #ddd border is too light next to our pale auth-bar */
+body.light .demo-banner{background:linear-gradient(90deg,rgba(168,85,247,.10),rgba(34,211,238,.10))} /* slightly softer gradient on white */
 body.text-lg{font-size:15px}
 body.text-lg table{font-size:13px}
 body.text-lg thead th{font-size:10.5px}
@@ -1221,7 +1232,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.54 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.55 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1308,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.54";
+var VERSION = "0.7.55";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
