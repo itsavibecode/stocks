@@ -38,5 +38,22 @@ service cloud.firestore {
                    && request.resource.data.fetchedAt is number;
     }
 
+    // Shared benchmark price history cache (e.g. SPY for the S&P 500 overlay
+    // on the Portfolio Value Over Time chart). Same dedup pattern as
+    // /fundamentals/: one user's AlphaVantage fetch warms the cache for every
+    // user. Read by any authenticated user, write by any authenticated user
+    // but with a strict shape — `dates` is the daily-close map, no portfolio
+    // or PII fields can be smuggled in.
+    match /benchmarks/{ticker} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.data.keys().hasOnly([
+                        'symbol', 'dates', 'fetchedAt', 'source'
+                      ])
+                   && request.resource.data.symbol == ticker
+                   && request.resource.data.fetchedAt is number
+                   && request.resource.data.dates is map;
+    }
+
   }
 }

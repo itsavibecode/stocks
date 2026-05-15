@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.52**
+**Current Version: v0.7.53**
 
 ---
 
 ## Changelog
+
+### v0.7.53 — 2026-05-15 — 📊 SPY benchmark overlay on Portfolio Value Over Time
+- **S&P 500 (SPY) comparison line added to the Portfolio Value Over Time chart on the All tab.** The chart now plots a second dashed-yellow line showing what SPY did over the same date range as your portfolio, normalized so both lines start at the same Y — apples-to-apples percent comparison. Legend row under the chart title shows both lines' percent change side-by-side ("Your portfolio +3.2% · S&P 500 +1.8%"). Hover tooltip extends to "2026-05-12 · $123,456 · SPY $124,180".
+- **Toggle button "✓ SPY / ○ SPY"** next to the chart's Share button. Persisted to `prefs.showSpyBenchmark` and synced cross-device through the existing prefs merge flow. Default ON.
+- **New shared `/benchmarks/SPY` Firestore collection** following the same dedup pattern as `/fundamentals/`: one user's AlphaVantage fetch warms the cache for everyone (24h TTL, daily-close granularity). Field-allowlist write rules prevent stuffing portfolio/PII data into the doc. Auto-warm fetch fires once on chart render if the cache is stale or empty AND the user has an AlphaVantage key configured; otherwise the chart silently falls back to portfolio-only. Non-trading-day dates (weekends/holidays) walk back up to 7 days to find the previous trading day's close so the lines stay aligned.
+- **AlphaVantage endpoint:** `TIME_SERIES_DAILY` with `outputsize=full` (~20yr history). One request, shared cache, no per-user cost.
 
 ### v0.7.52 — 2026-05-06 — 🔔 Notifications inbox + worker reminder coverage warnings
 - **Notifications inbox.** Every toast now persists to `prefs.notifInbox` (capped at 100 entries, deduped within 1s for burst spam). New 🔔 bell button in the header shows an unread badge; click to open the inbox modal with timestamped entries color-coded by type (warn/error/info). "Mark all read" + "Clear" buttons; entries auto-mark read 800ms after opening. Caller can pass `{noinbox:true}` to `showToast()` for trivial UI feedback ("PNG saved") that shouldn't pollute the inbox. Persisted to Firestore via the same `prefs` merge flow that survives reloads.

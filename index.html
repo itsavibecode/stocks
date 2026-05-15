@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.52</title>
+<title>Stockfolio v0.7.53</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -256,8 +256,14 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .snap-history-svg .grid{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.5}
 .snap-history-svg .axis{stroke:var(--muted);stroke-width:1;opacity:.4}
 .snap-history-svg .line{stroke:var(--accent2);stroke-width:2;fill:none;stroke-linejoin:round;stroke-linecap:round}
+.snap-history-svg .line-spy{stroke:var(--yellow);stroke-width:1.6;fill:none;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:4,3;opacity:.85}
 .snap-history-svg .area{fill:url(#areaGrad);opacity:.25}
 .snap-history-svg .dot{fill:var(--accent2)}
+.snap-history-legend{display:inline-flex;align-items:center;gap:10px;font-size:10.5px;color:var(--muted);flex-wrap:wrap}
+.snap-history-legend .lg{display:inline-flex;align-items:center;gap:5px}
+.snap-history-legend .sw{width:16px;height:3px;border-radius:2px;display:inline-block}
+.snap-history-legend .sw.portfolio{background:var(--accent2)}
+.snap-history-legend .sw.spy{background:repeating-linear-gradient(90deg,var(--yellow) 0 4px,transparent 4px 7px)}
 .snap-history-svg .axis-label{fill:var(--muted);font-size:9px;font-family:var(--mono)}
 .snap-history-svg .hover-line{stroke:var(--accent);stroke-width:1;stroke-dasharray:3,3;opacity:0;pointer-events:none}
 .snap-history-svg .hover-dot{fill:var(--accent);opacity:0;pointer-events:none}
@@ -1195,7 +1201,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.52 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.53 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <div class="modal-overlay" id="mod" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1282,7 +1288,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.52";
+var VERSION = "0.7.53";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1940,6 +1946,13 @@ var liveChanges = {};
 var FUND = {};
 var FUND_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 try { var _fc = localStorage.getItem('pf_fund'); if(_fc) FUND = JSON.parse(_fc); } catch(e){}
+// SPY benchmark daily-close history. Sourced from AlphaVantage TIME_SERIES_DAILY
+// once per ~24h, cached in localStorage AND shared Firestore /benchmarks/SPY
+// (cross-user / cross-device dedup). Format: { dates: {"2026-04-15": 543.21,
+// ...}, fetchedAt: <ms> }. Loaded on demand by the Portfolio Value chart.
+var SPY_HIST = null;
+var SPY_TTL_MS = 24 * 60 * 60 * 1000; // 24h — daily data, no point refreshing more often
+try { var _sh = localStorage.getItem('pf_spy_hist'); if(_sh) SPY_HIST = JSON.parse(_sh); } catch(e){}
 // PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
 var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
 var pricesLastFetched = 0;
@@ -3515,10 +3528,6 @@ function render(){
       if (hist.length < 2) {
         return '<div class="snap-history"><div class="snap-history-title">📈 Portfolio Value Over Time</div><div class="snap-empty">History starts accumulating from today. Come back tomorrow to see your value plotted, longer for trends.</div></div>';
       }
-      var values = hist.map(function(h){return h.v});
-      var minV = Math.min.apply(null, values);
-      var maxV = Math.max.apply(null, values);
-      var range = (maxV - minV) || 1;
       // Plot area math — note: the SVG no longer needs to reserve space for
       // labels since they're rendered as HTML overlays in .snap-history-y /
       // .snap-history-x. The wrap div pads 64px left + 18px bottom externally.
@@ -3526,6 +3535,36 @@ function render(){
       var padT = 6, padB = 6, padL = 6, padR = 6;
       var plotW = w - padL - padR;
       var plotH = ch - padT - padB;
+
+      // SPY overlay — opt-in via prefs.showSpyBenchmark (default true). Reads
+      // from the shared /benchmarks/SPY cache; if SPY data is missing or any
+      // chart-start date can't be matched, the overlay silently falls back to
+      // portfolio-only. Auto-warm fetch happens after render in the wire-up.
+      var showSpy = prefs.showSpyBenchmark !== false;
+      var spyPath = null, spyValues = [];
+      if (showSpy && SPY_HIST && SPY_HIST.dates) {
+        var spyStart = _spyCloseOn(hist[0].d, SPY_HIST.dates);
+        if (spyStart && spyStart > 0) {
+          // Normalize SPY so its first point equals the portfolio's first value
+          // (this lets the two lines share a Y axis and compare percent moves).
+          var portStart = hist[0].v;
+          var spyOk = true;
+          for (var i = 0; i < hist.length; i++) {
+            var sc = _spyCloseOn(hist[i].d, SPY_HIST.dates);
+            if (!sc) { spyOk = false; break; }
+            spyValues.push((sc / spyStart) * portStart);
+          }
+          if (!spyOk) spyValues = [];
+        }
+      }
+
+      // Y range needs to span BOTH portfolio + SPY for the shared axis to fit
+      var allValues = hist.map(function(h){return h.v});
+      if (spyValues.length === hist.length) allValues = allValues.concat(spyValues);
+      var minV = Math.min.apply(null, allValues);
+      var maxV = Math.max.apply(null, allValues);
+      var range = (maxV - minV) || 1;
+
       var pts = hist.map(function(h, i) {
         var x = padL + (hist.length === 1 ? plotW/2 : i / (hist.length - 1) * plotW);
         var y = padT + plotH - ((h.v - minV) / range) * plotH;
@@ -3533,15 +3572,50 @@ function render(){
       });
       var pathD = 'M' + pts.map(function(p){return p.x+','+p.y}).join(' L');
       var areaD = pathD + ' L' + pts[pts.length-1].x + ',' + (padT + plotH) + ' L' + pts[0].x + ',' + (padT + plotH) + ' Z';
+
+      var spyPts = [];
+      if (spyValues.length === hist.length) {
+        spyPts = spyValues.map(function(v, i) {
+          var x = padL + (hist.length === 1 ? plotW/2 : i / (hist.length - 1) * plotW);
+          var y = padT + plotH - ((v - minV) / range) * plotH;
+          return { x: x.toFixed(1), y: y.toFixed(1), v: v };
+        });
+        spyPath = 'M' + spyPts.map(function(p){return p.x+','+p.y}).join(' L');
+      }
+
       var midV = (minV + maxV) / 2;
       var firstD = hist[0].d, lastD = hist[hist.length-1].d;
       var change = hist[hist.length-1].v - hist[0].v;
       var changePct = hist[0].v > 0 ? (change / hist[0].v * 100) : 0;
       var changeColor = change >= 0 ? 'var(--green)' : 'var(--red)';
       var changeSign = change >= 0 ? '+' : '';
-      var dataAttr = JSON.stringify(pts).replace(/"/g, '&quot;');
+
+      // SPY change% over same window (for legend) — based on raw SPY closes
+      var spyChangePct = null;
+      if (spyValues.length === hist.length) {
+        var sStart = _spyCloseOn(hist[0].d, SPY_HIST.dates);
+        var sEnd = _spyCloseOn(hist[hist.length-1].d, SPY_HIST.dates);
+        if (sStart && sEnd) spyChangePct = (sEnd - sStart) / sStart * 100;
+      }
+
+      // Hover data — bundle both portfolio + SPY pts so the tooltip can show both
+      var hoverData = pts.map(function(p, i) {
+        return { x: p.x, y: p.y, d: p.d, v: p.v, sv: spyPts[i] ? spyPts[i].v : null };
+      });
+      var dataAttr = JSON.stringify(hoverData).replace(/"/g, '&quot;');
+
       var html = '<div class="snap-history" id="history-chart-panel" style="position:relative">';
-      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline share-btn" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
+      html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline share-btn" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" title="Save this chart as a PNG">💾 Share</button> <button class="btn btn-outline" onclick="toggleSpyBenchmark()" title="Toggle the S&amp;P 500 (SPY) comparison line" style="font-size:10.5px;padding:4px 8px">' + (showSpy ? '✓ SPY' : '○ SPY') + '</button></span></div>';
+
+      // Legend row — only shown when SPY is actually plotted
+      if (spyPath) {
+        var spySign = spyChangePct >= 0 ? '+' : '';
+        var spyColor = spyChangePct >= 0 ? 'var(--green)' : 'var(--red)';
+        html += '<div class="snap-history-legend" style="margin:2px 0 8px"><span class="lg"><span class="sw portfolio"></span>Your portfolio <span style="color:' + changeColor + ';font-weight:700">' + changeSign + changePct.toFixed(2) + '%</span></span><span class="lg"><span class="sw spy"></span>S&amp;P 500 (SPY) <span style="color:' + spyColor + ';font-weight:700">' + spySign + (spyChangePct || 0).toFixed(2) + '%</span></span></div>';
+      } else if (showSpy) {
+        html += '<div class="snap-history-legend" style="margin:2px 0 8px;font-size:10px;color:var(--muted)">S&amp;P 500 comparison unavailable — needs an AlphaVantage key and at least one auto-warm fetch.</div>';
+      }
+
       html += '<div class="snap-history-chart-wrap">';
       // Y-axis labels — HTML overlay (max top, mid middle, min bottom)
       html += '<div class="snap-history-y">';
@@ -3557,8 +3631,9 @@ function render(){
         var y = padT + plotH * (1 - t);
         html += '<line class="grid" x1="' + padL + '" x2="' + (w - padR) + '" y1="' + y + '" y2="' + y + '"/>';
       });
-      // Area + line
+      // Area + line — SPY drawn first so portfolio line sits on top
       html += '<path class="area" d="' + areaD + '"/>';
+      if (spyPath) html += '<path class="line-spy" d="' + spyPath + '"/>';
       html += '<path class="line" d="' + pathD + '"/>';
       var last = pts[pts.length - 1];
       html += '<circle class="dot" cx="' + last.x + '" cy="' + last.y + '" r="3"/>';
@@ -3599,7 +3674,9 @@ function render(){
         dot.setAttribute('cx', nearest.x);
         dot.setAttribute('cy', nearest.y);
         dot.style.opacity = '1';
-        tip.textContent = nearest.d + ' · ' + fm(nearest.v);
+        var tipTxt = nearest.d + ' · ' + fm(nearest.v);
+        if (nearest.sv != null) tipTxt += ' · SPY ' + fm(nearest.sv);
+        tip.textContent = tipTxt;
         tip.style.left = (ev.clientX - rect.left + 12) + 'px';
         tip.style.top = (ev.clientY - rect.top - 14) + 'px';
         tip.style.opacity = '1';
@@ -3735,6 +3812,31 @@ function render(){
     snap.innerHTML=sH;
     // Wire hover behavior on the chart
     _wireHistoryChartHover();
+    // Auto-warm SPY benchmark cache (shared /benchmarks/SPY across users).
+    // If the cache is stale or empty AND the user has AlphaVantage configured,
+    // fetch once and re-render. Quiet failure — chart still works without SPY.
+    (function(){
+      var prefs = loadPrefs();
+      if (prefs.showSpyBenchmark === false) return;
+      var hasFresh = SPY_HIST && SPY_HIST.dates && _spyCacheValid(SPY_HIST);
+      if (hasFresh) return;
+      var allowFetch = !!ALPHAVANTAGE_KEY;
+      getSpyHistory({ allowFetch: allowFetch }).then(function(rec){
+        if (!rec || !rec.dates) return;
+        // Only re-render if the cache changed (had nothing before or refreshed)
+        var s2 = G('snapshotPanel'); if (!s2) return;
+        // Light-touch re-render of the chart only — replace the panel HTML in place
+        var panel = document.getElementById('history-chart-panel');
+        if (!panel) return;
+        var tmp = document.createElement('div');
+        tmp.innerHTML = _renderHistoryChartHTML(0);
+        var fresh = tmp.firstChild;
+        if (fresh) {
+          panel.parentNode.replaceChild(fresh, panel);
+          _wireHistoryChartHover();
+        }
+      });
+    })();
   })();
 
   // ALL (now with expandable lots)
@@ -4524,6 +4626,97 @@ function getFundamentals(ticker, opts){
     });
   });
 }
+// ─────────────────────────────────────────────────────────────────
+// SPY BENCHMARK HISTORY — daily-close prices used to overlay a second
+// line on the Portfolio Value Over Time chart, showing how the S&P 500
+// did over the same date range from your portfolio's start. Same shared-
+// cache pattern as /fundamentals: in-memory → /benchmarks/SPY Firestore
+// → AlphaVantage. 24h TTL since daily data doesn't change intraday.
+// ─────────────────────────────────────────────────────────────────
+function _spyCacheValid(rec){
+  return rec && typeof rec.fetchedAt === 'number' && (Date.now() - rec.fetchedAt) < SPY_TTL_MS && rec.dates;
+}
+function _saveSpyLocal(){
+  try { localStorage.setItem('pf_spy_hist', JSON.stringify(SPY_HIST)); } catch(e){}
+}
+function _spyReadFromFirestore(){
+  if (!firebaseReady || !db) return Promise.resolve(null);
+  return db.collection('benchmarks').doc('SPY').get()
+    .then(function(snap){ return snap.exists ? snap.data() : null; })
+    .catch(function(e){ console.warn('SPY read failed:', e); return null; });
+}
+function _spyWriteToFirestore(rec){
+  if (!firebaseReady || !db || !currentUser) return Promise.resolve();
+  return db.collection('benchmarks').doc('SPY').set({
+    symbol: 'SPY',
+    dates: rec.dates || {},
+    fetchedAt: Date.now(),
+    source: rec.source || 'alphavantage'
+  }).catch(function(e){ console.warn('SPY write failed:', e); });
+}
+function _spyFetchFromAlphaVantage(){
+  if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
+  // outputsize=full returns ~20 years of history. compact would only give
+  // 100 days, which won't cover users with longer history. SPY is one
+  // request regardless of users (shared cache), so the full payload is fine.
+  return fetch('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&outputsize=full&apikey='+ALPHAVANTAGE_KEY)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var series = data && data['Time Series (Daily)'];
+      if(!series || typeof series !== 'object'){
+        if(data && (data.Information || data.Note)) {
+          if(typeof logApiError==='function') logApiError('spy-history','SPY', data.Information||data.Note);
+        }
+        return null;
+      }
+      var dates = {};
+      Object.keys(series).forEach(function(d){
+        var close = parseFloat(series[d]['4. close']);
+        if(!isNaN(close)) dates[d] = close;
+      });
+      return { dates: dates, source: 'alphavantage' };
+    })
+    .catch(function(e){
+      if(typeof logApiError==='function') logApiError('spy-history','SPY', e.message||'Failed');
+      return null;
+    });
+}
+function getSpyHistory(opts){
+  opts = opts || {};
+  if(!opts.force && _spyCacheValid(SPY_HIST)) return Promise.resolve(SPY_HIST);
+  return _spyReadFromFirestore().then(function(rec){
+    if(!opts.force && _spyCacheValid(rec)){
+      SPY_HIST = rec;
+      _saveSpyLocal();
+      return rec;
+    }
+    if(!opts.allowFetch) return rec || SPY_HIST || null; // cache miss + no fetch
+    return _spyFetchFromAlphaVantage().then(function(fresh){
+      if(!fresh) return rec || SPY_HIST || null;
+      fresh.fetchedAt = Date.now();
+      SPY_HIST = fresh;
+      _saveSpyLocal();
+      _spyWriteToFirestore(fresh);
+      return fresh;
+    });
+  });
+}
+// Given a YYYY-MM-DD date and SPY's history map, return the close from that
+// date. If the date isn't a trading day (weekend/holiday), walk back up to
+// 7 days to find the previous trading day's close.
+function _spyCloseOn(date, spyDates){
+  if(!date || !spyDates) return null;
+  if(spyDates[date]) return spyDates[date];
+  // Walk back up to 7 days for non-trading days
+  var d = new Date(date+'T12:00:00Z');
+  for(var i=1; i<=7; i++){
+    d.setUTCDate(d.getUTCDate() - 1);
+    var ds = d.toISOString().slice(0,10);
+    if(spyDates[ds]) return spyDates[ds];
+  }
+  return null;
+}
+
 // Bulk refresh — used by the "Refresh fundamentals" button. Throttles to
 // 1 fetch per 13s to stay under AlphaVantage's 5/min free-tier rate limit.
 function refreshAllFundamentals(force){
@@ -4743,6 +4936,13 @@ function sTab(id){
   if(typeof syncStickyTop==='function') try{syncStickyTop()}catch(e){}
 }
 function toggleRSS(){var p=G('rP'),b=G('rBtn');if(p.style.display==='none'){p.style.display='';b.classList.add('active')}else{p.style.display='none';b.classList.remove('active')}}
+function toggleSpyBenchmark(){
+  var prefs = loadPrefs();
+  prefs.showSpyBenchmark = prefs.showSpyBenchmark === false ? true : false;
+  savePrefs(prefs);
+  // Re-render snapshot panel so the chart picks up the new state
+  if (typeof render === 'function') render();
+}
 function cpRSS(){navigator.clipboard.writeText(gRSS()).then(function(){var b=G('cpB');b.textContent='\u2713 Copied!';setTimeout(function(){b.textContent='Copy XML'},2e3)})}
 function openMod(){
   G('mod').style.display='';
