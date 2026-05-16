@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.63**
+**Current Version: v0.7.64**
 
 ---
 
 ## Changelog
+
+### v0.7.64 — 2026-05-15 — 🎬 Demo mode: full baked-in dataset + airtight privacy
+- **Demo mode now seeds fundamentals + SPY history + day-change percentages** so the Insights tab's Payout Safety scores have real numbers to blend with ratings, the marquee ticker shows colored up/down arrows, and the Portfolio Value chart's S&P 500 overlay renders without ever calling AlphaVantage. New constants: `DEMO_FUND` (7 dividend tickers with realistic OCF/FCF/divPaid/coverage), `DEMO_SPY_HIST` (180-day synthetic SPY closes weekdays only), `DEMO_CHANGES` (mixed up/down day moves).
+- **Tightened demo privacy.** Every per-user localStorage read that fires at script-eval time now skips when `IS_DEMO` is true — `pf_fund`, `pf_spy_hist`, `pf_prices`, `pf_prices_ts`, `pf_changes`, `pf_news`, `pf_news_ts`, `pf_activity`. Previously a returning user's cached fundamentals / SPY / prices / news / activity log would bleed into the demo view; now demo starts with a clean slate seeded entirely from the bundled `DEMO_*` constants. The 10-ticker demo portfolio uses `FALLBACK_NEWS` (already present) for headlines so every tab has data immediately on a fresh visit.
 
 ### v0.7.63 — 2026-05-15 — 🎬 Try-demo link recolored to accent cyan
 - Re-styled the v0.7.62 footer demo link from hot pink to the app's accent cyan (`var(--accent2)`) so it matches the rest of the in-app link palette and doesn't clash. Same hover behavior — pill fills with cyan, text turns white. Works in both dark and light theme via the CSS variable.

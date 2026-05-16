@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.63</title>
+<title>Stockfolio v0.7.64</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1313,7 +1313,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.63 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="?demo=1" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
+  <div class="footer">Stockfolio v0.7.64 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="?demo=1" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1406,7 +1406,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.63";
+var VERSION = "0.7.64";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2125,6 +2125,47 @@ var DEMO_HISTORY = (function(){
 // Demo prices anchored to the lot cost bases so the Unrealized P/L panel
 // shows a believable mix of winners + losers. (Values rough as of 2026-05.)
 var DEMO_PRICES = {AAPL:226.40,MSFT:438.90,SCHD:84.20,ABBV:198.75,KO:72.30,T:23.10,VICI:34.50,BAC:46.80,AMZN:204.60,GOOG:182.40,INTC:30.95,NVDA:135.20};
+// Day-change percentages for the marquee ticker — small mixed up/down moves
+// so the ticker bar actually shows colored arrows in demo.
+var DEMO_CHANGES = {AAPL:0.42,MSFT:-0.18,SCHD:0.21,ABBV:1.34,KO:-0.05,T:0.67,VICI:-0.28,BAC:0.88,AMZN:1.12,GOOG:-0.31,INTC:-0.74,NVDA:2.05};
+// Demo fundamentals (operating-cash-flow + free-cash-flow + dividends-paid +
+// coverage ratio) for the Insights tab's Payout Safety scoring. Numbers are
+// illustrative — sourced from each company's most-recent 10-K with a year
+// rounded — not live and never refreshed in demo mode. ETFs (SCHD) and
+// non-dividend names (AMZN/GOOG) are intentionally omitted so the Insights
+// panel only shows fundamentals for dividend payers, matching real behavior.
+var DEMO_FUND = {
+  AAPL: {symbol:"AAPL", ocf:118.3, fcf:99.6,  divPaid:15.2, coverage:7.78,  period:"2025-09", fetchedAt:Date.now(), source:"demo"},
+  MSFT: {symbol:"MSFT", ocf:118.5, fcf:74.1,  divPaid:22.3, coverage:5.31,  period:"2025-06", fetchedAt:Date.now(), source:"demo"},
+  ABBV: {symbol:"ABBV", ocf:22.8,  fcf:21.6,  divPaid:10.9, coverage:2.09,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  KO:   {symbol:"KO",   ocf:13.1,  fcf:11.0,  divPaid:8.4,  coverage:1.56,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  T:    {symbol:"T",    ocf:39.2,  fcf:18.8,  divPaid:8.1,  coverage:4.84,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  VICI: {symbol:"VICI", ocf:2.85,  fcf:2.80,  divPaid:1.84, coverage:1.55,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  BAC:  {symbol:"BAC",  ocf:34.7,  fcf:32.1,  divPaid:8.2,  coverage:4.23,  period:"2025-12", fetchedAt:Date.now(), source:"demo"}
+};
+// 180-day synthetic SPY daily-close history so the Portfolio Value chart's
+// SPY benchmark overlay renders in demo. Mild upward drift (+~5%) + sine
+// wave + small deterministic noise — matches the same date range as
+// DEMO_HISTORY so the two lines fully overlap.
+var DEMO_SPY_HIST = (function(){
+  var dates = {};
+  var today = new Date();
+  var startV = 535;  // SPY low end of recent range
+  var endV = 562;    // SPY high end ~+5%
+  for(var i=180;i>=0;i--){
+    var d = new Date(today.getTime() - i*86400000);
+    // Skip weekends — SPY only has trading-day closes
+    var dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) continue;
+    var iso = d.toISOString().slice(0,10);
+    var t = (180-i)/180;
+    var seed = parseInt(iso.replace(/-/g,''),10);
+    var noise = (((seed*7919+12347)%10000)/10000 - 0.5) * 6;
+    var wave = Math.sin(t*Math.PI*3.5) * 4;
+    dates[iso] = Math.round((startV + (endV-startV)*t + wave + noise) * 100) / 100;
+  }
+  return { dates: dates, fetchedAt: Date.now(), source: "demo" };
+})();
 var livePrices = {};
 // Day-change % from Finnhub (when available). Used to color price cells red/green.
 var liveChanges = {};
@@ -2138,14 +2179,18 @@ var liveChanges = {};
 // keeps user portfolio data from leaking into this collection.
 var FUND = {};
 var FUND_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
-try { var _fc = localStorage.getItem('pf_fund'); if(_fc) FUND = JSON.parse(_fc); } catch(e){}
+// Demo mode: skip localStorage so the user's real cached fundamentals don't
+// bleed into the demo (privacy). DEMO_FUND gets seeded in load() instead.
+try { if(!IS_DEMO){ var _fc = localStorage.getItem('pf_fund'); if(_fc) FUND = JSON.parse(_fc); } } catch(e){}
 // SPY benchmark daily-close history. Sourced from AlphaVantage TIME_SERIES_DAILY
 // once per ~24h, cached in localStorage AND shared Firestore /benchmarks/SPY
 // (cross-user / cross-device dedup). Format: { dates: {"2026-04-15": 543.21,
 // ...}, fetchedAt: <ms> }. Loaded on demand by the Portfolio Value chart.
 var SPY_HIST = null;
 var SPY_TTL_MS = 24 * 60 * 60 * 1000; // 24h — daily data, no point refreshing more often
-try { var _sh = localStorage.getItem('pf_spy_hist'); if(_sh) SPY_HIST = JSON.parse(_sh); } catch(e){}
+// Demo mode: skip localStorage so user's real SPY cache doesn't leak in.
+// DEMO_SPY_HIST gets seeded in load() instead.
+try { if(!IS_DEMO){ var _sh = localStorage.getItem('pf_spy_hist'); if(_sh) SPY_HIST = JSON.parse(_sh); } } catch(e){}
 // PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
 var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
 var pricesLastFetched = 0;
@@ -2161,13 +2206,17 @@ var PRICE_CACHE_MS = 10 * 60 * 1000; // 10 min
 // Load cached prices + day-change %s (the latter feeds the ticker arrows
 // so they survive reload — without this, liveChanges starts empty after
 // every page load and the ticker shows no arrows until next fetch).
+// Skipped in demo mode — demo seeds DEMO_PRICES + DEMO_CHANGES in load()
+// so the user's real cached prices stay out of the demo view.
 try {
-  var cp = localStorage.getItem('pf_prices');
-  var cpt = parseInt(localStorage.getItem('pf_prices_ts')||'0');
-  if (cp) livePrices = JSON.parse(cp);
-  pricesLastFetched = cpt;
-  var cch = localStorage.getItem('pf_changes');
-  if (cch) liveChanges = JSON.parse(cch);
+  if (!IS_DEMO) {
+    var cp = localStorage.getItem('pf_prices');
+    var cpt = parseInt(localStorage.getItem('pf_prices_ts')||'0');
+    if (cp) livePrices = JSON.parse(cp);
+    pricesLastFetched = cpt;
+    var cch = localStorage.getItem('pf_changes');
+    if (cch) liveChanges = JSON.parse(cch);
+  }
 } catch(e){}
 
 var DV={
@@ -2250,9 +2299,13 @@ function logActivity(type, detail) {
   }
 }
 // Local-only restore on page load (gets overwritten by cloud entries on signin)
+// Skipped in demo mode — activity log starts empty so the user's real
+// audit-trail history doesn't leak into the demo view.
 try {
-  var _la = localStorage.getItem('pf_activity');
-  if (_la) activityLog = JSON.parse(_la) || [];
+  if (!IS_DEMO) {
+    var _la = localStorage.getItem('pf_activity');
+    if (_la) activityLog = JSON.parse(_la) || [];
+  }
 } catch(e) {}
 
 async function callWorker(path, body, method) {
@@ -2591,12 +2644,17 @@ function fetchAllPrices() {
   next();
 }
 
-// Load cached news
+// Load cached news. Skipped in demo mode so the user's real per-ticker
+// news cache doesn't bleed in — demo falls back to the FALLBACK_NEWS
+// constant via getNews() which already has solid demo-quality headlines
+// for every built-in ticker (see ~line 2645).
 try {
-  var cn = localStorage.getItem('pf_news');
-  var ct = parseInt(localStorage.getItem('pf_news_ts')||'0');
-  if (cn) liveNews = JSON.parse(cn);
-  newsLastFetched = ct;
+  if (!IS_DEMO) {
+    var cn = localStorage.getItem('pf_news');
+    var ct = parseInt(localStorage.getItem('pf_news_ts')||'0');
+    if (cn) liveNews = JSON.parse(cn);
+    newsLastFetched = ct;
+  }
 } catch(e){}
 
 // Fallback static news for when no API key
@@ -2697,6 +2755,19 @@ function load(){
     realized = DEMO_PORTFOLIO.realized.slice();
     // Pin prices so the snapshot math is deterministic regardless of network
     Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
+    // Day-change % so the marquee ticker shows colored arrows
+    Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
+    // Fundamentals so the Insights tab's Payout Safety score has real
+    // numbers to blend with each dividend ticker's rating
+    Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
+    // SPY benchmark history so the Portfolio Value chart's S&P 500
+    // comparison line renders without any API call
+    SPY_HIST = DEMO_SPY_HIST;
+    // liveNews intentionally stays empty — getNews() falls through to the
+    // FALLBACK_NEWS constant which has demo-quality headlines for every
+    // built-in ticker including all 10 demo holdings.
+    pricesLastFetched = Date.now();
+    newsLastFetched = Date.now();
     computeFromLots();
     return;
   }
