@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.64**
+**Current Version: v0.7.65**
 
 ---
 
 ## Changelog
+
+### v0.7.65 — 2026-05-15 — 🔧 Fix mobile FAB leaking to desktop
+- **Mobile "+" add button no longer appears as a stray rectangle on desktop.** v0.7.56 added the mobile FAB (`.mobile-fab`) but the CSS styles that hide it lived entirely inside the `@media(max-width:640px)` block — meaning at viewports wider than 640px the `<button>` element rendered with browser defaults (small inline rectangle with a "+" inside, "Add ticker" tooltip on hover). Added a `display:none` rule outside the media query as the default, then `display:flex!important` inside the mobile query so the FAB shows only where it's supposed to.
 
 ### v0.7.64 — 2026-05-15 — 🎬 Demo mode: full baked-in dataset + airtight privacy
 - **Demo mode now seeds fundamentals + SPY history + day-change percentages** so the Insights tab's Payout Safety scores have real numbers to blend with ratings, the marquee ticker shows colored up/down arrows, and the Portfolio Value chart's S&P 500 overlay renders without ever calling AlphaVantage. New constants: `DEMO_FUND` (7 dividend tickers with realistic OCF/FCF/divPaid/coverage), `DEMO_SPY_HIST` (180-day synthetic SPY closes weekdays only), `DEMO_CHANGES` (mixed up/down day moves).
