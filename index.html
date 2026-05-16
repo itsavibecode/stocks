@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.65</title>
+<title>Stockfolio v0.7.66</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1319,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.65 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="?demo=1" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
+  <div class="footer">Stockfolio v0.7.66 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1412,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.65";
+var VERSION = "0.7.66";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1441,11 +1441,26 @@ var syncEnabled = false;
 // saveToCloud, savePrefs cloud branch, activity log, history snapshot)
 // short-circuit when IS_DEMO is true so the user's real data stays safe.
 // ═════════════════════════════════════════════════
+// Demo-mode detection — tries (in order):
+//   1. ?demo=1 or ?demo=true in the query string (canonical)
+//   2. #demo=1 in the hash (fallback for cases where GitHub Pages strips
+//      the query during a trailing-slash redirect)
+//   3. sessionStorage flag set by enterDemoMode() — survives reloads
+//      within the same tab so the user doesn't lose demo state on F5
+// enterDemoMode() and exitDemoMode() both manipulate the flag + URL.
 var IS_DEMO = false;
 try {
   var _qs = new URLSearchParams(location.search);
   if (_qs.get('demo') === '1' || _qs.get('demo') === 'true') IS_DEMO = true;
 } catch(e){}
+try {
+  if (!IS_DEMO && /(^|[#&?])demo=(1|true)(&|$)/i.test(location.hash || '')) IS_DEMO = true;
+} catch(e){}
+try {
+  if (!IS_DEMO && sessionStorage.getItem('sf_demo_active') === '1') IS_DEMO = true;
+} catch(e){}
+// If we activated demo, make it sticky for this tab so reloads keep it
+if (IS_DEMO) { try { sessionStorage.setItem('sf_demo_active', '1'); } catch(e){} }
 
 try {
   if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY") {
@@ -4064,7 +4079,15 @@ function render(){
     if(tks.length===0||tks.every(function(t){return(sh[t]||0)===0})){
       // No live shares — but if there are realized sales, still show the realized panel
       var realizedHTML = (realized && realized.length>0) ? _renderRealizedHTML() : '';
-      snap.innerHTML='<div class="snap-wrap"><div class="snap-empty">Add shares to a ticker to see your portfolio snapshot.</div>'+realizedHTML+'</div>';
+      // If the user has NO portfolio data AND isn't in demo mode, surface a
+      // "Try demo" CTA so they can see a populated dashboard immediately
+      // without needing to know about ?demo=1. Once they've added a ticker
+      // or signed in (currentUser populated), the CTA stops appearing.
+      var demoCTA = '';
+      if (!IS_DEMO && !currentUser && (!realized || realized.length === 0)) {
+        demoCTA = '<div style="margin-top:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(8,145,178,.10),rgba(124,58,237,.10));border:1px solid var(--accent2);border-radius:10px;text-align:center;line-height:1.6"><div style="font-size:13px;font-weight:700;margin-bottom:6px">🎬 First time here?</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Try the demo to see Stockfolio with a realistic sample portfolio — none of your data is touched.</div><button class="btn btn-primary" onclick="enterDemoMode()" style="font-size:12px">Load demo data</button></div>';
+      }
+      snap.innerHTML='<div class="snap-wrap"><div class="snap-empty">Add shares to a ticker to see your portfolio snapshot.</div>'+demoCTA+realizedHTML+'</div>';
       return;
     }
     var totalValue=0,ytdIncome=0,annualIncome=0;
@@ -7763,12 +7786,28 @@ if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedSta
 
 // Demo-mode helper: clear ?demo and reload into the user's real session.
 function exitDemoMode(){
+  try { sessionStorage.removeItem('sf_demo_active'); } catch(e){}
   try {
     var u = new URL(location.href);
     u.searchParams.delete('demo');
+    u.hash = '';
     location.href = u.toString();
   } catch(e) {
     location.href = location.pathname; // last-resort fallback
+  }
+}
+// Programmatic entry point — used by the "Try demo" buttons baked into
+// empty-state messages so the user doesn't have to know about ?demo=1.
+// Sets the sessionStorage flag + canonical query param, then hard-reloads
+// so all of the script-eval-time IS_DEMO gates re-evaluate.
+function enterDemoMode(){
+  try { sessionStorage.setItem('sf_demo_active', '1'); } catch(e){}
+  try {
+    var u = new URL(location.href);
+    u.searchParams.set('demo', '1');
+    location.href = u.toString();
+  } catch(e) {
+    location.href = location.pathname + '?demo=1';
   }
 }
 

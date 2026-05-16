@@ -1,10 +1,19 @@
 # Stockfolio
 
-**Current Version: v0.7.65**
+**Current Version: v0.7.66**
 
 ---
 
 ## Changelog
+
+### v0.7.66 — 2026-05-15 — 🎬 Robust demo activation + "Load demo" empty-state CTA
+- **Demo mode now detects three ways instead of one.** The previous detection only checked `?demo=1` in the query string — if GitHub Pages stripped the param during a trailing-slash redirect, or the user navigated in a way that lost the query, the demo silently failed and the user saw an empty signed-out dashboard. New detection:
+  1. `?demo=1` / `?demo=true` in the query (canonical)
+  2. `#demo=1` in the hash (fallback if query stripped)
+  3. `sessionStorage.sf_demo_active=1` flag (persists across reloads in the same tab)
+- **New `enterDemoMode()` helper** sets all three at once and hard-reloads so the script-eval-time `IS_DEMO` gates re-evaluate. `exitDemoMode()` clears all three.
+- **Empty-state "Load demo data" button** in the snapshot panel. When the user has no portfolio AND isn't signed in AND has no realized sales, a callout card appears with a one-click button to enter demo mode. Removes the need to know the URL parameter exists.
+- **Footer "🎬 Try demo" link rewired** to call `enterDemoMode()` instead of relying on `<a href="?demo=1">` — works reliably regardless of current URL state.
 
 ### v0.7.65 — 2026-05-15 — 🔧 Fix mobile FAB leaking to desktop
 - **Mobile "+" add button no longer appears as a stray rectangle on desktop.** v0.7.56 added the mobile FAB (`.mobile-fab`) but the CSS styles that hide it lived entirely inside the `@media(max-width:640px)` block — meaning at viewports wider than 640px the `<button>` element rendered with browser defaults (small inline rectangle with a "+" inside, "Add ticker" tooltip on hover). Added a `display:none` rule outside the media query as the default, then `display:flex!important` inside the mobile query so the FAB shows only where it's supposed to.
