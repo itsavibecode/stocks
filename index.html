@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.70</title>
+<title>Stockfolio v0.7.71</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1319,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.70 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.71 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1412,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.70";
+var VERSION = "0.7.71";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2331,6 +2331,7 @@ try {
 
 async function callWorker(path, body, method) {
   method = method || "POST";
+  if (IS_DEMO) { showToast('SnapTrade is disabled in demo mode','warn'); return null; }
   if (!currentUser) { showToast('Sign in to use SnapTrade','warn'); return null; }
   var token;
   try { token = await currentUser.getIdToken(); }
@@ -2449,6 +2450,7 @@ function fetchNewsTiingo(ticker){
     }).catch(function(e){logApiError('news-tiingo',ticker,e.message||'Failed');return null});
 }
 function fetchNewsForTicker(ticker){
+  if (IS_DEMO) return Promise.resolve([]); // demo never hits the network
   if(!anyKeySet())return Promise.resolve([]);
   return fetchNewsFinnhub(ticker).then(function(r){
     if(r&&r.length)return r;
@@ -2561,6 +2563,7 @@ function fetchPriceTwelveData(ticker){
     }).catch(function(e){logApiError('quote-twelvedata',ticker,e.message||'Failed');return null});
 }
 function fetchPriceForTicker(ticker){
+  if (IS_DEMO) return Promise.resolve(null); // demo never hits the network
   if(!anyKeySet())return Promise.resolve(null);
   return fetchPriceFinnhub(ticker).then(function(p){
     if(p)return p;
@@ -2596,6 +2599,7 @@ function renderMarketTickers(){
   }).join('');
 }
 function fetchMarketIndices(){
+  if (IS_DEMO) return; // demo never hits the network
   if(!anyKeySet())return;
   // Indices use the same fallback chain as individual quotes (Finnhub → AV → Tiingo)
   MARKET_INDICES.forEach(function(idx){
@@ -2621,6 +2625,7 @@ function fetchMarketIndices(){
   });
 }
 function fetchBTC(){
+  if (IS_DEMO) return; // demo never hits the network
   fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true')
     .then(function(r){return r.json()})
     .then(function(data){
@@ -2884,6 +2889,7 @@ function updateRecheckTimeUI(){
   var b1=G('bRefreshTime');if(b1)b1.textContent=_fmtRefreshTime(stApiState.lastFetched);
 }
 function recheckMissingData(){
+  if (IS_DEMO) return; // demo never hits the network
   if(!FINNHUB_KEY)return;
   // Priority 1: no DV entry at all or no sector
   var critical=tks.filter(function(t){return!DV[t]||!DV[t].sc||DV[t].sc===''||DV[t].sc==='\u2014'});
@@ -4218,6 +4224,7 @@ function render(){
     // failing fetch in tight loops if render() runs repeatedly — only after
     // 60s have passed since the last attempt.
     (function(){
+      if (IS_DEMO) return; // demo uses DEMO_SPY_HIST, never fetches
       var prefs = loadPrefs();
       if (prefs.showSpyBenchmark === false) return;
       var hasFresh = SPY_HIST && SPY_HIST.dates && _spyCacheValid(SPY_HIST);
@@ -5222,6 +5229,7 @@ function refreshAllFundamentals(force){
 // FETCH STOCK PROFILE — for newly added tickers
 // ═════════════════════════════════════════════════
 function fetchProfile(ticker){
+  if (IS_DEMO) return; // demo never hits the network
   if(!FINNHUB_KEY)return;
   // Known commodity/specialty ETFs that Finnhub won't classify
   // Known ETFs that Finnhub often misses profile data for
@@ -5370,8 +5378,9 @@ function fetchProfile(ticker){
 function getDVCustom(){var custom={};tks.forEach(function(t){if(DV[t]&&!BUILTIN_TICKERS[t])custom[t]=DV[t]});return custom}
 var BUILTIN_TICKERS={};
 (function(){var dt=["NET","IBM","T","PFE","LUV","RGR","MSFT","RTX","BP","SCHD","ABBV","AXP","F","GOOG","AAPL","TSLA","TGT","KO","VICI","CMCSA","BAC","INTC","AMZN"];dt.forEach(function(t){BUILTIN_TICKERS[t]=1})})();
-// Load custom DV data
-try{var cdv=JSON.parse(localStorage.getItem('pf_dv_custom'));if(cdv){Object.keys(cdv).forEach(function(t){DV[t]=cdv[t]})}}catch(e){}
+// Load custom DV data. Skipped in demo mode so any user-added custom
+// ticker data doesn't leak into the demo view.
+try{if(!IS_DEMO){var cdv=JSON.parse(localStorage.getItem('pf_dv_custom'));if(cdv){Object.keys(cdv).forEach(function(t){DV[t]=cdv[t]})}}}catch(e){}
 
 
 function sTab(id){

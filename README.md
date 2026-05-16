@@ -1,10 +1,21 @@
 # Stockfolio
 
-**Current Version: v0.7.70**
+**Current Version: v0.7.71**
 
 ---
 
 ## Changelog
+
+### v0.7.71 — 2026-05-15 — 🚫 Demo mode: zero network calls, full audit
+- **Audited every network-touching code path and added explicit `IS_DEMO` short-circuits**, even where existing checks (`!FINNHUB_KEY` / `!anyKeySet()` / `!currentUser`) already prevented the call. Defense-in-depth — demo should NEVER hit a network endpoint, full stop. Gated:
+  - `fetchBTC()` — was firing CoinGecko `simple/price` unconditionally on init + every periodic refresh (**this was leaking**)
+  - `fetchMarketIndices()` — was gated only on `anyKeySet()` (safe but implicit)
+  - `recheckMissingData()`, `fetchProfile()` — were gated only on `!FINNHUB_KEY`
+  - `fetchPriceForTicker()`, `fetchNewsForTicker()` — top-level gates so every caller is automatically protected
+  - SPY auto-warm in the chart wire-up — explicit early return
+  - `callWorker()` (SnapTrade Cloudflare Worker calls) — shows toast and exits
+  - `pf_dv_custom` localStorage read — wrapped in `!IS_DEMO` so custom DV data doesn't leak in
+- Demo mode now runs entirely on the bundled `DEMO_*` constants + `FALLBACK_NEWS`. Zero outbound network requests.
 
 ### v0.7.70 — 2026-05-15 — 🛟 Bulletproof demo auto-load + diagnostic logging
 - **End-of-init fallback re-seed.** Added a safety net that runs after every init step has completed: if `IS_DEMO` is true but `tks.length === 0`, force-call `enterDemoMode()` to recover. Catches any race condition / init-ordering quirk / silent error that could leave the user on an empty page despite `IS_DEMO=true`.
