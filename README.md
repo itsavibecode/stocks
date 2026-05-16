@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.67**
+**Current Version: v0.7.68**
 
 ---
 
 ## Changelog
+
+### v0.7.68 — 2026-05-15 — 🧹 Hide footer "Try demo" link when already in demo
+- Wrapped the footer "🎬 Try demo" link + its separator in a `<span id="footerDemoSep">` and hide that span whenever `IS_DEMO` is true (both at init for URL-loaded demos and inside `enterDemoMode()` for in-place activation). Was redundant + slightly confusing since the link did nothing in demo (the function early-returns when already active).
 
 ### v0.7.67 — 2026-05-15 — 🎬 In-place demo activation (no reload, no URL dependency)
 - **`enterDemoMode()` now seeds everything in-place + re-renders** instead of relying on a `?demo=1` URL navigation + script reload to activate. The previous approach was fragile: if GitHub Pages stripped the query during a redirect or the browser dropped it for any reason, the demo would silently fail and the user would land on an empty signed-out dashboard. Now the function:

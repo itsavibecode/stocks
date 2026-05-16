@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.67</title>
+<title>Stockfolio v0.7.68</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1319,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.67 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
+  <div class="footer">Stockfolio v0.7.68 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1412,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.67";
+var VERSION = "0.7.68";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -7768,6 +7768,9 @@ if (IS_DEMO) {
   // Hide the standard auth bar "Sign in to sync" prompt — demo mode owns that messaging.
   var _ab = document.querySelector('.auth-bar');
   if (_ab) _ab.style.display = 'none';
+  // Hide the footer "Try demo" link — redundant once you're already in demo.
+  var _fds = document.getElementById('footerDemoSep');
+  if (_fds) _fds.style.display = 'none';
 }
 load();
 loadApiKey(); // load API key from prefs before any fetches; also seeds stApiState.userSecret
@@ -7829,11 +7832,14 @@ function enterDemoMode(){
   // Reset prefs cache so loadPrefs() returns the demo defaults
   _DEMO_PREFS = null;
   computeFromLots();
-  // Swap header: hide auth bar, show demo banner
+  // Swap header: hide auth bar, show demo banner. Also hide the footer
+  // "Try demo" link — it's redundant once you're already in demo.
   var banner = document.getElementById('demoBanner');
   if (banner) banner.style.display = '';
   var ab = document.querySelector('.auth-bar');
   if (ab) ab.style.display = 'none';
+  var fds = document.getElementById('footerDemoSep');
+  if (fds) fds.style.display = 'none';
   // Re-render everything that depends on tks / lots / FUND / SPY_HIST
   try { render(); } catch(e) { console.error('Demo render error:', e); }
   try { if (typeof renderSnapTradeCard==='function') renderSnapTradeCard(); } catch(e){}
