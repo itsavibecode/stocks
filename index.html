@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.57</title>
+<title>Stockfolio v0.7.58</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -354,10 +354,17 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 /* Section headers between groups of related Settings cards. column-span:all
    makes them stretch across both columns of the masonry-style settings-grid,
    acting as visual section dividers. */
-.settings-section-header{column-span:all;-webkit-column-span:all;margin:18px 0 6px 0;padding:6px 4px 6px 4px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;break-inside:avoid}
+.settings-section-header{column-span:all;-webkit-column-span:all;margin:18px 0 6px 0;padding:6px 4px 6px 4px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;break-inside:avoid;cursor:pointer;user-select:none;transition:color .12s, border-color .12s}
+.settings-section-header:hover{color:var(--text2);border-bottom-color:var(--border2)}
 .settings-section-header:first-of-type{margin-top:0}
 .settings-section-header .ssh-icon{font-size:15px}
+.settings-section-header .ssh-chev{display:inline-block;font-size:11px;color:var(--muted);transition:transform .15s ease;transform-origin:center;width:14px;text-align:center;line-height:1}
+.settings-section-header.collapsed .ssh-chev{transform:rotate(-90deg)}
 .settings-section-header .ssh-desc{font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:auto;font-style:italic}
+@media(max-width:560px){.settings-section-header .ssh-desc{display:none}}
+.settings-toolbar{column-span:all;-webkit-column-span:all;display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:4px;break-inside:avoid}
+.settings-toolbar .btn{font-size:10.5px;padding:5px 10px}
+.settings-toolbar .label{margin-right:auto;font-size:10.5px;color:var(--muted);font-style:italic}
 .key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
@@ -1004,8 +1011,17 @@ body.text-xl .sc .scv{font-size:24px}
       <h3 style="font-size:16px;font-weight:700">&#9881; Settings</h3>
       <div class="settings-grid">
 
+      <!-- Section toolbar — Expand / Collapse all. Sits ABOVE every section
+           header, spans both columns of the masonry grid. State persists to
+           prefs.settingsCollapsed so it syncs across devices. -->
+      <div class="settings-toolbar">
+        <span class="label">Click a section header to collapse/expand</span>
+        <button class="btn btn-outline" onclick="settingsExpandAll()">▾ Expand all</button>
+        <button class="btn btn-outline" onclick="settingsCollapseAll()">▸ Collapse all</button>
+      </div>
+
       <!-- ──────── ACCOUNT ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">👤</span><span>Account</span><span class="ssh-desc">your sign-in + cloud-sync status</span></div>
+      <div class="settings-section-header" data-section="account" onclick="toggleSettingsSection('account')"><span class="ssh-chev">▾</span><span class="ssh-icon">👤</span><span>Account</span><span class="ssh-desc">your sign-in + cloud-sync status</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px" id="acctCard">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128100; Your Account</div>
@@ -1013,7 +1029,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── APPEARANCE & AUDIO ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">🎨</span><span>Appearance &amp; Audio</span><span class="ssh-desc">theme, text size, ticker speed, sounds</span></div>
+      <div class="settings-section-header" data-section="appearance" onclick="toggleSettingsSection('appearance')"><span class="ssh-chev">▾</span><span class="ssh-icon">🎨</span><span>Appearance &amp; Audio</span><span class="ssh-desc">theme, text size, ticker speed, sounds</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127912; Appearance</div>
@@ -1060,7 +1076,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── NOTIFICATIONS ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">🔔</span><span>Notifications</span><span class="ssh-desc">dividend ex-date / pay-date reminders</span></div>
+      <div class="settings-section-header" data-section="notifications" onclick="toggleSettingsSection('notifications')"><span class="ssh-chev">▾</span><span class="ssh-icon">🔔</span><span>Notifications</span><span class="ssh-desc">dividend ex-date / pay-date reminders</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128276; Dividend Reminders</div>
@@ -1102,7 +1118,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── MONEY & TAXES ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">💰</span><span>Money &amp; Taxes</span><span class="ssh-desc">income goal + tax bracket for projections</span></div>
+      <div class="settings-section-header" data-section="money" onclick="toggleSettingsSection('money')"><span class="ssh-chev">▾</span><span class="ssh-icon">💰</span><span>Money &amp; Taxes</span><span class="ssh-desc">income goal + tax bracket for projections</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127919; Annual Dividend Goal</div>
@@ -1140,7 +1156,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── BROKERAGE & ACCOUNTS ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">🏦</span><span>Brokerage &amp; Accounts</span><span class="ssh-desc">manual account labels + SnapTrade sync</span></div>
+      <div class="settings-section-header" data-section="brokerage" onclick="toggleSettingsSection('brokerage')"><span class="ssh-chev">▾</span><span class="ssh-icon">🏦</span><span>Brokerage &amp; Accounts</span><span class="ssh-desc">manual account labels + SnapTrade sync</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#127974; Manage Accounts</div>
@@ -1170,7 +1186,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── API KEYS ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">🔑</span><span>API Keys</span><span class="ssh-desc">price + news providers, all free tiers</span></div>
+      <div class="settings-section-header" data-section="apikeys" onclick="toggleSettingsSection('apikeys')"><span class="ssh-chev">▾</span><span class="ssh-icon">🔑</span><span>API Keys</span><span class="ssh-desc">price + news providers, all free tiers</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
@@ -1240,7 +1256,7 @@ body.text-xl .sc .scv{font-size:24px}
       </div>
 
       <!-- ──────── DATA & ACTIVITY ──────── -->
-      <div class="settings-section-header"><span class="ssh-icon">💾</span><span>Data &amp; Activity</span><span class="ssh-desc">export, import, reset, audit trail</span></div>
+      <div class="settings-section-header" data-section="data" onclick="toggleSettingsSection('data')"><span class="ssh-chev">▾</span><span class="ssh-icon">💾</span><span>Data &amp; Activity</span><span class="ssh-desc">export, import, reset, audit trail</span></div>
 
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128190; Export &amp; Import</div>
@@ -1292,7 +1308,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.57 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.58 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1385,7 +1401,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.57";
+var VERSION = "0.7.58";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2013,6 +2029,7 @@ function loadFromCloud() {
       loadPrefUI();
       renderSnapTradeCard();
       renderBrokersTab();
+      if(typeof applySettingsCollapsedState==='function') applySettingsCollapsedState();
       if(typeof updateInboxBadge==='function') updateInboxBadge();
       // Activity log from cloud overrides local (cloud is source of truth for signed-in users)
       if (Array.isArray(d.activity)) {
@@ -5716,6 +5733,87 @@ function savePref(){
   prefs.textSize=G('sTextSize').value;
   savePrefs(prefs);
 }
+
+// ═════════════════════════════════════════════════
+// SETTINGS SECTION COLLAPSE / EXPAND
+// Each `.settings-section-header` in the Settings tab toggles the
+// visibility of every sibling element BETWEEN that header and the next
+// `.settings-section-header` (or end of grid). State persists per-section
+// in prefs.settingsCollapsed so it syncs across devices via the normal
+// cloud-prefs merge.
+// ═════════════════════════════════════════════════
+function _getSettingsCollapsed(){
+  var p = loadPrefs();
+  if (!p.settingsCollapsed || typeof p.settingsCollapsed !== 'object') p.settingsCollapsed = {};
+  return p.settingsCollapsed;
+}
+function _setSettingsCollapsed(name, collapsed){
+  var p = loadPrefs();
+  if (!p.settingsCollapsed || typeof p.settingsCollapsed !== 'object') p.settingsCollapsed = {};
+  if (collapsed) p.settingsCollapsed[name] = true;
+  else delete p.settingsCollapsed[name];
+  savePrefs(p);
+}
+// Find every sibling DOM element after `header` up to the next
+// `.settings-section-header`. Returns the array (so the caller can
+// toggle display on each).
+function _settingsSiblingCards(header){
+  var out = [];
+  var sib = header.nextElementSibling;
+  while (sib && !sib.classList.contains('settings-section-header')) {
+    // Skip the toolbar row (not a card)
+    if (!sib.classList.contains('settings-toolbar')) out.push(sib);
+    sib = sib.nextElementSibling;
+  }
+  return out;
+}
+function toggleSettingsSection(name){
+  var header = document.querySelector('.settings-section-header[data-section="'+name+'"]');
+  if (!header) return;
+  var isCollapsed = header.classList.contains('collapsed');
+  var willCollapse = !isCollapsed;
+  header.classList.toggle('collapsed', willCollapse);
+  _settingsSiblingCards(header).forEach(function(el){
+    el.style.display = willCollapse ? 'none' : '';
+  });
+  _setSettingsCollapsed(name, willCollapse);
+}
+function settingsExpandAll(){
+  document.querySelectorAll('.settings-section-header').forEach(function(header){
+    header.classList.remove('collapsed');
+    _settingsSiblingCards(header).forEach(function(el){ el.style.display = ''; });
+  });
+  // Clear all collapsed-state from prefs in one go
+  var p = loadPrefs();
+  p.settingsCollapsed = {};
+  savePrefs(p);
+}
+function settingsCollapseAll(){
+  var p = loadPrefs();
+  if (!p.settingsCollapsed || typeof p.settingsCollapsed !== 'object') p.settingsCollapsed = {};
+  document.querySelectorAll('.settings-section-header').forEach(function(header){
+    var name = header.getAttribute('data-section');
+    if (!name) return;
+    header.classList.add('collapsed');
+    _settingsSiblingCards(header).forEach(function(el){ el.style.display = 'none'; });
+    p.settingsCollapsed[name] = true;
+  });
+  savePrefs(p);
+}
+// Apply persisted collapsed state on page load. Called once after init +
+// every time the user signs in (cloud prefs may override local).
+function applySettingsCollapsedState(){
+  var state = _getSettingsCollapsed();
+  document.querySelectorAll('.settings-section-header').forEach(function(header){
+    var name = header.getAttribute('data-section');
+    if (!name) return;
+    var collapsed = !!state[name];
+    header.classList.toggle('collapsed', collapsed);
+    _settingsSiblingCards(header).forEach(function(el){
+      el.style.display = collapsed ? 'none' : '';
+    });
+  });
+}
 // Save the v0.7.39 multi-channel sound prefs from the Settings UI.
 // Reads master-mute + each channel's enabled / sound / volume inputs and
 // writes them into prefs.sound. No toast — saving is silent (per user
@@ -7478,6 +7576,10 @@ renderSnapTradeCard();
 renderBrokersTab();
 renderActivityCard();
 updateRecheckTimeUI();
+// Restore Settings section collapse state — must run AFTER the Settings
+// tab's section headers are present in the DOM (they're inline HTML,
+// always present, so this is safe immediately after init).
+if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedState();
 
 // Demo-mode helper: clear ?demo and reload into the user's real session.
 function exitDemoMode(){

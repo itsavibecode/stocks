@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.57**
+**Current Version: v0.7.58**
 
 ---
 
 ## Changelog
+
+### v0.7.58 — 2026-05-15 — 🗂️ Collapsible Settings sections
+- **Click any Settings section header to collapse/expand it.** The 7 section headers added in v0.7.51 (Account / Appearance & Audio / Notifications / Money & Taxes / Brokerage & Accounts / API Keys / Data & Activity) now have a chevron and toggle their cards open or closed when clicked. Chevron rotates 90° when collapsed.
+- **Expand all / Collapse all** buttons in a small toolbar above the first section header (right-aligned, spans both masonry columns). One click clears or sets every section in one go.
+- **State persists per-section in `prefs.settingsCollapsed`** so the cards you don't care about stay collapsed across reloads and sync across devices via the existing cloud-prefs merge. Applied on init AND after cloud-load (so a cross-device change reaches you next sign-in).
+- The collapsed-card hide is JS-driven (sibling-walks from each header to the next), which means the masonry columns reflow cleanly — no awkward empty gaps where cards used to be.
 
 ### v0.7.57 — 2026-05-15 — 🔎 SPY overlay: actual error visibility + retry button
 - **Fixed the misleading "needs an AlphaVantage key" message.** When the SPY benchmark line couldn't render, the chart always blamed a missing API key — even when the real cause was an AlphaVantage rate-limit (free tier is 25 requests/day), a bad key, a network blip, or `outputsize=full` getting throttled. The user would have their key set, still see "needs a key", and rightly wonder what was going on.
