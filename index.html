@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.56</title>
+<title>Stockfolio v0.7.57</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1292,7 +1292,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.56 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.57 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1385,7 +1385,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.56";
+var VERSION = "0.7.57";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3811,13 +3811,36 @@ function render(){
       var html = '<div class="snap-history" id="history-chart-panel" style="position:relative">';
       html += '<div class="snap-history-title"><span>📈 Portfolio Value Over Time</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' + hist.length + ' day' + (hist.length !== 1 ? 's' : '') + ' &middot; ' + firstD + ' → ' + lastD + ' &middot; <span style="color:' + changeColor + ';font-weight:700">' + changeSign + fm(change) + ' (' + changeSign + changePct.toFixed(2) + '%)</span> <button class="btn btn-outline share-btn" onclick="shareElementById(\'history-chart-panel\',\'value-history\',\'Portfolio Value Chart\')" title="Save this chart as a PNG">💾 Share</button> <button class="btn btn-outline" onclick="toggleSpyBenchmark()" title="Toggle the S&amp;P 500 (SPY) comparison line" style="font-size:10.5px;padding:4px 8px">' + (showSpy ? '✓ SPY' : '○ SPY') + '</button></span></div>';
 
-      // Legend row — only shown when SPY is actually plotted
+      // Legend row — only shown when SPY is actually plotted, or a status
+      // message if SPY couldn't render (so the user knows what's going on
+      // instead of seeing a misleading "needs a key" message when the actual
+      // problem is e.g. rate-limiting on a key they already have).
       if (spyPath) {
         var spySign = spyChangePct >= 0 ? '+' : '';
         var spyColor = spyChangePct >= 0 ? 'var(--green)' : 'var(--red)';
         html += '<div class="snap-history-legend" style="margin:2px 0 8px"><span class="lg"><span class="sw portfolio"></span>Your portfolio <span style="color:' + changeColor + ';font-weight:700">' + changeSign + changePct.toFixed(2) + '%</span></span><span class="lg"><span class="sw spy"></span>S&amp;P 500 (SPY) <span style="color:' + spyColor + ';font-weight:700">' + spySign + (spyChangePct || 0).toFixed(2) + '%</span></span></div>';
       } else if (showSpy) {
-        html += '<div class="snap-history-legend" style="margin:2px 0 8px;font-size:10px;color:var(--muted)">S&amp;P 500 comparison unavailable — needs an AlphaVantage key and at least one auto-warm fetch.</div>';
+        // Build a precise status message based on actual state
+        var spyStatus = (typeof SPY_FETCH_STATE !== 'undefined' && SPY_FETCH_STATE) ? SPY_FETCH_STATE : { status:'idle' };
+        var msgText = '', retryHTML = '', msgColor = 'var(--muted)';
+        if (!ALPHAVANTAGE_KEY) {
+          msgText = 'S&amp;P 500 comparison needs an AlphaVantage key — <a href="#" onclick="event.preventDefault();sTab(\'settings\')" style="color:var(--accent2)">add yours in Settings</a>.';
+        } else if (spyStatus.status === 'fetching') {
+          msgText = '<span class="sync-spinner" style="width:9px;height:9px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:5px"></span>Fetching S&amp;P 500 history from AlphaVantage…';
+        } else if (spyStatus.status === 'error' && spyStatus.lastError) {
+          // Most common cause: AlphaVantage free-tier rate limit hit
+          // (25 requests/day). Surface the actual response so the user
+          // knows whether to wait or fix something.
+          msgText = 'S&amp;P 500 fetch failed: <span style="color:var(--text)">' + spyStatus.lastError.replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,200) + '</span>';
+          msgColor = 'var(--red)';
+          retryHTML = ' <button class="btn btn-outline" onclick="retrySpyFetch()" style="font-size:10px;padding:3px 8px;margin-left:6px">↻ Retry</button>';
+        } else {
+          // status === 'ok' but no spyPath means dates didn't line up —
+          // AlphaVantage data exists but doesn't cover the chart's
+          // start date. Very rare; offer retry anyway.
+          msgText = 'S&amp;P 500 data didn\'t cover your portfolio\'s date range. <button class="btn btn-outline" onclick="retrySpyFetch()" style="font-size:10px;padding:3px 8px;margin-left:4px">↻ Refetch</button>';
+        }
+        html += '<div class="snap-history-legend" style="margin:2px 0 8px;font-size:10.5px;color:' + msgColor + ';line-height:1.5">' + msgText + retryHTML + '</div>';
       }
 
       html += '<div class="snap-history-chart-wrap">';
@@ -4018,18 +4041,26 @@ function render(){
     _wireHistoryChartHover();
     // Auto-warm SPY benchmark cache (shared /benchmarks/SPY across users).
     // If the cache is stale or empty AND the user has AlphaVantage configured,
-    // fetch once and re-render. Quiet failure — chart still works without SPY.
+    // fetch once and re-render. Re-render fires on success AND on first
+    // failure (so the chart shows the actual error message instead of the
+    // stale "no key" placeholder). Backoff on errors: don't retry the same
+    // failing fetch in tight loops if render() runs repeatedly — only after
+    // 60s have passed since the last attempt.
     (function(){
       var prefs = loadPrefs();
       if (prefs.showSpyBenchmark === false) return;
       var hasFresh = SPY_HIST && SPY_HIST.dates && _spyCacheValid(SPY_HIST);
       if (hasFresh) return;
+      // If we just tried and failed within the last minute, don't retry on
+      // every render — let the user hit the Retry button instead.
+      if (SPY_FETCH_STATE && SPY_FETCH_STATE.status === 'error' && SPY_FETCH_STATE.lastTriedAt && (Date.now() - SPY_FETCH_STATE.lastTriedAt) < 60000) return;
+      // If a fetch is already in-flight from a prior render, don't pile on.
+      if (SPY_FETCH_STATE && SPY_FETCH_STATE.status === 'fetching') return;
       var allowFetch = !!ALPHAVANTAGE_KEY;
       getSpyHistory({ allowFetch: allowFetch }).then(function(rec){
-        if (!rec || !rec.dates) return;
-        // Only re-render if the cache changed (had nothing before or refreshed)
+        // Re-render the chart in place so it picks up SPY_FETCH_STATE
+        // (success → renders the SPY line; failure → renders the error msg).
         var s2 = G('snapshotPanel'); if (!s2) return;
-        // Light-touch re-render of the chart only — replace the panel HTML in place
         var panel = document.getElementById('history-chart-panel');
         if (!panel) return;
         var tmp = document.createElement('div');
@@ -4843,6 +4874,13 @@ function _spyCacheValid(rec){
 function _saveSpyLocal(){
   try { localStorage.setItem('pf_spy_hist', JSON.stringify(SPY_HIST)); } catch(e){}
 }
+// Fetch-state tracker so the chart UI can distinguish "still loading",
+// "rate-limited / bad key", and "no key" — the previous UI lumped all
+// three into one misleading "needs an AlphaVantage key" message.
+//   status: 'idle' | 'fetching' | 'ok' | 'error'
+//   lastError: string | null   — actual AlphaVantage message when status='error'
+//   lastTriedAt: number | null
+var SPY_FETCH_STATE = { status:'idle', lastError:null, lastTriedAt:null };
 function _spyReadFromFirestore(){
   if (!firebaseReady || !db) return Promise.resolve(null);
   return db.collection('benchmarks').doc('SPY').get()
@@ -4859,7 +4897,11 @@ function _spyWriteToFirestore(rec){
   }).catch(function(e){ console.warn('SPY write failed:', e); });
 }
 function _spyFetchFromAlphaVantage(){
-  if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
+  if(!ALPHAVANTAGE_KEY){
+    SPY_FETCH_STATE = { status:'error', lastError:'No AlphaVantage key configured', lastTriedAt:Date.now() };
+    return Promise.resolve(null);
+  }
+  SPY_FETCH_STATE = { status:'fetching', lastError:null, lastTriedAt:Date.now() };
   // outputsize=full returns ~20 years of history. compact would only give
   // 100 days, which won't cover users with longer history. SPY is one
   // request regardless of users (shared cache), so the full payload is fine.
@@ -4868,9 +4910,9 @@ function _spyFetchFromAlphaVantage(){
     .then(function(data){
       var series = data && data['Time Series (Daily)'];
       if(!series || typeof series !== 'object'){
-        if(data && (data.Information || data.Note)) {
-          if(typeof logApiError==='function') logApiError('spy-history','SPY', data.Information||data.Note);
-        }
+        var msg = (data && (data.Information || data.Note || data['Error Message'])) || 'Unknown AlphaVantage response (no Time Series field)';
+        SPY_FETCH_STATE = { status:'error', lastError:msg, lastTriedAt:Date.now() };
+        if(typeof logApiError==='function') logApiError('spy-history','SPY', msg);
         return null;
       }
       var dates = {};
@@ -4878,12 +4920,38 @@ function _spyFetchFromAlphaVantage(){
         var close = parseFloat(series[d]['4. close']);
         if(!isNaN(close)) dates[d] = close;
       });
+      SPY_FETCH_STATE = { status:'ok', lastError:null, lastTriedAt:Date.now() };
       return { dates: dates, source: 'alphavantage' };
     })
     .catch(function(e){
-      if(typeof logApiError==='function') logApiError('spy-history','SPY', e.message||'Failed');
+      var msg = (e && e.message) || 'Network or fetch error';
+      SPY_FETCH_STATE = { status:'error', lastError:msg, lastTriedAt:Date.now() };
+      if(typeof logApiError==='function') logApiError('spy-history','SPY', msg);
       return null;
     });
+}
+// User-facing retry — called from the chart's "Retry" button when the
+// initial auto-warm fetch failed (rate limit, bad key, etc.) and the user
+// wants to try again after fixing whatever was wrong.
+function retrySpyFetch(){
+  if (!ALPHAVANTAGE_KEY) {
+    if(typeof showToast==='function') showToast('Add an AlphaVantage key in Settings first.', 'warn');
+    return;
+  }
+  if (SPY_FETCH_STATE.status === 'fetching') {
+    if(typeof showToast==='function') showToast('SPY fetch already in progress…');
+    return;
+  }
+  if(typeof showToast==='function') showToast('Retrying SPY fetch…');
+  getSpyHistory({ force:true, allowFetch:true }).then(function(rec){
+    if (rec && rec.dates) {
+      if(typeof showToast==='function') showToast('SPY data loaded — chart updating');
+    } else {
+      var why = SPY_FETCH_STATE.lastError || 'AlphaVantage returned no data';
+      if(typeof showToast==='function') showToast('SPY fetch failed: '+why, 'error');
+    }
+    if (typeof render === 'function') render();
+  });
 }
 function getSpyHistory(opts){
   opts = opts || {};

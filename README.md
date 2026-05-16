@@ -1,10 +1,20 @@
 # Stockfolio
 
-**Current Version: v0.7.56**
+**Current Version: v0.7.57**
 
 ---
 
 ## Changelog
+
+### v0.7.57 — 2026-05-15 — 🔎 SPY overlay: actual error visibility + retry button
+- **Fixed the misleading "needs an AlphaVantage key" message.** When the SPY benchmark line couldn't render, the chart always blamed a missing API key — even when the real cause was an AlphaVantage rate-limit (free tier is 25 requests/day), a bad key, a network blip, or `outputsize=full` getting throttled. The user would have their key set, still see "needs a key", and rightly wonder what was going on.
+- **`SPY_FETCH_STATE` tracker** now records `status` (`idle/fetching/ok/error`), the actual `lastError` text returned by AlphaVantage, and `lastTriedAt`. The chart's status line now distinguishes:
+  - **No key** → "Add yours in Settings" link
+  - **Fetching** → spinner + "Fetching S&P 500 history from AlphaVantage…"
+  - **Error** → shows the actual AlphaVantage response (e.g. *"Thank you for using Alpha Vantage! Our standard API rate limit is 25 requests per day…"*) with a red color + ↻ Retry button
+  - **Data didn't cover the range** → offers ↻ Refetch
+- **Auto-warm backoff** — after a failed fetch, the chart won't auto-retry until 60s have passed (and re-renders are no-ops in the meantime). User can click ↻ Retry to force a fresh attempt at any time.
+- **Re-render on failure** — previously the auto-warm would silently exit on failure and leave the chart showing the stale "needs a key" placeholder. Now it re-renders so the actual error reaches the user.
 
 ### v0.7.56 — 2026-05-15 — 📱 Mobile UX top-to-bottom sweep
 - **iOS Safari zoom-on-focus eliminated.** Inputs/textareas/selects on phones now use 16px font (was 13–14px), which prevents Safari's mandatory auto-zoom when the user taps into a field. Covers the modal inputs, search bars, reminder day-count fields, and every form input across Settings.
