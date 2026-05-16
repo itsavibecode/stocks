@@ -1,10 +1,17 @@
 # Stockfolio
 
-**Current Version: v0.7.72**
+**Current Version: v0.7.73**
 
 ---
 
 ## Changelog
+
+### v0.7.73 — 2026-05-15 — 💰 Dividends-by-Month stacked bar chart
+- **New "💰 Dividends by Month" chart in the snapshot panel.** One vertical bar per month, segmented by paying company. Hover any segment to see the ticker + exact dollar amount. Built from each ticker's recorded payment history (`DV[t].h`) × current shares held, so it reflects "what this portfolio would have paid" across months.
+- **Per-ticker stable colors.** Hash the ticker symbol → HSL hue so the same ticker always gets the same color across reloads, screen sizes, and PNG share exports. Legend at the top of the chart lists every paying ticker sorted by total dollar contribution (largest first).
+- **Auto-scaling Y-axis** rounds the max up to a clean dollar number ($25 / $50 / $100 / $250 / $500 / $1000 / next-$500). 4-segment gridline.
+- **Mobile-aware X-axis.** Month labels (e.g. "Apr 26") render horizontally on desktop; below 760px they rotate -45° so 12+ months still fit.
+- **💾 Share button** exports as PNG via the existing `shareElementById` flow.
 
 ### v0.7.72 — 2026-05-15 — 📊 PE Ratio horizontal bar chart
 - **New "📊 PE Ratio" chart in the snapshot panel.** Horizontal bar chart with one row per portfolio ticker that has PE data, sorted by PE descending. Two-column grid on desktop, single column on mobile. Title shows ticker count + axis scale; Share button exports the chart as a PNG.

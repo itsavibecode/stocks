@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.72</title>
+<title>Stockfolio v0.7.73</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -245,6 +245,31 @@ body.compact .tk-ticker{height:28px}
 tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .snap-bar.b-hold{background:linear-gradient(90deg,var(--green),var(--accent2))}
 .snap-bar.b-pe{background:linear-gradient(90deg,var(--purple),#a78bfa)}
+/* Dividends-by-Month stacked bar chart (v0.7.73). Same panel-card styling
+   as the PE chart so they read as siblings. SVG geometry uses padL/padR=6
+   like the history chart; Y-axis labels are HTML overlays (preserveAspect
+   Ratio=none stretches the SVG and would distort text). */
+.dvm-chart{margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.dvm-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.dvm-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-bottom:10px;font-size:10.5px;color:var(--text2);max-height:64px;overflow-y:auto}
+.dvm-legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.dvm-legend .dvm-sw{display:inline-block;width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.dvm-chart-wrap{position:relative;padding-left:64px;padding-bottom:28px}
+.dvm-svg{display:block;width:100%;height:240px}
+.dvm-svg .grid{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.5}
+.dvm-svg .dvm-seg{transition:opacity .12s;cursor:default}
+.dvm-svg .dvm-seg:hover{opacity:.78;stroke:var(--text);stroke-width:.5}
+.dvm-y{position:absolute;left:0;top:8px;bottom:36px;width:60px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+.dvm-y .ylab{font-size:10px;font-family:var(--mono);color:var(--muted);text-align:right;line-height:1;white-space:nowrap}
+.dvm-x{position:absolute;left:64px;right:6px;bottom:0;display:flex;justify-content:space-between;font-size:9.5px;font-family:var(--mono);color:var(--muted);pointer-events:none}
+.dvm-xlab{flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 1px}
+/* On narrow widths the month labels overlap — rotate them 90° via CSS
+   transform so they still fit. Most realistic portfolios have ~12-24
+   months of payment history, which would otherwise crash together. */
+@media(max-width:760px){
+  .dvm-x{font-size:8.5px}
+  .dvm-xlab{transform:rotate(-45deg);transform-origin:center top;margin-top:6px}
+}
 /* PE Ratio chart wrapper — wider label column for ticker names, room for the
    value on the right. Two-column layout on desktop so 20+ tickers don't make
    the chart too tall; collapses to one column on narrow screens. */
@@ -1330,7 +1355,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.72 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.73 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1423,7 +1448,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.72";
+var VERSION = "0.7.73";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3783,6 +3808,134 @@ function render(){
   // bar + "N/A" label to keep them visible in context. Two-column grid on
   // wide screens so a 20+ ticker portfolio doesn't push the rest of the
   // page off-screen.
+  // Dividends-by-Month stacked bar chart — one bar per month, each bar
+  // segmented by ticker. Data comes from DV[t].h × sh[t] (per-share
+  // payment × current shares). Hover any segment to see the ticker +
+  // exact dollar amount. SVG rendering so it stays crisp at any size.
+  if (typeof _renderDividendsByMonthHTML !== 'function') {
+    // Stable per-ticker hue — same ticker always gets the same color
+    // across reloads + share PNG exports, hashed from the symbol bytes.
+    window._tickerHue = function(t){
+      var h = 0;
+      for (var i = 0; i < t.length; i++) h = ((h*31) + t.charCodeAt(i)) % 360;
+      return h;
+    };
+    window._tickerColor = function(t){
+      return 'hsl(' + _tickerHue(t) + ', 62%, 56%)';
+    };
+    window._renderDividendsByMonthHTML = function() {
+      // Aggregate dividend payments: months[YYYY-MM][TICKER] = $ amount
+      var months = {};
+      tks.forEach(function(t){
+        var s = sh[t] || 0;
+        if (s <= 0) return;
+        var hist = (DV[t] && DV[t].h) || [];
+        hist.forEach(function(entry){
+          if (!entry || !entry.d || !entry.a) return;
+          var mo = entry.d.slice(0,7); // YYYY-MM
+          if (!months[mo]) months[mo] = {};
+          months[mo][t] = (months[mo][t] || 0) + entry.a * s;
+        });
+      });
+      var monthKeys = Object.keys(months).sort();
+      if (monthKeys.length < 1) return ''; // no data to chart
+
+      // Compute the per-month totals for Y-axis scaling
+      var monthTotals = monthKeys.map(function(m){
+        var sum = 0;
+        Object.keys(months[m]).forEach(function(t){ sum += months[m][t]; });
+        return sum;
+      });
+      var maxV = Math.max.apply(null, monthTotals);
+      // Round axis max up to a clean number ($25 / $50 / $100 / $250 / $500 / $1000 / next $500)
+      var axisMax;
+      if (maxV <= 25) axisMax = 25;
+      else if (maxV <= 50) axisMax = 50;
+      else if (maxV <= 100) axisMax = 100;
+      else if (maxV <= 250) axisMax = 250;
+      else if (maxV <= 500) axisMax = 500;
+      else if (maxV <= 1000) axisMax = 1000;
+      else axisMax = Math.ceil(maxV / 500) * 500;
+
+      // Gather unique tickers (for the legend) sorted by total $ desc
+      var totalsByTk = {};
+      monthKeys.forEach(function(m){
+        Object.keys(months[m]).forEach(function(t){
+          totalsByTk[t] = (totalsByTk[t] || 0) + months[m][t];
+        });
+      });
+      var legendTks = Object.keys(totalsByTk).sort(function(a,b){ return totalsByTk[b] - totalsByTk[a]; });
+
+      // SVG geometry — fixed viewBox, stretches to container width
+      var w = 800, ch = 240;
+      var padT = 8, padB = 28, padL = 6, padR = 6;
+      var plotW = w - padL - padR;
+      var plotH = ch - padT - padB;
+      // Bar slot width — leave a gap (~25% of slot) between bars
+      var slotW = plotW / monthKeys.length;
+      var barW = Math.max(4, slotW * 0.78);
+      var barOffset = (slotW - barW) / 2;
+
+      var html = '<div class="dvm-chart" id="div-by-month-panel">';
+      html += '<div class="dvm-chart-title"><span>💰 Dividends by Month</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px;font-weight:400">'+monthKeys.length+' month'+(monthKeys.length!==1?'s':'')+' · '+legendTks.length+' ticker'+(legendTks.length!==1?'s':'')+' <button class="btn btn-outline share-btn" onclick="shareElementById(\'div-by-month-panel\',\'dividends-by-month\',\'Dividends by Month\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
+      html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Cash dividends received per month, stacked by paying company. Hover any segment to see the exact amount. Computed from each ticker\'s payment history × your current share count, so it reflects "what this portfolio would have paid" not a strict historical record.</div>';
+
+      // Legend
+      html += '<div class="dvm-legend">';
+      legendTks.forEach(function(t){
+        html += '<span class="dvm-legend-item"><span class="dvm-sw" style="background:'+_tickerColor(t)+'"></span>'+t+'</span>';
+      });
+      html += '</div>';
+
+      // Y-axis labels (HTML overlay so they don't distort with preserveAspectRatio=none)
+      html += '<div class="dvm-chart-wrap">';
+      html += '<div class="dvm-y">';
+      html += '<span class="ylab">'+fm(axisMax)+'</span>';
+      html += '<span class="ylab">'+fm(axisMax * 0.75)+'</span>';
+      html += '<span class="ylab">'+fm(axisMax * 0.5)+'</span>';
+      html += '<span class="ylab">'+fm(axisMax * 0.25)+'</span>';
+      html += '<span class="ylab">$0</span>';
+      html += '</div>';
+
+      html += '<svg class="dvm-svg" viewBox="0 0 '+w+' '+ch+'" preserveAspectRatio="none">';
+      // Gridlines
+      [0, 0.25, 0.5, 0.75, 1].forEach(function(t){
+        var y = padT + plotH * (1 - t);
+        html += '<line class="grid" x1="'+padL+'" x2="'+(w-padR)+'" y1="'+y+'" y2="'+y+'"/>';
+      });
+      // Stacked bars
+      monthKeys.forEach(function(mo, idx){
+        var x = padL + idx * slotW + barOffset;
+        // Sort tickers in this month by amount desc so biggest sits at the bottom
+        var tks_in_mo = Object.keys(months[mo]).sort(function(a,b){ return months[mo][b] - months[mo][a]; });
+        var cumulative = 0;
+        tks_in_mo.forEach(function(t){
+          var amt = months[mo][t];
+          var segH = (amt / axisMax) * plotH;
+          var y = padT + plotH - cumulative - segH;
+          var tip = t + ': ' + fm(amt) + ' · ' + mo;
+          html += '<rect class="dvm-seg" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(.5,segH).toFixed(1)+'" fill="'+_tickerColor(t)+'" data-tip="'+tip.replace(/"/g,'&quot;')+'"><title>'+tip+'</title></rect>';
+          cumulative += segH;
+        });
+      });
+      html += '</svg>';
+
+      // X-axis labels (HTML overlay — one label per month, abbreviated to "Mon YY")
+      html += '<div class="dvm-x">';
+      monthKeys.forEach(function(mo){
+        var parts = mo.split('-');
+        var moAbbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(parts[1])-1] || parts[1];
+        var yr2 = parts[0].slice(2);
+        html += '<span class="dvm-xlab">'+moAbbr+' '+yr2+'</span>';
+      });
+      html += '</div>';
+
+      html += '</div>'; // end .dvm-chart-wrap
+      html += '</div>'; // end .dvm-chart
+      return html;
+    };
+  }
+
   if (typeof _renderPERatioChartHTML !== 'function') {
     window._renderPERatioChartHTML = function() {
       // Build rows: {tk, pe, isNeg}
@@ -4293,6 +4446,10 @@ function render(){
     sH+='</div></div>';
     // Tax Outlook panel
     sH+=_renderTaxOutlookHTML(annualIncome);
+    // Dividends-by-Month stacked bar chart — one bar per month, segmented
+    // by paying ticker. Built from DV[t].h × sh[t]; tickers without
+    // payment history (non-dividend names) are simply absent from the data.
+    sH+=_renderDividendsByMonthHTML();
     // PE Ratio horizontal bar chart (one row per portfolio ticker with
     // PE data — fundamentals cache + built-in fallbacks; tickers without
     // data are silently skipped)
