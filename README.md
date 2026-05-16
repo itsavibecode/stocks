@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.68**
+**Current Version: v0.7.69**
 
 ---
 
 ## Changelog
+
+### v0.7.69 — 2026-05-15 — 🔁 Demo button now idempotent — recovers stuck-empty state
+- **Removed the early-return guard from `enterDemoMode()`.** v0.7.67 added `if (IS_DEMO) return;` which created a dead end: if `IS_DEMO` got set true on script load (via `?demo=1` URL or the sessionStorage flag) but the data didn't end up in memory for any reason — race condition, stale tab, anything — clicking the "Load demo data" button did absolutely nothing because of the guard. The function is now idempotent: always seeds, always re-renders.
+- **Recovery-path empty-state CTA.** When the snapshot panel detects no portfolio data AND `IS_DEMO === true`, the CTA card now says "⚠️ Demo data didn't load — Reload demo data" with a button that re-runs `enterDemoMode()` to recover. Previously the CTA was hidden in demo mode, leaving the user stuck with no way to recover.
+- Wrapped the seed step in try/catch so any seeding error surfaces as a toast instead of failing silently.
 
 ### v0.7.68 — 2026-05-15 — 🧹 Hide footer "Try demo" link when already in demo
 - Wrapped the footer "🎬 Try demo" link + its separator in a `<span id="footerDemoSep">` and hide that span whenever `IS_DEMO` is true (both at init for URL-loaded demos and inside `enterDemoMode()` for in-place activation). Was redundant + slightly confusing since the link did nothing in demo (the function early-returns when already active).

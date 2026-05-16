@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.68</title>
+<title>Stockfolio v0.7.69</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1319,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.68 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.69 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1412,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.68";
+var VERSION = "0.7.69";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -4079,13 +4079,18 @@ function render(){
     if(tks.length===0||tks.every(function(t){return(sh[t]||0)===0})){
       // No live shares — but if there are realized sales, still show the realized panel
       var realizedHTML = (realized && realized.length>0) ? _renderRealizedHTML() : '';
-      // If the user has NO portfolio data AND isn't in demo mode, surface a
-      // "Try demo" CTA so they can see a populated dashboard immediately
-      // without needing to know about ?demo=1. Once they've added a ticker
-      // or signed in (currentUser populated), the CTA stops appearing.
+      // Empty-state CTA — shown when the user has no portfolio data so they
+      // can one-click into the demo. Also shown if IS_DEMO is somehow true
+      // but data didn't seed (recovery path) — clicking the button re-runs
+      // enterDemoMode() which always re-seeds.
       var demoCTA = '';
-      if (!IS_DEMO && !currentUser && (!realized || realized.length === 0)) {
-        demoCTA = '<div style="margin-top:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(8,145,178,.10),rgba(124,58,237,.10));border:1px solid var(--accent2);border-radius:10px;text-align:center;line-height:1.6"><div style="font-size:13px;font-weight:700;margin-bottom:6px">🎬 First time here?</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Try the demo to see Stockfolio with a realistic sample portfolio — none of your data is touched.</div><button class="btn btn-primary" onclick="enterDemoMode()" style="font-size:12px">Load demo data</button></div>';
+      if (!currentUser && (!realized || realized.length === 0)) {
+        var ctaLabel = IS_DEMO ? 'Reload demo data' : 'Load demo data';
+        var ctaHeading = IS_DEMO ? '⚠️ Demo data didn\'t load' : '🎬 First time here?';
+        var ctaDesc = IS_DEMO
+          ? 'Demo mode is active but the sample portfolio didn\'t seed. Click below to try loading it again.'
+          : 'Try the demo to see Stockfolio with a realistic sample portfolio — none of your data is touched.';
+        demoCTA = '<div style="margin-top:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(8,145,178,.10),rgba(124,58,237,.10));border:1px solid var(--accent2);border-radius:10px;text-align:center;line-height:1.6"><div style="font-size:13px;font-weight:700;margin-bottom:6px">' + ctaHeading + '</div><div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">' + ctaDesc + '</div><button class="btn btn-primary" onclick="enterDemoMode()" style="font-size:12px">' + ctaLabel + '</button></div>';
       }
       snap.innerHTML='<div class="snap-wrap"><div class="snap-empty">Add shares to a ticker to see your portfolio snapshot.</div>'+demoCTA+realizedHTML+'</div>';
       return;
@@ -7805,8 +7810,13 @@ function exitDemoMode(){
 // based approach was fragile — if GitHub Pages stripped the query during
 // a redirect or the browser dropped it for any reason, the demo silently
 // failed and the user saw an empty signed-out dashboard).
+// Programmatic demo entry — ALWAYS seeds + re-renders, even if IS_DEMO
+// was already true. The previous early-return guard caused a dead-end
+// state where IS_DEMO got set true on script load (via ?demo=1 or the
+// sessionStorage flag) but the data didn't end up in memory for any
+// reason, and clicking the in-app demo button did nothing because of
+// the guard. Now the function is idempotent and always recovers.
 function enterDemoMode(){
-  if (IS_DEMO) return; // already in demo, nothing to do
   IS_DEMO = true;
   // Persist flags so reloads keep demo state
   try { sessionStorage.setItem('sf_demo_active', '1'); } catch(e){}
@@ -7822,13 +7832,19 @@ function enterDemoMode(){
   db = null;
   // Seed all the demo data into in-memory state. saveLocal/saveToCloud
   // already short-circuit on IS_DEMO so this doesn't touch storage.
-  tks = DEMO_PORTFOLIO.tks.slice();
-  lots = JSON.parse(JSON.stringify(DEMO_PORTFOLIO.lots));
-  realized = DEMO_PORTFOLIO.realized.slice();
-  Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
-  Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
-  Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
-  SPY_HIST = DEMO_SPY_HIST;
+  try {
+    tks = DEMO_PORTFOLIO.tks.slice();
+    lots = JSON.parse(JSON.stringify(DEMO_PORTFOLIO.lots));
+    realized = DEMO_PORTFOLIO.realized.slice();
+    Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
+    Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
+    Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
+    SPY_HIST = DEMO_SPY_HIST;
+  } catch(e) {
+    console.error('Demo seed error:', e);
+    if (typeof showToast==='function') showToast('Demo load failed: '+(e.message||'error'), 'error');
+    return;
+  }
   // Reset prefs cache so loadPrefs() returns the demo defaults
   _DEMO_PREFS = null;
   computeFromLots();
