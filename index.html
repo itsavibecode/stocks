@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.58</title>
+<title>Stockfolio v0.7.59</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1308,7 +1308,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.58 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.59 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1401,7 +1401,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.58";
+var VERSION = "0.7.59";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3758,30 +3758,40 @@ function render(){
       var plotH = ch - padT - padB;
 
       // SPY overlay — opt-in via prefs.showSpyBenchmark (default true). Reads
-      // from the shared /benchmarks/SPY cache; if SPY data is missing or any
-      // chart-start date can't be matched, the overlay silently falls back to
-      // portfolio-only. Auto-warm fetch happens after render in the wire-up.
+      // from the shared /benchmarks/SPY cache. Supports PARTIAL overlay: if
+      // portfolio history extends earlier than the SPY data window (AlphaVantage
+      // free tier's outputsize=compact gives ~100 trading days), we start the
+      // SPY line at the first portfolio date that has SPY data — instead of
+      // showing nothing. Both lines normalize from that first SPY-covered
+      // date, and the legend reports % change over that overlap window.
       var showSpy = prefs.showSpyBenchmark !== false;
-      var spyPath = null, spyValues = [];
+      var spyPath = null;
+      // firstSpyIdx = index into hist[] where SPY data first appears
+      // spyValuesByIdx[i] = normalized SPY value for hist[i], or null if no SPY data there
+      var firstSpyIdx = -1;
+      var spyValuesByIdx = [];
       if (showSpy && SPY_HIST && SPY_HIST.dates) {
-        var spyStart = _spyCloseOn(hist[0].d, SPY_HIST.dates);
-        if (spyStart && spyStart > 0) {
-          // Normalize SPY so its first point equals the portfolio's first value
-          // (this lets the two lines share a Y axis and compare percent moves).
-          var portStart = hist[0].v;
-          var spyOk = true;
-          for (var i = 0; i < hist.length; i++) {
-            var sc = _spyCloseOn(hist[i].d, SPY_HIST.dates);
-            if (!sc) { spyOk = false; break; }
-            spyValues.push((sc / spyStart) * portStart);
+        // Find the first portfolio date with SPY data
+        for (var i0 = 0; i0 < hist.length; i0++) {
+          var sc0 = _spyCloseOn(hist[i0].d, SPY_HIST.dates);
+          if (sc0 && sc0 > 0) { firstSpyIdx = i0; break; }
+        }
+        if (firstSpyIdx >= 0) {
+          var spyStart = _spyCloseOn(hist[firstSpyIdx].d, SPY_HIST.dates);
+          // Normalize SPY so its first plotted point equals the portfolio's
+          // value at that same index — both lines share the Y axis from there
+          var portStart = hist[firstSpyIdx].v;
+          for (var i1 = 0; i1 < hist.length; i1++) {
+            if (i1 < firstSpyIdx) { spyValuesByIdx.push(null); continue; }
+            var sc1 = _spyCloseOn(hist[i1].d, SPY_HIST.dates);
+            spyValuesByIdx.push(sc1 ? (sc1 / spyStart) * portStart : null);
           }
-          if (!spyOk) spyValues = [];
         }
       }
 
       // Y range needs to span BOTH portfolio + SPY for the shared axis to fit
       var allValues = hist.map(function(h){return h.v});
-      if (spyValues.length === hist.length) allValues = allValues.concat(spyValues);
+      spyValuesByIdx.forEach(function(v){ if (v !== null) allValues.push(v); });
       var minV = Math.min.apply(null, allValues);
       var maxV = Math.max.apply(null, allValues);
       var range = (maxV - minV) || 1;
@@ -3794,14 +3804,20 @@ function render(){
       var pathD = 'M' + pts.map(function(p){return p.x+','+p.y}).join(' L');
       var areaD = pathD + ' L' + pts[pts.length-1].x + ',' + (padT + plotH) + ' L' + pts[0].x + ',' + (padT + plotH) + ' Z';
 
+      // SPY points — only built for indices where we have SPY data (partial overlay)
       var spyPts = [];
-      if (spyValues.length === hist.length) {
-        spyPts = spyValues.map(function(v, i) {
+      if (firstSpyIdx >= 0) {
+        spyValuesByIdx.forEach(function(v, i) {
+          if (v === null) { spyPts.push(null); return; }
           var x = padL + (hist.length === 1 ? plotW/2 : i / (hist.length - 1) * plotW);
           var y = padT + plotH - ((v - minV) / range) * plotH;
-          return { x: x.toFixed(1), y: y.toFixed(1), v: v };
+          spyPts.push({ x: x.toFixed(1), y: y.toFixed(1), v: v });
         });
-        spyPath = 'M' + spyPts.map(function(p){return p.x+','+p.y}).join(' L');
+        // Build SPY path starting from firstSpyIdx
+        var spyPathPts = spyPts.slice(firstSpyIdx).filter(function(p){return p!==null});
+        if (spyPathPts.length >= 2) {
+          spyPath = 'M' + spyPathPts.map(function(p){return p.x+','+p.y}).join(' L');
+        }
       }
 
       var midV = (minV + maxV) / 2;
@@ -3811,17 +3827,24 @@ function render(){
       var changeColor = change >= 0 ? 'var(--green)' : 'var(--red)';
       var changeSign = change >= 0 ? '+' : '';
 
-      // SPY change% over same window (for legend) — based on raw SPY closes
-      var spyChangePct = null;
-      if (spyValues.length === hist.length) {
-        var sStart = _spyCloseOn(hist[0].d, SPY_HIST.dates);
-        var sEnd = _spyCloseOn(hist[hist.length-1].d, SPY_HIST.dates);
-        if (sStart && sEnd) spyChangePct = (sEnd - sStart) / sStart * 100;
+      // SPY change% over the OVERLAP window (firstSpyIdx → end), and matching
+      // portfolio change% over the same window so the comparison is apples-
+      // to-apples even when the SPY line is a partial overlay.
+      var spyChangePct = null, portChangePctOverlap = null, overlapStartDate = null;
+      if (spyPath) {
+        var sStart2 = _spyCloseOn(hist[firstSpyIdx].d, SPY_HIST.dates);
+        var sEnd2 = _spyCloseOn(hist[hist.length-1].d, SPY_HIST.dates);
+        if (sStart2 && sEnd2) spyChangePct = (sEnd2 - sStart2) / sStart2 * 100;
+        var pStart = hist[firstSpyIdx].v;
+        var pEnd = hist[hist.length-1].v;
+        if (pStart > 0) portChangePctOverlap = (pEnd - pStart) / pStart * 100;
+        overlapStartDate = hist[firstSpyIdx].d;
       }
 
       // Hover data — bundle both portfolio + SPY pts so the tooltip can show both
       var hoverData = pts.map(function(p, i) {
-        return { x: p.x, y: p.y, d: p.d, v: p.v, sv: spyPts[i] ? spyPts[i].v : null };
+        var sv = (spyPts[i] && spyPts[i].v != null) ? spyPts[i].v : null;
+        return { x: p.x, y: p.y, d: p.d, v: p.v, sv: sv };
       });
       var dataAttr = JSON.stringify(hoverData).replace(/"/g, '&quot;');
 
@@ -3835,7 +3858,18 @@ function render(){
       if (spyPath) {
         var spySign = spyChangePct >= 0 ? '+' : '';
         var spyColor = spyChangePct >= 0 ? 'var(--green)' : 'var(--red)';
-        html += '<div class="snap-history-legend" style="margin:2px 0 8px"><span class="lg"><span class="sw portfolio"></span>Your portfolio <span style="color:' + changeColor + ';font-weight:700">' + changeSign + changePct.toFixed(2) + '%</span></span><span class="lg"><span class="sw spy"></span>S&amp;P 500 (SPY) <span style="color:' + spyColor + ';font-weight:700">' + spySign + (spyChangePct || 0).toFixed(2) + '%</span></span></div>';
+        // When SPY is a partial overlay (firstSpyIdx > 0), the % comparison
+        // is over the OVERLAP window — both portfolio % and SPY % start at
+        // hist[firstSpyIdx]. The legend uses portChangePctOverlap to keep
+        // it apples-to-apples and notes the start date.
+        var portPctShown = (firstSpyIdx > 0 && portChangePctOverlap !== null) ? portChangePctOverlap : changePct;
+        var portSignShown = portPctShown >= 0 ? '+' : '';
+        var portColorShown = portPctShown >= 0 ? 'var(--green)' : 'var(--red)';
+        var rangeNote = '';
+        if (firstSpyIdx > 0 && overlapStartDate) {
+          rangeNote = '<span style="color:var(--muted);font-size:10px;margin-left:6px">since ' + overlapStartDate.slice(5) + ' (SPY data starts there)</span>';
+        }
+        html += '<div class="snap-history-legend" style="margin:2px 0 8px"><span class="lg"><span class="sw portfolio"></span>Your portfolio <span style="color:' + portColorShown + ';font-weight:700">' + portSignShown + portPctShown.toFixed(2) + '%</span></span><span class="lg"><span class="sw spy"></span>S&amp;P 500 (SPY) <span style="color:' + spyColor + ';font-weight:700">' + spySign + (spyChangePct || 0).toFixed(2) + '%</span></span>' + rangeNote + '</div>';
       } else if (showSpy) {
         // Build a precise status message based on actual state
         var spyStatus = (typeof SPY_FETCH_STATE !== 'undefined' && SPY_FETCH_STATE) ? SPY_FETCH_STATE : { status:'idle' };
@@ -3845,12 +3879,17 @@ function render(){
         } else if (spyStatus.status === 'fetching') {
           msgText = '<span class="sync-spinner" style="width:9px;height:9px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:5px"></span>Fetching S&amp;P 500 history from AlphaVantage…';
         } else if (spyStatus.status === 'error' && spyStatus.lastError) {
-          // Most common cause: AlphaVantage free-tier rate limit hit
-          // (25 requests/day). Surface the actual response so the user
-          // knows whether to wait or fix something.
-          msgText = 'S&amp;P 500 fetch failed: <span style="color:var(--text)">' + spyStatus.lastError.replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,200) + '</span>';
-          msgColor = 'var(--red)';
-          retryHTML = ' <button class="btn btn-outline" onclick="retrySpyFetch()" style="font-size:10px;padding:3px 8px;margin-left:6px">↻ Retry</button>';
+          if (spyStatus.rateLimited) {
+            // AlphaVantage 25/day quota tripped — retrying right away won't
+            // help. Surface a clear wait-and-retry message instead of the
+            // raw verbose API response.
+            msgText = '⏳ AlphaVantage daily quota hit (25 requests/day on free tier). SPY comparison will return automatically tomorrow.';
+            msgColor = 'var(--yellow)';
+          } else {
+            msgText = 'S&amp;P 500 fetch failed: <span style="color:var(--text)">' + spyStatus.lastError.replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,200) + '</span>';
+            msgColor = 'var(--red)';
+            retryHTML = ' <button class="btn btn-outline" onclick="retrySpyFetch()" style="font-size:10px;padding:3px 8px;margin-left:6px">↻ Retry</button>';
+          }
         } else {
           // status === 'ok' but no spyPath means dates didn't line up —
           // AlphaVantage data exists but doesn't cover the chart's
@@ -4068,9 +4107,15 @@ function render(){
       if (prefs.showSpyBenchmark === false) return;
       var hasFresh = SPY_HIST && SPY_HIST.dates && _spyCacheValid(SPY_HIST);
       if (hasFresh) return;
-      // If we just tried and failed within the last minute, don't retry on
-      // every render — let the user hit the Retry button instead.
-      if (SPY_FETCH_STATE && SPY_FETCH_STATE.status === 'error' && SPY_FETCH_STATE.lastTriedAt && (Date.now() - SPY_FETCH_STATE.lastTriedAt) < 60000) return;
+      // Backoff after a failed fetch — depends on the failure mode:
+      //   - rate-limited by AlphaVantage (25/day) → 4 hours (no point retrying
+      //     until tomorrow, but 4h gives some flex if quota resets mid-day)
+      //   - other errors → 60s (transient network / one-off blip)
+      // User can always force a retry with the ↻ Retry button on the chart.
+      if (SPY_FETCH_STATE && SPY_FETCH_STATE.status === 'error' && SPY_FETCH_STATE.lastTriedAt) {
+        var backoff = SPY_FETCH_STATE.rateLimited ? (4*60*60*1000) : 60000;
+        if ((Date.now() - SPY_FETCH_STATE.lastTriedAt) < backoff) return;
+      }
       // If a fetch is already in-flight from a prior render, don't pile on.
       if (SPY_FETCH_STATE && SPY_FETCH_STATE.status === 'fetching') return;
       var allowFetch = !!ALPHAVANTAGE_KEY;
@@ -4919,16 +4964,29 @@ function _spyFetchFromAlphaVantage(){
     return Promise.resolve(null);
   }
   SPY_FETCH_STATE = { status:'fetching', lastError:null, lastTriedAt:Date.now() };
-  // outputsize=full returns ~20 years of history. compact would only give
-  // 100 days, which won't cover users with longer history. SPY is one
-  // request regardless of users (shared cache), so the full payload is fine.
-  return fetch('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&outputsize=full&apikey='+ALPHAVANTAGE_KEY)
+  // AlphaVantage made `outputsize=full` premium-only for TIME_SERIES_DAILY
+  // sometime in 2026 ("The outputsize=full parameter value is a premium
+  // feature"). compact returns the last 100 trading days (~4.5 months) on
+  // free tier, which covers the vast majority of portfolio histories since
+  // the app started tracking. For users with history that pre-dates SPY's
+  // 100-day window, the chart's SPY overlay starts from the first date
+  // SPY has data for (partial overlay — see _renderHistoryChartHTML).
+  return fetch('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&outputsize=compact&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){ return r.json(); })
     .then(function(data){
       var series = data && data['Time Series (Daily)'];
       if(!series || typeof series !== 'object'){
         var msg = (data && (data.Information || data.Note || data['Error Message'])) || 'Unknown AlphaVantage response (no Time Series field)';
-        SPY_FETCH_STATE = { status:'error', lastError:msg, lastTriedAt:Date.now() };
+        // Detect AlphaVantage's daily rate limit so the auto-warm backs off
+        // for hours not seconds. The "25 requests per day" message is the
+        // tell — once that lands, no point retrying again today.
+        var isRateLimit = /25 requests per day|rate limit|standard API rate/i.test(msg);
+        SPY_FETCH_STATE = {
+          status: 'error',
+          lastError: msg,
+          lastTriedAt: Date.now(),
+          rateLimited: isRateLimit
+        };
         if(typeof logApiError==='function') logApiError('spy-history','SPY', msg);
         return null;
       }

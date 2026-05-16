@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.58**
+**Current Version: v0.7.59**
 
 ---
 
 ## Changelog
+
+### v0.7.59 — 2026-05-15 — 📊 SPY overlay free-tier fix + partial overlay + rate-limit backoff
+- **Switched SPY fetch from `outputsize=full` to `outputsize=compact`.** AlphaVantage made `full` a premium-only parameter for `TIME_SERIES_DAILY` sometime in 2026 — every v0.7.53+ SPY fetch was failing with "*The outputsize=full parameter value is a premium feature*." `compact` returns the last 100 trading days (~4.5 months of calendar dates) on the free tier, which covers virtually every portfolio's history since the app started tracking.
+- **Partial-overlay support.** If portfolio history extends earlier than the 100-day SPY window, the SPY line now starts at the first portfolio date that has SPY data instead of disappearing entirely. Both lines normalize from that overlap-start date and the legend reports % change over that same window with a "since MM-DD (SPY data starts there)" note so the comparison stays apples-to-apples.
+- **Rate-limit detection + 4-hour backoff.** When AlphaVantage returns the "25 requests per day" message, the SPY fetcher now flags `rateLimited:true` on `SPY_FETCH_STATE` and the auto-warm waits 4 hours before retrying (instead of the 60-second backoff used for transient errors). Avoids burning more requests against a quota that's already exhausted.
+- **Rate-limit-specific UI message.** When rate-limited, the chart shows "⏳ AlphaVantage daily quota hit (25 requests/day on free tier). SPY comparison will return automatically tomorrow." in yellow — much more useful than the verbose verbatim API response.
 
 ### v0.7.58 — 2026-05-15 — 🗂️ Collapsible Settings sections
 - **Click any Settings section header to collapse/expand it.** The 7 section headers added in v0.7.51 (Account / Appearance & Audio / Notifications / Money & Taxes / Brokerage & Accounts / API Keys / Data & Activity) now have a chevron and toggle their cards open or closed when clicked. Chevron rotates 90° when collapsed.
