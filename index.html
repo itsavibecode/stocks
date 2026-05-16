@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.59</title>
+<title>Stockfolio v0.7.60</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -570,6 +570,8 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 .lmh{font-size:10px;font-weight:700;color:var(--muted);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.8px;padding-left:4px}
 
 .rss-panel{background:var(--card);border:1px solid rgba(251,146,60,.2);border-radius:12px;padding:18px;margin-bottom:16px;animation:fadeUp .25s ease both}
+.rss-close{position:absolute;top:8px;right:10px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:all .12s;font-weight:300}
+.rss-close:hover{background:var(--orange);color:#fff;border-color:var(--orange);transform:rotate(90deg)}
 .rss-panel pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:10px;font-family:var(--mono);color:var(--accent2);overflow:auto;max-height:220px;line-height:1.5}
 
 .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
@@ -829,8 +831,9 @@ body.text-xl .sc .scv{font-size:24px}
 <div class="tk-ticker" id="pfTicker" style="display:none"><div class="tk-ticker-track" id="pfTickerTrack"></div></div>
 
 <div class="container">
-  <div class="rss-panel" id="rP" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+  <div class="rss-panel" id="rP" style="display:none;position:relative">
+    <button class="rss-close" onclick="toggleRSS()" title="Close RSS panel" aria-label="Close">×</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;padding-right:32px">
       <strong style="font-size:14px">&#128225; RSS Feed</strong>
       <button class="btn btn-outline" onclick="cpRSS()" id="cpB">Copy XML</button>
     </div>
@@ -1308,7 +1311,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.59 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.60 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1401,7 +1404,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.59";
+var VERSION = "0.7.60";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════

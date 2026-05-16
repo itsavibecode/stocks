@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.59**
+**Current Version: v0.7.60**
 
 ---
 
 ## Changelog
+
+### v0.7.60 — 2026-05-15 — ✕ RSS panel close button
+- **Added a close (×) button to the top-right corner of the RSS panel** so you can dismiss it without scrolling back up to find the 📡 RSS toggle in the header. Same `toggleRSS()` action under the hood. Hover spins 90° + paints orange so it reads as the orange "close" of the orange "open" button.
 
 ### v0.7.59 — 2026-05-15 — 📊 SPY overlay free-tier fix + partial overlay + rate-limit backoff
 - **Switched SPY fetch from `outputsize=full` to `outputsize=compact`.** AlphaVantage made `full` a premium-only parameter for `TIME_SERIES_DAILY` sometime in 2026 — every v0.7.53+ SPY fetch was failing with "*The outputsize=full parameter value is a premium feature*." `compact` returns the last 100 trading days (~4.5 months of calendar dates) on the free tier, which covers virtually every portfolio's history since the app started tracking.
