@@ -1,10 +1,21 @@
 # Stockfolio
 
-**Current Version: v0.7.66**
+**Current Version: v0.7.67**
 
 ---
 
 ## Changelog
+
+### v0.7.67 — 2026-05-15 — 🎬 In-place demo activation (no reload, no URL dependency)
+- **`enterDemoMode()` now seeds everything in-place + re-renders** instead of relying on a `?demo=1` URL navigation + script reload to activate. The previous approach was fragile: if GitHub Pages stripped the query during a redirect or the browser dropped it for any reason, the demo would silently fail and the user would land on an empty signed-out dashboard. Now the function:
+  1. Sets `IS_DEMO = true` in-memory
+  2. Updates the URL via `history.replaceState` (no reload — survives back/forward navigation)
+  3. Sets the sessionStorage flag (so a manual reload still keeps demo)
+  4. Nulls the Firestore handle (defense against any cloud write)
+  5. Seeds `tks`/`lots`/`realized`/`livePrices`/`liveChanges`/`FUND`/`SPY_HIST` from the demo constants
+  6. Swaps the header (hides auth bar, shows demo banner)
+  7. Calls `render()` + the supporting renderers
+- All the script-eval-time URL-based detection still works for direct-link sharing (`https://itsavibecode.github.io/stocks/?demo=1`).
 
 ### v0.7.66 — 2026-05-15 — 🎬 Robust demo activation + "Load demo" empty-state CTA
 - **Demo mode now detects three ways instead of one.** The previous detection only checked `?demo=1` in the query string — if GitHub Pages stripped the param during a trailing-slash redirect, or the user navigated in a way that lost the query, the demo silently failed and the user saw an empty signed-out dashboard. New detection:
