@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.61**
+**Current Version: v0.7.62**
 
 ---
 
 ## Changelog
+
+### v0.7.62 — 2026-05-15 — 🎬 Pink "Try demo" link in footer
+- **Added a `?demo=1` link to the footer** so visitors who land on the live app can preview a realistic sample portfolio with one click instead of needing to know about the URL parameter. Styled pink (`#ec4899` dark / `#db2777` light) to stand out from the muted footer text — pill-shaped on hover, fills with pink and white text.
 
 ### v0.7.61 — 2026-05-15 — 🔒 Scrub API keys from error messages + handle AlphaVantage abuse-detection
 - **API keys redacted from all error messages.** AlphaVantage's "We have detected your API key as part of an automated request…" response echoes your actual key back in the error string — which means a screenshot of the API errors modal or chart-level error message would leak your key. New `_scrubApiKeys(msg)` helper replaces every known key (Finnhub / AlphaVantage / Tiingo / Polygon / TwelveData) with `[redacted-*-key]` before storing in `apiErrors`, displaying in the alert, or putting on `SPY_FETCH_STATE.lastError`. Applied both at log time (new entries) AND at display time (defense in depth for entries logged before this fix).

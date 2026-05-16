@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.61</title>
+<title>Stockfolio v0.7.62</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -586,6 +586,11 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 .rb{background:var(--border);color:var(--muted);border:none;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:var(--sans);transition:all .1s}
 .rb:hover{background:var(--red);color:#fff}
 .footer{text-align:center;padding:24px 0 12px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);margin-top:24px}
+.footer-demo-link{color:#ec4899;text-decoration:none;font-weight:600;padding:1px 6px;border-radius:4px;transition:all .15s;border:1px solid rgba(236,72,153,.3)}
+.footer-demo-link:hover{background:#ec4899;color:#fff;border-color:#ec4899}
+/* Light theme: tone down the pink slightly so it still pops without screaming */
+body.light .footer-demo-link{color:#db2777;border-color:rgba(219,39,119,.35)}
+body.light .footer-demo-link:hover{background:#db2777;color:#fff;border-color:#db2777}
 
 @media(max-width:1024px){.dg{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
@@ -1311,7 +1316,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.61 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.62 &middot; Auto-saves &middot; Sign in to sync across devices &middot; <a href="?demo=1" class="footer-demo-link" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1404,7 +1409,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.61";
+var VERSION = "0.7.62";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
