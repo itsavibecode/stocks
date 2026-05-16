@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.60**
+**Current Version: v0.7.61**
 
 ---
 
 ## Changelog
+
+### v0.7.61 — 2026-05-15 — 🔒 Scrub API keys from error messages + handle AlphaVantage abuse-detection
+- **API keys redacted from all error messages.** AlphaVantage's "We have detected your API key as part of an automated request…" response echoes your actual key back in the error string — which means a screenshot of the API errors modal or chart-level error message would leak your key. New `_scrubApiKeys(msg)` helper replaces every known key (Finnhub / AlphaVantage / Tiingo / Polygon / TwelveData) with `[redacted-*-key]` before storing in `apiErrors`, displaying in the alert, or putting on `SPY_FETCH_STATE.lastError`. Applied both at log time (new entries) AND at display time (defense in depth for entries logged before this fix).
+- **Abuse-detection treated like rate-limit.** When AlphaVantage flags the request as "automated" / too-frequent, the SPY fetcher now tags it the same as the 25/day quota (`rateLimited:true`) so the auto-warm backs off for 4 hours instead of hammering. The chart shows a yellow "AlphaVantage flagged the request as too-frequent — SPY will auto-retry in a few hours. Slowing down other AlphaVantage fetches (e.g. fundamentals refresh) helps." message rather than the verbatim API response.
 
 ### v0.7.60 — 2026-05-15 — ✕ RSS panel close button
 - **Added a close (×) button to the top-right corner of the RSS panel** so you can dismiss it without scrolling back up to find the 📡 RSS toggle in the header. Same `toggleRSS()` action under the hood. Hover spins 90° + paints orange so it reads as the orange "close" of the orange "open" button.

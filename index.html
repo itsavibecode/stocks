@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.60</title>
+<title>Stockfolio v0.7.61</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1311,7 +1311,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.60 &middot; Auto-saves &middot; Sign in to sync across devices</div>
+  <div class="footer">Stockfolio v0.7.61 &middot; Auto-saves &middot; Sign in to sync across devices</div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1404,7 +1404,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.60";
+var VERSION = "0.7.61";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3883,10 +3883,16 @@ function render(){
           msgText = '<span class="sync-spinner" style="width:9px;height:9px;border-width:1.5px;display:inline-block;vertical-align:middle;margin-right:5px"></span>Fetching S&amp;P 500 history from AlphaVantage…';
         } else if (spyStatus.status === 'error' && spyStatus.lastError) {
           if (spyStatus.rateLimited) {
-            // AlphaVantage 25/day quota tripped — retrying right away won't
-            // help. Surface a clear wait-and-retry message instead of the
-            // raw verbose API response.
-            msgText = '⏳ AlphaVantage daily quota hit (25 requests/day on free tier). SPY comparison will return automatically tomorrow.';
+            // Either daily 25/req quota OR abuse-detection ("automated
+            // requests"). Both mean "wait, retrying makes it worse." We
+            // back off for 4h automatically; user can also click Retry
+            // after addressing the cause.
+            var isAbuse = /detected your API key|automated requests/i.test(spyStatus.lastError);
+            if (isAbuse) {
+              msgText = '⏳ AlphaVantage flagged the request as too-frequent. SPY comparison will auto-retry in a few hours. Slowing down other AlphaVantage fetches (e.g. fundamentals refresh) helps.';
+            } else {
+              msgText = '⏳ AlphaVantage daily quota hit (25 requests/day on free tier). SPY comparison will return automatically tomorrow.';
+            }
             msgColor = 'var(--yellow)';
           } else {
             msgText = 'S&amp;P 500 fetch failed: <span style="color:var(--text)">' + spyStatus.lastError.replace(/&/g,'&amp;').replace(/</g,'&lt;').slice(0,200) + '</span>';
@@ -4979,16 +4985,23 @@ function _spyFetchFromAlphaVantage(){
     .then(function(data){
       var series = data && data['Time Series (Daily)'];
       if(!series || typeof series !== 'object'){
-        var msg = (data && (data.Information || data.Note || data['Error Message'])) || 'Unknown AlphaVantage response (no Time Series field)';
+        var msgRaw = (data && (data.Information || data.Note || data['Error Message'])) || 'Unknown AlphaVantage response (no Time Series field)';
+        // Scrub the API key out of the message before storing/displaying
+        // (AlphaVantage's "abuse detected" response echoes the key back).
+        var msg = (typeof _scrubApiKeys === 'function') ? _scrubApiKeys(msgRaw) : msgRaw;
         // Detect AlphaVantage's daily rate limit so the auto-warm backs off
         // for hours not seconds. The "25 requests per day" message is the
         // tell — once that lands, no point retrying again today.
         var isRateLimit = /25 requests per day|rate limit|standard API rate/i.test(msg);
+        // "Detected your API key as part of an automated request" is the
+        // abuse-detection response — same back-off treatment as rate limit
+        // since hammering retries makes it worse, not better.
+        var isAbuseFlag = /detected your API key|automated requests/i.test(msg);
         SPY_FETCH_STATE = {
           status: 'error',
           lastError: msg,
           lastTriedAt: Date.now(),
-          rateLimited: isRateLimit
+          rateLimited: isRateLimit || isAbuseFlag
         };
         if(typeof logApiError==='function') logApiError('spy-history','SPY', msg);
         return null;
@@ -6163,16 +6176,43 @@ function clearInbox(){
 // API ERROR LOG
 // ═════════════════════════════════════════════════
 var apiErrors=[];
+// Scrub the user's API keys out of any string before it's stored, shown
+// in the API errors modal, copied to clipboard, or screenshotted. Some
+// providers (notably AlphaVantage when they detect "abuse") echo the key
+// back in the error message — leaking it through bug-report screenshots
+// is a real risk, so we redact every known key with [redacted-*-key].
+function _scrubApiKeys(msg){
+  if (typeof msg !== 'string') return msg;
+  var pairs = [
+    [FINNHUB_KEY,      '[redacted-finnhub-key]'],
+    [ALPHAVANTAGE_KEY, '[redacted-alphavantage-key]'],
+    [TIINGO_KEY,       '[redacted-tiingo-key]'],
+    [POLYGON_KEY,      '[redacted-polygon-key]'],
+    [TWELVEDATA_KEY,   '[redacted-twelvedata-key]']
+  ];
+  pairs.forEach(function(p){
+    var k = p[0];
+    if (k && typeof k === 'string' && k.length >= 6) {
+      // Replace all occurrences; escape regex chars in the key just in case
+      var esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      msg = msg.replace(new RegExp(esc, 'g'), p[1]);
+    }
+  });
+  return msg;
+}
 function logApiError(endpoint,ticker,msg){
   var ts=new Date().toLocaleTimeString();
-  apiErrors.push({ts:ts,ep:endpoint,tk:ticker,msg:msg});
+  apiErrors.push({ts:ts,ep:endpoint,tk:ticker,msg:_scrubApiKeys(msg)});
   if(apiErrors.length>50)apiErrors.shift();
   var badge=G('apiErrorBadge'),cnt=G('apiErrCount');
   if(badge&&cnt){badge.style.display='';cnt.textContent=apiErrors.length}
 }
 function showApiErrors(){
   if(!apiErrors.length){showToast('No API errors');return}
-  var msg=apiErrors.slice(-10).map(function(e){return e.ts+' ['+e.tk+'] '+e.ep+': '+e.msg}).join('\n');
+  // Defense-in-depth: scrub keys at display time too, so entries logged
+  // before _scrubApiKeys existed (or with a key that wasn't loaded at log
+  // time) still get redacted in the alert.
+  var msg=apiErrors.slice(-10).map(function(e){return e.ts+' ['+e.tk+'] '+e.ep+': '+_scrubApiKeys(e.msg)}).join('\n');
   alert('Recent API Errors (last '+Math.min(apiErrors.length,10)+' of '+apiErrors.length+'):\n\n'+msg);
 }
 
