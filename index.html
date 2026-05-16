@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.73</title>
+<title>Stockfolio v0.7.74</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -254,12 +254,15 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .dvm-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-bottom:10px;font-size:10.5px;color:var(--text2);max-height:64px;overflow-y:auto}
 .dvm-legend-item{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .dvm-legend .dvm-sw{display:inline-block;width:10px;height:10px;border-radius:2px;flex-shrink:0}
-.dvm-chart-wrap{position:relative;padding-left:64px;padding-bottom:28px}
-.dvm-svg{display:block;width:100%;height:240px}
+/* Inner wrap holds the SVG + axis-label overlays. Width is capped via
+   the --dvm-width custom property the renderer sets (so few-bar charts
+   stay narrow + slim instead of fat-stretching to fill the panel). */
+.dvm-chart-wrap{position:relative;padding-left:64px;padding-bottom:28px;max-width:var(--dvm-width,100%);margin:0 auto}
+.dvm-svg{display:block;width:100%;height:var(--dvm-height,280px)}
 .dvm-svg .grid{stroke:var(--border);stroke-width:1;stroke-dasharray:2,3;opacity:.5}
 .dvm-svg .dvm-seg{transition:opacity .12s;cursor:default}
 .dvm-svg .dvm-seg:hover{opacity:.78;stroke:var(--text);stroke-width:.5}
-.dvm-y{position:absolute;left:0;top:8px;bottom:36px;width:60px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+.dvm-y{position:absolute;left:0;top:8px;bottom:28px;width:60px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
 .dvm-y .ylab{font-size:10px;font-family:var(--mono);color:var(--muted);text-align:right;line-height:1;white-space:nowrap}
 .dvm-x{position:absolute;left:64px;right:6px;bottom:0;display:flex;justify-content:space-between;font-size:9.5px;font-family:var(--mono);color:var(--muted);pointer-events:none}
 .dvm-xlab{flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 1px}
@@ -1355,7 +1358,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.73 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.74 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1448,7 +1451,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.73";
+var VERSION = "0.7.74";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3866,7 +3869,10 @@ function render(){
       });
       var legendTks = Object.keys(totalsByTk).sort(function(a,b){ return totalsByTk[b] - totalsByTk[a]; });
 
-      // SVG geometry — fixed viewBox, stretches to container width
+      // SVG geometry — fixed viewBox (800x240), but the outer wrap's
+      // max-width is computed from entry count so few-bar charts stay slim
+      // instead of stretching wide-and-fat to fill the snapshot panel.
+      // Target: ~28px of CSS bar-slot width + 64px left padding for Y labels.
       var w = 800, ch = 240;
       var padT = 8, padB = 28, padL = 6, padR = 6;
       var plotW = w - padL - padR;
@@ -3875,6 +3881,18 @@ function render(){
       var slotW = plotW / monthKeys.length;
       var barW = Math.max(4, slotW * 0.78);
       var barOffset = (slotW - barW) / 2;
+      // Outer-wrap CSS sizing:
+      //   - Width: 28px per slot + 64px left padding for Y-axis labels.
+      //     Capped at 100% so a 36-month chart still uses full panel width.
+      //   - Height: 280px for many bars; up to 360px when only a few entries
+      //     so the chart feels proportionally taller (matches the user's
+      //     "more narrow and taller" preference for sparse data).
+      var wrapW = Math.min(100, Math.round(monthKeys.length * 28 + 64));
+      var wrapWStr = wrapW >= 100 ? '100%' : (monthKeys.length * 28 + 64) + 'px';
+      var wrapH = monthKeys.length <= 4 ? 360
+                  : monthKeys.length <= 8 ? 320
+                  : monthKeys.length <= 16 ? 300
+                  : 280;
 
       var html = '<div class="dvm-chart" id="div-by-month-panel">';
       html += '<div class="dvm-chart-title"><span>💰 Dividends by Month</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px;font-weight:400">'+monthKeys.length+' month'+(monthKeys.length!==1?'s':'')+' · '+legendTks.length+' ticker'+(legendTks.length!==1?'s':'')+' <button class="btn btn-outline share-btn" onclick="shareElementById(\'div-by-month-panel\',\'dividends-by-month\',\'Dividends by Month\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
@@ -3888,7 +3906,7 @@ function render(){
       html += '</div>';
 
       // Y-axis labels (HTML overlay so they don't distort with preserveAspectRatio=none)
-      html += '<div class="dvm-chart-wrap">';
+      html += '<div class="dvm-chart-wrap" style="--dvm-width:'+wrapWStr+';--dvm-height:'+wrapH+'px">';
       html += '<div class="dvm-y">';
       html += '<span class="ylab">'+fm(axisMax)+'</span>';
       html += '<span class="ylab">'+fm(axisMax * 0.75)+'</span>';

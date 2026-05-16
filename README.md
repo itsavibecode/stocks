@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.73**
+**Current Version: v0.7.74**
 
 ---
 
 ## Changelog
+
+### v0.7.74 — 2026-05-15 — 💰 Dividends-by-Month: bars stay slim when sparse
+- **Sparse Dividends-by-Month charts no longer balloon into fat bars.** v0.7.73 stretched the chart to 100% of the snapshot panel width regardless of entry count, so a 4-month chart had bars 150px+ wide. Now the outer wrap's max-width is computed from entry count (~28px CSS per slot + 64px Y-axis padding, capped at 100%), and the chart height bumps from 280px → 360px when there are 4 or fewer entries so the chart reads as "narrow + tall" instead of "wide + short" when data is sparse — matching the user-requested ratio.
+- Chart height steps: ≤4 entries → 360px, ≤8 → 320px, ≤16 → 300px, more → 280px.
 
 ### v0.7.73 — 2026-05-15 — 💰 Dividends-by-Month stacked bar chart
 - **New "💰 Dividends by Month" chart in the snapshot panel.** One vertical bar per month, segmented by paying company. Hover any segment to see the ticker + exact dollar amount. Built from each ticker's recorded payment history (`DV[t].h`) × current shares held, so it reflects "what this portfolio would have paid" across months.
