@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.69**
+**Current Version: v0.7.70**
 
 ---
 
 ## Changelog
+
+### v0.7.70 — 2026-05-15 — 🛟 Bulletproof demo auto-load + diagnostic logging
+- **End-of-init fallback re-seed.** Added a safety net that runs after every init step has completed: if `IS_DEMO` is true but `tks.length === 0`, force-call `enterDemoMode()` to recover. Catches any race condition / init-ordering quirk / silent error that could leave the user on an empty page despite `IS_DEMO=true`.
+- **Diagnostic console logs.** When the demo activates, the browser console now shows `[Stockfolio] Demo data seeded in load() — tks=10 lots keys=10`. If the seed fails, `[Stockfolio] Demo seed failed in load(): <error>` instead. Easy to verify from devtools whether the demo is actually populating.
+- **`load()` demo branch wrapped in try/catch** so any error during seeding surfaces in the console instead of failing silently halfway through.
 
 ### v0.7.69 — 2026-05-15 — 🔁 Demo button now idempotent — recovers stuck-empty state
 - **Removed the early-return guard from `enterDemoMode()`.** v0.7.67 added `if (IS_DEMO) return;` which created a dead end: if `IS_DEMO` got set true on script load (via `?demo=1` URL or the sessionStorage flag) but the data didn't end up in memory for any reason — race condition, stale tab, anything — clicking the "Load demo data" button did absolutely nothing because of the guard. The function is now idempotent: always seeds, always re-renders.

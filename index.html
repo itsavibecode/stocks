@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.69</title>
+<title>Stockfolio v0.7.70</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1319,7 +1319,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.69 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.70 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1412,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.69";
+var VERSION = "0.7.70";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2771,25 +2771,24 @@ function load(){
     // Seed from constant sample dataset. No localStorage reads/writes — we
     // never want demo data to clobber a returning user's real cache, and we
     // never want the user's stale local data to bleed into the demo view.
-    tks = DEMO_PORTFOLIO.tks.slice();
-    lots = JSON.parse(JSON.stringify(DEMO_PORTFOLIO.lots));
-    realized = DEMO_PORTFOLIO.realized.slice();
-    // Pin prices so the snapshot math is deterministic regardless of network
-    Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
-    // Day-change % so the marquee ticker shows colored arrows
-    Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
-    // Fundamentals so the Insights tab's Payout Safety score has real
-    // numbers to blend with each dividend ticker's rating
-    Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
-    // SPY benchmark history so the Portfolio Value chart's S&P 500
-    // comparison line renders without any API call
-    SPY_HIST = DEMO_SPY_HIST;
-    // liveNews intentionally stays empty — getNews() falls through to the
-    // FALLBACK_NEWS constant which has demo-quality headlines for every
-    // built-in ticker including all 10 demo holdings.
-    pricesLastFetched = Date.now();
-    newsLastFetched = Date.now();
-    computeFromLots();
+    // Wrapped in try/catch so a seed error doesn't silently leave the user
+    // on an empty page — the end-of-init fallback (see bottom of file) will
+    // catch any failure and surface it via console.
+    try {
+      tks = DEMO_PORTFOLIO.tks.slice();
+      lots = JSON.parse(JSON.stringify(DEMO_PORTFOLIO.lots));
+      realized = DEMO_PORTFOLIO.realized.slice();
+      Object.keys(DEMO_PRICES).forEach(function(k){ livePrices[k] = DEMO_PRICES[k]; });
+      Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
+      Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
+      SPY_HIST = DEMO_SPY_HIST;
+      pricesLastFetched = Date.now();
+      newsLastFetched = Date.now();
+      computeFromLots();
+      console.log('[Stockfolio] Demo data seeded in load() — tks=', tks.length, 'lots keys=', Object.keys(lots).length);
+    } catch(e) {
+      console.error('[Stockfolio] Demo seed failed in load():', e);
+    }
     return;
   }
   try{tks=JSON.parse(localStorage.getItem('pf_t'))||DT.slice()}catch(e){tks=DT.slice()}
@@ -7899,6 +7898,23 @@ setInterval(tickLocalClock,1000);
 // from localStorage. Re-fires after cloud-load via updateInboxBadge call
 // in renderAccountCard or any savePrefs round-trip.
 if(typeof updateInboxBadge==='function') updateInboxBadge();
+
+// ═════════════════════════════════════════════════
+// DEMO MODE — bulletproof fallback re-seed at end of init.
+// If IS_DEMO is true (URL ?demo=1 / #demo=1 / sessionStorage) but tks
+// somehow ended up empty after load() + render() (any race, init
+// ordering quirk, or silent error), force a re-seed + re-render now
+// that everything else is loaded. console.log is intentional — gives
+// us a breadcrumb in the browser console if anyone reports demo not
+// working in the future.
+// ═════════════════════════════════════════════════
+if (IS_DEMO) {
+  console.log('[Stockfolio] Demo mode active — IS_DEMO=true, tks.length=', tks.length);
+  if (!tks || tks.length === 0) {
+    console.warn('[Stockfolio] Demo mode active but tks empty — forcing re-seed');
+    try { enterDemoMode(); } catch(e) { console.error('[Stockfolio] Demo fallback re-seed failed:', e); }
+  }
+}
 
 // Keep the sticky-thead top offset in sync with the actual page-header height.
 // The page header (.header) is position:sticky;top:0;z-index:100. Its height
