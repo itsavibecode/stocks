@@ -1,10 +1,19 @@
 # Stockfolio
 
-**Current Version: v0.7.71**
+**Current Version: v0.7.72**
 
 ---
 
 ## Changelog
+
+### v0.7.72 — 2026-05-15 — 📊 PE Ratio horizontal bar chart
+- **New "📊 PE Ratio" chart in the snapshot panel.** Horizontal bar chart with one row per portfolio ticker that has PE data, sorted by PE descending. Two-column grid on desktop, single column on mobile. Title shows ticker count + axis scale; Share button exports the chart as a PNG.
+- **PE data sources** (in priority order):
+  1. `FUND[ticker].pe` — live AlphaVantage cache (extensible — future OVERVIEW fetch will populate this)
+  2. `BUILTIN_PE` — hardcoded rough 2026 TTM PEs for the 23 built-in tickers
+  3. Demo mode: PE values added to every `DEMO_FUND` entry (10 tickers)
+- **Negative TTM earnings handled gracefully.** Tickers with PE = 0 (loss-making companies, e.g. INTC + NET in current data) get a striped bar with "N/A" label so they stay visible in context without dominating the axis. Tickers with no PE data at all are silently skipped.
+- **Axis auto-scales** to a clean round number (25 / 50 / 100 / next-50 step) so the bars use the full width usefully.
 
 ### v0.7.71 — 2026-05-15 — 🚫 Demo mode: zero network calls, full audit
 - **Audited every network-touching code path and added explicit `IS_DEMO` short-circuits**, even where existing checks (`!FINNHUB_KEY` / `!anyKeySet()` / `!currentUser`) already prevented the call. Defense-in-depth — demo should NEVER hit a network endpoint, full stop. Gated:

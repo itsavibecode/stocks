@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.71</title>
+<title>Stockfolio v0.7.72</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -244,6 +244,17 @@ body.compact .tk-ticker{height:28px}
 .due-tag.past{background:var(--card2);color:var(--muted);font-weight:500}
 tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .snap-bar.b-hold{background:linear-gradient(90deg,var(--green),var(--accent2))}
+.snap-bar.b-pe{background:linear-gradient(90deg,var(--purple),#a78bfa)}
+/* PE Ratio chart wrapper — wider label column for ticker names, room for the
+   value on the right. Two-column layout on desktop so 20+ tickers don't make
+   the chart too tall; collapses to one column on narrow screens. */
+.pe-chart{margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.pe-chart-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.pe-chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 18px}
+@media(max-width:760px){.pe-chart-grid{grid-template-columns:1fr}}
+.pe-chart .snap-row-label{font-size:10.5px}
+.pe-row-na .snap-bar-bg{background:repeating-linear-gradient(45deg,var(--card3),var(--card3) 4px,var(--card2) 4px,var(--card2) 8px)}
+.pe-row-na .snap-amt{color:var(--muted);font-style:italic}
 .snap-amt{font-family:var(--mono);font-weight:600;text-align:right;font-size:10.5px;color:var(--text)}
 .snap-empty{color:var(--muted);font-style:italic;font-size:11px;padding:10px 0}
 .goal-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:14px}
@@ -1319,7 +1330,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.71 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.72 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1412,7 +1423,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.71";
+var VERSION = "0.7.72";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2156,14 +2167,37 @@ var DEMO_CHANGES = {AAPL:0.42,MSFT:-0.18,SCHD:0.21,ABBV:1.34,KO:-0.05,T:0.67,VIC
 // non-dividend names (AMZN/GOOG) are intentionally omitted so the Insights
 // panel only shows fundamentals for dividend payers, matching real behavior.
 var DEMO_FUND = {
-  AAPL: {symbol:"AAPL", ocf:118.3, fcf:99.6,  divPaid:15.2, coverage:7.78,  period:"2025-09", fetchedAt:Date.now(), source:"demo"},
-  MSFT: {symbol:"MSFT", ocf:118.5, fcf:74.1,  divPaid:22.3, coverage:5.31,  period:"2025-06", fetchedAt:Date.now(), source:"demo"},
-  ABBV: {symbol:"ABBV", ocf:22.8,  fcf:21.6,  divPaid:10.9, coverage:2.09,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
-  KO:   {symbol:"KO",   ocf:13.1,  fcf:11.0,  divPaid:8.4,  coverage:1.56,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
-  T:    {symbol:"T",    ocf:39.2,  fcf:18.8,  divPaid:8.1,  coverage:4.84,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
-  VICI: {symbol:"VICI", ocf:2.85,  fcf:2.80,  divPaid:1.84, coverage:1.55,  period:"2025-12", fetchedAt:Date.now(), source:"demo"},
-  BAC:  {symbol:"BAC",  ocf:34.7,  fcf:32.1,  divPaid:8.2,  coverage:4.23,  period:"2025-12", fetchedAt:Date.now(), source:"demo"}
+  AAPL: {symbol:"AAPL", ocf:118.3, fcf:99.6,  divPaid:15.2, coverage:7.78,  pe:33.5, period:"2025-09", fetchedAt:Date.now(), source:"demo"},
+  MSFT: {symbol:"MSFT", ocf:118.5, fcf:74.1,  divPaid:22.3, coverage:5.31,  pe:36.2, period:"2025-06", fetchedAt:Date.now(), source:"demo"},
+  ABBV: {symbol:"ABBV", ocf:22.8,  fcf:21.6,  divPaid:10.9, coverage:2.09,  pe:17.9, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  KO:   {symbol:"KO",   ocf:13.1,  fcf:11.0,  divPaid:8.4,  coverage:1.56,  pe:26.4, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  T:    {symbol:"T",    ocf:39.2,  fcf:18.8,  divPaid:8.1,  coverage:4.84,  pe:17.8, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  VICI: {symbol:"VICI", ocf:2.85,  fcf:2.80,  divPaid:1.84, coverage:1.55,  pe:13.6, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  BAC:  {symbol:"BAC",  ocf:34.7,  fcf:32.1,  divPaid:8.2,  coverage:4.23,  pe:13.7, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  AMZN: {symbol:"AMZN", ocf:107.0, fcf:50.3,  divPaid:0,    coverage:0,     pe:47.2, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  GOOG: {symbol:"GOOG", ocf:101.7, fcf:69.5,  divPaid:7.4,  coverage:13.74, pe:26.8, period:"2025-12", fetchedAt:Date.now(), source:"demo"},
+  SCHD: {symbol:"SCHD", ocf:0,     fcf:0,     divPaid:0,    coverage:0,     pe:18.3, period:"2025-12", fetchedAt:Date.now(), source:"demo"}
 };
+// PE ratios for built-in tickers — rough 2026-05 trailing-twelve-month
+// values. Used as a fallback when FUND[ticker].pe isn't available from
+// the AlphaVantage OVERVIEW endpoint. PE = 0 means the company has
+// negative TTM earnings (unprofitable), matching standard convention.
+var BUILTIN_PE = {
+  AAPL:33.5, MSFT:36.2, GOOG:26.8, AMZN:47.2, TSLA:78.1,
+  T:17.8, IBM:32.4, PFE:12.6, RTX:27.5, BP:8.4,
+  SCHD:18.3, ABBV:17.9, AXP:21.5, F:11.2, TGT:14.8,
+  KO:26.4, VICI:13.6, CMCSA:9.8, BAC:13.7, INTC:0,
+  LUV:35.6, RGR:24.8, NET:0
+};
+// Resolve a ticker's PE — FUND cache wins (live/demo fetched), then the
+// built-in map, then null (no value known). Callers should treat null as
+// "skip this row" and 0 as "negative earnings — display the row with an
+// asterisk + N/A bar so the user sees the loss-making name in context."
+function getPE(ticker){
+  if (FUND[ticker] && typeof FUND[ticker].pe === 'number') return FUND[ticker].pe;
+  if (typeof BUILTIN_PE[ticker] === 'number') return BUILTIN_PE[ticker];
+  return null;
+}
 // 180-day synthetic SPY daily-close history so the Portfolio Value chart's
 // SPY benchmark overlay renders in demo. Mild upward drift (+~5%) + sine
 // wave + small deterministic noise — matches the same date range as
@@ -3742,6 +3776,57 @@ function render(){
       return html;
     };
   }
+  // PE Ratio chart — horizontal bar chart, one row per portfolio ticker.
+  // PE values come from FUND[ticker].pe (live or demo) with a BUILTIN_PE
+  // fallback for built-in symbols. Tickers with no PE data are skipped;
+  // tickers with PE=0 (negative TTM earnings / unprofitable) get a striped
+  // bar + "N/A" label to keep them visible in context. Two-column grid on
+  // wide screens so a 20+ ticker portfolio doesn't push the rest of the
+  // page off-screen.
+  if (typeof _renderPERatioChartHTML !== 'function') {
+    window._renderPERatioChartHTML = function() {
+      // Build rows: {tk, pe, isNeg}
+      var rows = [];
+      tks.forEach(function(t){
+        if (!sh[t] || sh[t] <= 0) return; // only positions we actually hold
+        var pe = getPE(t);
+        if (pe === null) return; // no data — skip entirely
+        rows.push({ tk: t, pe: pe, isNeg: pe === 0 });
+      });
+      if (rows.length === 0) return ''; // nothing to chart
+      // Sort by PE descending so the biggest valuations land at the top —
+      // pushes loss-making (PE=0) tickers to the bottom of the list
+      rows.sort(function(a,b){
+        if (a.isNeg && !b.isNeg) return 1;
+        if (!a.isNeg && b.isNeg) return -1;
+        return b.pe - a.pe;
+      });
+      var maxPE = rows.reduce(function(m,r){ return r.pe > m ? r.pe : m; }, 1);
+      // Round max up to a clean number for the axis label
+      var axisMax = maxPE <= 25 ? 25 : maxPE <= 50 ? 50 : maxPE <= 100 ? 100 : Math.ceil(maxPE/50)*50;
+      var html = '<div class="pe-chart" id="pe-ratio-panel">';
+      html += '<div class="pe-chart-title"><span>📊 PE Ratio</span><span class="snap-sub" style="display:flex;align-items:center;gap:10px;font-weight:400">'+rows.length+' positions · scale 0–'+axisMax+' <button class="btn btn-outline share-btn" onclick="shareElementById(\'pe-ratio-panel\',\'pe-ratio\',\'PE Ratio Chart\')" title="Save this chart as a PNG">💾 Share</button></span></div>';
+      html += '<div style="font-size:10.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Price-to-earnings ratio (TTM). Lower = cheaper relative to earnings. Bars striped + "N/A" means the company had a TTM loss (no meaningful PE). Sector context matters — tech stocks typically run higher than financials.</div>';
+      html += '<div class="pe-chart-grid">';
+      rows.forEach(function(r){
+        var rowCls = r.isNeg ? ' pe-row-na' : '';
+        var w = r.isNeg ? 0 : Math.max(1, r.pe / axisMax * 100);
+        var label = r.isNeg ? 'N/A' : r.pe.toFixed(1);
+        var tip = r.isNeg
+          ? r.tk + ': negative TTM earnings (no meaningful PE)'
+          : r.tk + ': ' + r.pe.toFixed(2) + ' PE';
+        html += '<div class="snap-row'+rowCls+'" title="'+tip+'">';
+        html += '<span class="snap-row-label">'+r.tk+'</span>';
+        html += '<div class="snap-bar-bg"><div class="snap-bar b-pe" style="width:'+w.toFixed(1)+'%"></div></div>';
+        html += '<span class="snap-amt">'+label+'</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+      return html;
+    };
+  }
+
   // Realized P/L panel — built from the realized[] log of completed sales.
   // Shows YTD + all-time totals, LT vs ST split, per-broker breakdown, recent sales table.
   // Tax estimate at the bottom uses prefs.taxBracket + prefs.stateRate.
@@ -4208,6 +4293,10 @@ function render(){
     sH+='</div></div>';
     // Tax Outlook panel
     sH+=_renderTaxOutlookHTML(annualIncome);
+    // PE Ratio horizontal bar chart (one row per portfolio ticker with
+    // PE data — fundamentals cache + built-in fallbacks; tickers without
+    // data are silently skipped)
+    sH+=_renderPERatioChartHTML();
     // Realized P/L (only renders if any sales exist)
     sH+=_renderRealizedHTML();
     // Portfolio history line chart
