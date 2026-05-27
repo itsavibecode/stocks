@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.74</title>
+<title>Stockfolio v0.7.75</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -531,6 +531,25 @@ body.compact .dr td{padding-top:5px;padding-bottom:5px}
 .tab-content{display:none;padding:16px 0}
 .tab-content.active{display:block}
 
+/* Sub-tabs (v0.7.75) — used inside the Dividends tab to switch between
+   Stocks / Increases / Specials views. Visually lighter than top-level
+   tabs so the hierarchy reads correctly. Stretches horizontally on
+   overflow with the same touch-scrolling behavior as the main tabs. */
+.subtab-nav{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.subtab-nav::-webkit-scrollbar{display:none}
+.subtab{font-family:var(--sans);font-size:11.5px;font-weight:600;background:0 0;border:none;color:var(--muted);padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.subtab:hover{color:var(--text2)}
+.subtab.active{color:var(--text);border-bottom-color:var(--accent)}
+.subtab-count{background:var(--border);color:var(--muted);border-radius:9px;padding:0 6px;font-size:10px;min-width:18px;text-align:center}
+.subtab.active .subtab-count{background:var(--accent);color:#fff}
+.subtab-content{display:none}
+.subtab-content.active{display:block}
+/* Slightly smaller buttons on mobile so the 3 sub-tabs fit comfortably */
+@media(max-width:640px){
+  .subtab{font-size:11px;padding:7px 10px;gap:4px}
+  .subtab-count{font-size:9.5px}
+}
+
 .search-bar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none;width:100%;max-width:440px;transition:border .15s}
 .search-bar:focus{border-color:var(--accent)}
 
@@ -926,29 +945,51 @@ body.text-xl .sc .scv{font-size:24px}
 
   <!-- DIVIDENDS -->
   <div class="tab-content" id="content-div">
-    <div class="sg" id="dS"></div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <input class="search-bar" type="text" placeholder="Search dividends by ticker, account, or rating..." id="divQ" oninput="render()" style="margin-bottom:0">
-      <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px;flex-shrink:0">
-        <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px">&#8635; Recheck Stocks</button>
-        <span id="dRecheckTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
-      </div>
-      <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:10px;padding:5px 10px;flex-shrink:0" title="Export dividend payment history to CSV (compatible with Excel + Google Sheets)">&#128190; Export CSV</button>
+    <!-- Sub-tab nav: Stocks (main holdings list) / Increases (recent
+         dividend hikes) / Specials (one-time special payouts). Counts
+         live-update via the badge spans, populated from render(). -->
+    <div class="subtab-nav" data-parent="div">
+      <button class="subtab active" data-subtab="stocks" onclick="sSubTab('div','stocks')">&#128176; Stocks <span class="subtab-count" id="cDstocks">0</span></button>
+      <button class="subtab" data-subtab="increases" onclick="sSubTab('div','increases')">&#128200; Increases <span class="subtab-count" id="cDinc">0</span></button>
+      <button class="subtab" data-subtab="specials" onclick="sSubTab('div','specials')">&#127881; Specials <span class="subtab-count" id="cDspec">0</span></button>
     </div>
-    <div class="table-wrap dt"><table id="tD"><thead><tr>
-      <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
-      <th data-col="price" onclick="ds('tD','price')">Current Price <span class="sa">&#9660;</span></th>
-      <th data-col="yield" onclick="ds('tD','yield')">Yield <span class="sa">&#9660;</span></th>
-      <th data-col="annualDiv" onclick="ds('tD','annualDiv')">Annual <span class="sa">&#9660;</span></th>
-      <th data-col="nextPayout" onclick="ds('tD','nextPayout')">Next Pay <span class="sa">&#9660;</span></th>
-      <th data-col="nextTotal" onclick="ds('tD','nextTotal')">Next Total <span class="sa">&#9660;</span></th>
-      <th data-col="payDate" onclick="ds('tD','payDate')">Pay Date <span class="sa">&#9660;</span></th>
-      <th data-col="rating" onclick="ds('tD','rating')">Rating <span class="sa">&#9660;</span></th>
-      <th data-col="shares" onclick="ds('tD','shares')">Shares <span class="sa">&#9660;</span></th>
-      <th data-col="broker" onclick="ds('tD','broker')">Broker <span class="sa">&#9660;</span></th>
-      <th data-col="income" onclick="ds('tD','income')">Inc/Yr <span class="sa">&#9660;</span></th>
-    </tr></thead><tbody id="bD"></tbody></table></div>
-    <div class="mc" id="mD"></div>
+
+    <!-- STOCKS sub-tab — the original Dividends table + filters -->
+    <div class="subtab-content active" data-parent="div" data-subtab="stocks">
+      <div class="sg" id="dS"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <input class="search-bar" type="text" placeholder="Search dividends by ticker, account, or rating..." id="divQ" oninput="render()" style="margin-bottom:0">
+        <div style="display:flex;flex-direction:column;align-items:stretch;gap:2px;flex-shrink:0">
+          <button class="btn btn-outline" onclick="recheckMissingData();showToast('Rechecking stock data...')" style="font-size:10px;padding:5px 10px">&#8635; Recheck Stocks</button>
+          <span id="dRecheckTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
+        </div>
+        <button class="btn btn-outline" onclick="exportDividendCSV()" style="font-size:10px;padding:5px 10px;flex-shrink:0" title="Export dividend payment history to CSV (compatible with Excel + Google Sheets)">&#128190; Export CSV</button>
+      </div>
+      <div class="table-wrap dt"><table id="tD"><thead><tr>
+        <th data-col="ticker" onclick="ds('tD','ticker')">Ticker <span class="sa">&#9660;</span></th>
+        <th data-col="price" onclick="ds('tD','price')">Current Price <span class="sa">&#9660;</span></th>
+        <th data-col="yield" onclick="ds('tD','yield')">Yield <span class="sa">&#9660;</span></th>
+        <th data-col="annualDiv" onclick="ds('tD','annualDiv')">Annual <span class="sa">&#9660;</span></th>
+        <th data-col="nextPayout" onclick="ds('tD','nextPayout')">Next Pay <span class="sa">&#9660;</span></th>
+        <th data-col="nextTotal" onclick="ds('tD','nextTotal')">Next Total <span class="sa">&#9660;</span></th>
+        <th data-col="payDate" onclick="ds('tD','payDate')">Pay Date <span class="sa">&#9660;</span></th>
+        <th data-col="rating" onclick="ds('tD','rating')">Rating <span class="sa">&#9660;</span></th>
+        <th data-col="shares" onclick="ds('tD','shares')">Shares <span class="sa">&#9660;</span></th>
+        <th data-col="broker" onclick="ds('tD','broker')">Broker <span class="sa">&#9660;</span></th>
+        <th data-col="income" onclick="ds('tD','income')">Inc/Yr <span class="sa">&#9660;</span></th>
+      </tr></thead><tbody id="bD"></tbody></table></div>
+      <div class="mc" id="mD"></div>
+    </div>
+
+    <!-- INCREASES sub-tab — recent dividend hikes (np > last paid amount) -->
+    <div class="subtab-content" data-parent="div" data-subtab="increases">
+      <div id="divIncreasesBody"></div>
+    </div>
+
+    <!-- SPECIALS sub-tab — one-time special dividend payouts (h[i].sp=true) -->
+    <div class="subtab-content" data-parent="div" data-subtab="specials">
+      <div id="divSpecialsBody"></div>
+    </div>
   </div>
 
   <!-- GROWTH -->
@@ -1358,7 +1399,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.74 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.75 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1451,7 +1492,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.74";
+var VERSION = "0.7.75";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2849,6 +2890,21 @@ function load(){
       Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
       Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
       SPY_HIST = DEMO_SPY_HIST;
+      // Demo-only DV overrides so the Increases + Specials sub-tabs show
+      // real-looking data. We bump `np` above the most-recent historical
+      // payment for a few aristocrat-style names (= increase detected),
+      // and inject `sp:true` history entries for known special dividends
+      // (e.g. MSFT's hypothetical year-end bonus). These mutate the global
+      // DV — but only in demo mode where the persistence layer is sealed
+      // off, so it never reaches anyone's real Firestore doc.
+      if (DV.ABBV) { DV.ABBV.np = 1.70;  DV.ABBV.a = 6.80; }   // +3.66% hike
+      if (DV.MSFT) { DV.MSFT.np = 0.91;  DV.MSFT.a = 3.64; }   // +9.64% hike
+      if (DV.KO)   { DV.KO.np   = 0.515; DV.KO.a   = 2.06; }   // +3.00% hike
+      if (DV.AAPL) { DV.AAPL.np = 0.26;  DV.AAPL.a = 1.04; }   // +4.00% hike
+      if (DV.T)    { DV.T.np    = 0.2875; DV.T.a   = 1.15; }   // +3.60% hike
+      // Specials — flag with sp:true and an optional note. Sorted by recency.
+      if (DV.MSFT && DV.MSFT.h) DV.MSFT.h.unshift({d:"2025-11-30", a:3.00, sp:true, note:"Year-end special dividend"});
+      if (DV.ABBV && DV.ABBV.h) DV.ABBV.h.unshift({d:"2026-01-15", a:1.50, sp:true, note:"One-time post-merger payout"});
       pricesLastFetched = Date.now();
       newsLastFetched = Date.now();
       computeFromLots();
@@ -3079,6 +3135,189 @@ function daysBadge(dateStr){
   return '<span class="due-tag far" title="In '+n+' days">in '+n+'d</span>';
 }
 function rb(r){return r==='King'?'\ud83d\udc51 King':r==='Aristocrat'?'\ud83c\udfc6 Aristocrat':r}
+
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+// DIVIDEND INCREASES / SPECIALS \u2014 feeds the sub-tabs under Dividends.
+// Increase detection: DV[t].np (next declared payment) > most recent
+// historical payment in DV[t].h. Inferring from existing data means
+// any user-added ticker that gets a Finnhub data refresh will surface
+// here automatically when the next declared payment is higher.
+// Special detection: any DV[t].h entry with sp:true (manually flagged).
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+function freqMultiplier(f){
+  if (f === 'Monthly') return 12;
+  if (f === 'Quarterly') return 4;
+  if (f === 'Semi-Annual' || f === 'Semi-Annually' || f === 'Bi-Annual') return 2;
+  if (f === 'Annual' || f === 'Yearly') return 1;
+  return 4; // safe default \u2014 most stocks are quarterly
+}
+function getDividendIncreases(){
+  var out = [];
+  tks.forEach(function(t){
+    if (!sh[t] || sh[t] <= 0) return;
+    var d = DV[t];
+    if (!d || !d.np || !d.h || d.h.length === 0) return;
+    // Use the most-recent prior historical payment as the "before" amount.
+    // Skip if the prior payment was 0 (initiation, not an increase).
+    var prev = d.h[0].a;
+    if (prev <= 0) return;
+    if (d.np <= prev) return; // not an increase (flat or cut)
+    var mult = freqMultiplier(d.f);
+    out.push({
+      ticker: t,
+      from: prev,
+      to: d.np,
+      pctChange: ((d.np - prev) / prev) * 100,
+      annualBefore: prev * mult,
+      annualAfter: d.np * mult,
+      annualIncomeIncrease: (d.np - prev) * mult * sh[t],
+      exDate: d.ex || '',
+      payDate: d.pd || '',
+      frequency: d.f || '',
+      sector: d.sc || '',
+      shares: sh[t],
+      yearsRaising: d.yr || 0
+    });
+  });
+  // Sort by % increase descending \u2014 biggest hikes lead
+  out.sort(function(a,b){ return b.pctChange - a.pctChange; });
+  return out;
+}
+function getSpecialDividends(){
+  var out = [];
+  tks.forEach(function(t){
+    if (!sh[t] || sh[t] <= 0) return;
+    var d = DV[t];
+    if (!d || !d.h) return;
+    d.h.forEach(function(entry){
+      if (!entry || !entry.sp) return;
+      out.push({
+        ticker: t,
+        amount: entry.a || 0,
+        payDate: entry.d || '',
+        exDate: entry.ed || entry.d || '',
+        shares: sh[t],
+        total: (entry.a || 0) * sh[t],
+        note: entry.note || ''
+      });
+    });
+  });
+  // Sort by pay-date descending \u2014 most recent first
+  out.sort(function(a,b){ return (b.payDate || '').localeCompare(a.payDate || ''); });
+  return out;
+}
+// Render the Increases sub-tab body
+function _renderDividendIncreasesHTML(){
+  var rows = getDividendIncreases();
+  if (rows.length === 0) {
+    return '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;line-height:1.6">No recent dividend increases detected.<br><span style="font-size:11px">An increase shows up here when a ticker\'s next declared payment is higher than its most recent paid amount.</span></div>';
+  }
+  var totalAnnualLift = rows.reduce(function(s,r){ return s + r.annualIncomeIncrease; }, 0);
+  var html = '';
+  // Header summary card
+  html += '<div class="sg" id="dIncStats" style="margin-bottom:14px"><div class="sc"><div class="scl">Increases Detected</div><div class="scv" style="color:var(--green)">'+rows.length+'</div></div>';
+  html += '<div class="sc"><div class="scl">Total Annual Lift</div><div class="scv" style="color:var(--green)">+'+fm(totalAnnualLift)+'</div></div>';
+  var avgPct = rows.reduce(function(s,r){ return s+r.pctChange; }, 0) / rows.length;
+  html += '<div class="sc"><div class="scl">Avg Hike</div><div class="scv" style="color:var(--accent2)">+'+avgPct.toFixed(2)+'%</div></div>';
+  html += '<div class="sc"><div class="scl">Biggest</div><div class="scv" style="color:var(--accent)">'+rows[0].ticker+' +'+rows[0].pctChange.toFixed(1)+'%</div></div>';
+  html += '</div>';
+  // Desktop table
+  html += '<div class="table-wrap dt"><table><thead><tr>';
+  html += '<th>Ticker</th><th>From</th><th>To</th><th>Change</th><th>Annual Before</th><th>Annual After</th><th>Your Lift / Yr</th><th>Ex-Date</th><th>Pay Date</th><th>Yrs Raising</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var bigHike = r.pctChange >= 10;
+    html += '<tr>';
+    html += '<td class="mono fw7">'+r.ticker+'</td>';
+    html += '<td class="mono muted">$'+r.from.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</td>';
+    html += '<td class="mono green fw7">$'+r.to.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</td>';
+    html += '<td class="mono green fw7'+(bigHike?'':'')+'">+'+r.pctChange.toFixed(2)+'%</td>';
+    html += '<td class="mono">'+fm(r.annualBefore)+'/sh</td>';
+    html += '<td class="mono green">'+fm(r.annualAfter)+'/sh</td>';
+    html += '<td class="mono green fw7">+'+fm(r.annualIncomeIncrease)+'</td>';
+    html += '<td class="mono" style="font-size:10.5px">'+(r.exDate || '\u2014')+daysBadge(r.exDate)+'</td>';
+    html += '<td class="mono" style="font-size:10.5px">'+(r.payDate || '\u2014')+daysBadge(r.payDate)+'</td>';
+    html += '<td class="mono">'+(r.yearsRaising > 0 ? r.yearsRaising+' yrs' : '\u2014')+(r.yearsRaising>=25?' '+(r.yearsRaising>=50?'\ud83d\udc51':'\ud83c\udfc6'):'')+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  // Mobile cards
+  html += '<div class="mc">';
+  rows.forEach(function(r){
+    html += '<div class="mk">';
+    html += '<div class="mkh"><div><span class="mkt">'+r.ticker+'</span> <span class="badge badge-green" style="font-size:9.5px">+'+r.pctChange.toFixed(1)+'%</span></div><span class="mkp green">+'+fm(r.annualIncomeIncrease)+'/yr</span></div>';
+    html += '<div class="mkr"><span class="l">From \u2192 To</span><span class="v mono">$'+r.from.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+' \u2192 $'+r.to.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</span></div>';
+    html += '<div class="mkr"><span class="l">Annual /sh</span><span class="v mono">'+fm(r.annualBefore)+' \u2192 '+fm(r.annualAfter)+'</span></div>';
+    if(r.exDate) html += '<div class="mkr"><span class="l">Ex-Date</span><span class="v mono">'+r.exDate+'</span></div>';
+    if(r.payDate) html += '<div class="mkr"><span class="l">Pay Date</span><span class="v mono">'+r.payDate+'</span></div>';
+    if(r.yearsRaising > 0) html += '<div class="mkr"><span class="l">Years Raising</span><span class="v">'+r.yearsRaising+' '+(r.yearsRaising>=50?'\ud83d\udc51':r.yearsRaising>=25?'\ud83c\udfc6':'')+'</span></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+// Render the Specials sub-tab body
+function _renderSpecialDividendsHTML(){
+  var rows = getSpecialDividends();
+  if (rows.length === 0) {
+    return '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;line-height:1.6">No special dividends recorded.<br><span style="font-size:11px">Special / one-time dividends appear here when a payment in a ticker\'s history is flagged as <code>sp:true</code>. Built-in tickers don\'t typically have these \u2014 they show up for irregular payouts like Costco\'s 2024 special or year-end bonuses from specific companies.</span></div>';
+  }
+  var totalReceived = rows.reduce(function(s,r){ return s + r.total; }, 0);
+  var html = '';
+  html += '<div class="sg" id="dSpecStats" style="margin-bottom:14px"><div class="sc"><div class="scl">Special Dividends</div><div class="scv" style="color:var(--purple)">'+rows.length+'</div></div>';
+  html += '<div class="sc"><div class="scl">Total Received</div><div class="scv" style="color:var(--green)">'+fm(totalReceived)+'</div></div>';
+  var byTk = {};
+  rows.forEach(function(r){ byTk[r.ticker] = (byTk[r.ticker] || 0) + r.total; });
+  var topTk = Object.keys(byTk).sort(function(a,b){return byTk[b]-byTk[a]})[0];
+  if(topTk) html += '<div class="sc"><div class="scl">Top Payer</div><div class="scv" style="color:var(--accent)">'+topTk+'</div></div>';
+  html += '</div>';
+  html += '<div class="table-wrap dt"><table><thead><tr>';
+  html += '<th>Ticker</th><th>Amount /sh</th><th>Shares</th><th>Total Received</th><th>Ex-Date</th><th>Pay Date</th><th>Note</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr>';
+    html += '<td class="mono fw7">'+r.ticker+' <span class="badge badge-purple" style="font-size:9px">\ud83c\udf81 Special</span></td>';
+    html += '<td class="mono">$'+r.amount.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</td>';
+    html += '<td class="mono">'+fmSh(r.shares)+'</td>';
+    html += '<td class="mono green fw7">'+fm(r.total)+'</td>';
+    html += '<td class="mono" style="font-size:10.5px">'+(r.exDate || '\u2014')+'</td>';
+    html += '<td class="mono" style="font-size:10.5px">'+(r.payDate || '\u2014')+'</td>';
+    html += '<td class="muted" style="font-size:10.5px">'+(r.note || '\u2014')+'</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div class="mc">';
+  rows.forEach(function(r){
+    html += '<div class="mk">';
+    html += '<div class="mkh"><div><span class="mkt">'+r.ticker+'</span> <span class="badge badge-purple" style="font-size:9.5px">\ud83c\udf81 Special</span></div><span class="mkp green">'+fm(r.total)+'</span></div>';
+    html += '<div class="mkr"><span class="l">Amount /sh</span><span class="v mono">$'+r.amount.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</span></div>';
+    html += '<div class="mkr"><span class="l">Shares</span><span class="v mono">'+fmSh(r.shares)+'</span></div>';
+    if(r.exDate) html += '<div class="mkr"><span class="l">Ex-Date</span><span class="v mono">'+r.exDate+'</span></div>';
+    if(r.payDate) html += '<div class="mkr"><span class="l">Pay Date</span><span class="v mono">'+r.payDate+'</span></div>';
+    if(r.note) html += '<div class="mkr"><span class="l">Note</span><span class="v">'+r.note+'</span></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+// Switch sub-tabs (used by the Dividends > Stocks/Increases/Specials nav).
+// Persists the last viewed sub-tab per parent so reloading lands you back
+// on the same view, synced cross-device via the prefs merge.
+function sSubTab(parent, sub){
+  var nav = document.querySelector('.subtab-nav[data-parent="'+parent+'"]');
+  if (nav) {
+    nav.querySelectorAll('.subtab').forEach(function(b){
+      b.classList.toggle('active', b.dataset.subtab === sub);
+    });
+  }
+  document.querySelectorAll('.subtab-content[data-parent="'+parent+'"]').forEach(function(c){
+    c.classList.toggle('active', c.dataset.subtab === sub);
+  });
+  var p = loadPrefs();
+  if (!p.lastSubTab || typeof p.lastSubTab !== 'object') p.lastSubTab = {};
+  p.lastSubTab[parent] = sub;
+  savePrefs(p);
+}
 function sCl(t){var s=sh[t]||0;var n=getLots(t).length;var label=s?(n>1?fmSh(s)+' ('+n+' lots)':fmSh(s)):'edit';return'<span class="sd'+(s?' hv':'')+'" onclick="eS(\''+t+'\',this)">'+label+'</span>'}
 function bCl(t){var b=bk[t]||'';return'<span class="bd'+(b?' hv':'')+'" onclick="eB(\''+t+'\',this)">'+(b||'set')+'</span>'}
 // Inline edit: edits first lot's shares (quick edit from table row)
@@ -3569,6 +3808,16 @@ function render(){
   G('bD').innerHTML=h;
   mc='';dS.forEach(function(t){var d=DV[t],s=sh[t]||0,inc=d.a*s,nt=d.np*s;mc+='<div class="mk" onclick="togM(this)"><div class="mkh"><div><span class="mkt">'+t+'</span> <span class="info-tag"><span class="badge '+rc(d.rt)+'">'+rb(d.rt)+'</span><span class="info-tip">'+(RATING_INFO[d.rt]||rb(d.rt))+'</span></span></div><span class="mkp green">'+d.y+'%</span></div><div class="mkr"><span class="l">Current Price</span><span class="v">'+fm(PR[t]||0)+'</span></div><div class="mkr"><span class="l">Next Pay</span><span class="v green">$'+d.np+' \u00b7 '+d.pd+'</span></div>'+(nt>0?'<div class="mkr"><span class="l">Next Total</span><span class="v green">'+fm(nt)+'</span></div>':'')+'<div class="mkr"><span class="l">Shares</span><span class="v">'+(s||'\u2014')+'</span></div>'+(bk[t]?'<div class="mkr"><span class="l">Account</span><span class="v" style="color:var(--purple)">'+bk[t]+'</span></div>':'')+(inc>0?'<div class="mkr"><span class="l">Income/Yr</span><span class="v green">'+fm(inc)+'</span></div>':'')+'<div class="mkd"><div class="mkr"><span class="l">Payout Ratio</span><span class="v">'+d.pr+'%</span></div><div class="mkr"><span class="l">5yr Growth</span><span class="v">'+(d.g5>0?'+':'')+d.g5+'%</span></div><div class="mkr"><span class="l">Yrs Paying</span><span class="v">'+d.yp+'</span></div><div class="mkr"><span class="l">Yrs Raising</span><span class="v">'+d.yr+'</span></div>'+taxPanelHTML(t)+lotsHTML(t)+nwH(t)+'</div></div>'});
   G('mD').innerHTML=mc;
+  // Dividends sub-tabs \u2014 Stocks count + Increases + Specials
+  var _gDStocks = G('cDstocks'); if (_gDStocks) _gDStocks.textContent = dvs.length;
+  try {
+    var increasesData = getDividendIncreases();
+    var specialsData = getSpecialDividends();
+    var cDinc = G('cDinc'); if (cDinc) cDinc.textContent = increasesData.length;
+    var cDspec = G('cDspec'); if (cDspec) cDspec.textContent = specialsData.length;
+    var incBody = G('divIncreasesBody'); if (incBody) incBody.innerHTML = _renderDividendIncreasesHTML();
+    var specBody = G('divSpecialsBody'); if (specBody) specBody.innerHTML = _renderSpecialDividendsHTML();
+  } catch(e) { console.error('Sub-tab render error:', e); }
 
   // GROWTH
   var gq=(G('growthQ').value||'').toLowerCase();
@@ -8063,6 +8312,14 @@ updateRecheckTimeUI();
 // tab's section headers are present in the DOM (they're inline HTML,
 // always present, so this is safe immediately after init).
 if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedState();
+// Restore last-viewed sub-tab per parent (currently just Dividends:
+// Stocks / Increases / Specials). Cloud-synced via the prefs merge.
+try {
+  var _stPrefs = loadPrefs();
+  if (_stPrefs.lastSubTab && _stPrefs.lastSubTab.div && _stPrefs.lastSubTab.div !== 'stocks') {
+    if (typeof sSubTab === 'function') sSubTab('div', _stPrefs.lastSubTab.div);
+  }
+} catch(e){}
 
 // Demo-mode helper: clear ?demo and reload into the user's real session.
 function exitDemoMode(){
@@ -8112,6 +8369,15 @@ function enterDemoMode(){
     Object.keys(DEMO_CHANGES).forEach(function(k){ liveChanges[k] = DEMO_CHANGES[k]; });
     Object.keys(DEMO_FUND).forEach(function(k){ FUND[k] = DEMO_FUND[k]; });
     SPY_HIST = DEMO_SPY_HIST;
+    // Demo-only DV overrides — same set as load() seeds, mirrored here
+    // so in-place demo activation lands the user on the same data.
+    if (DV.ABBV) { DV.ABBV.np = 1.70;  DV.ABBV.a = 6.80; }
+    if (DV.MSFT) { DV.MSFT.np = 0.91;  DV.MSFT.a = 3.64; }
+    if (DV.KO)   { DV.KO.np   = 0.515; DV.KO.a   = 2.06; }
+    if (DV.AAPL) { DV.AAPL.np = 0.26;  DV.AAPL.a = 1.04; }
+    if (DV.T)    { DV.T.np    = 0.2875; DV.T.a   = 1.15; }
+    if (DV.MSFT && DV.MSFT.h && !DV.MSFT.h.some(function(e){return e.sp})) DV.MSFT.h.unshift({d:"2025-11-30", a:3.00, sp:true, note:"Year-end special dividend"});
+    if (DV.ABBV && DV.ABBV.h && !DV.ABBV.h.some(function(e){return e.sp})) DV.ABBV.h.unshift({d:"2026-01-15", a:1.50, sp:true, note:"One-time post-merger payout"});
   } catch(e) {
     console.error('Demo seed error:', e);
     if (typeof showToast==='function') showToast('Demo load failed: '+(e.message||'error'), 'error');

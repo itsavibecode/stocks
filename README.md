@@ -1,10 +1,17 @@
 # Stockfolio
 
-**Current Version: v0.7.74**
+**Current Version: v0.7.75**
 
 ---
 
 ## Changelog
+
+### v0.7.75 — 2026-05-15 — 📈 Dividends sub-tabs: Stocks / Increases / Specials
+- **Dividends tab now has three sub-tabs.** "💰 Stocks" (the original holdings table), "📈 Increases" (recent dividend hikes detected from `DV[t].np > DV[t].h[0].a`), and "🎁 Specials" (one-time special dividends flagged via `sp:true` in the payment history). Each sub-tab has a live count badge.
+- **Increases table** shows: ticker, prev → new per-share amount, % change, annual /sh before & after, your annual income lift (× shares), ex-date, pay date, years-raising streak (🏆 Aristocrat at 25+, 👑 King at 50+). Sorted by % change descending so biggest hikes lead. Top-of-table summary stats: total count, total annual income lift, average hike %, biggest hiker.
+- **Specials table** shows: ticker (with 🎁 Special badge), amount per share, your share count, total received (amount × shares), ex-date, pay date, and a free-form note (e.g. "Year-end special dividend"). Sorted by pay date descending.
+- **Demo data** populates 5 sample increases (ABBV, MSFT, KO, AAPL, T — ranging from +3% to +9.6% hikes) and 2 specials (MSFT $3.00 year-end, ABBV $1.50 post-merger) so the new views are immediately visible.
+- **Last-viewed sub-tab persists** in `prefs.lastSubTab.div` and restores on next page load — synced across devices via the existing cloud-prefs merge.
 
 ### v0.7.74 — 2026-05-15 — 💰 Dividends-by-Month: bars stay slim when sparse
 - **Sparse Dividends-by-Month charts no longer balloon into fat bars.** v0.7.73 stretched the chart to 100% of the snapshot panel width regardless of entry count, so a 4-month chart had bars 150px+ wide. Now the outer wrap's max-width is computed from entry count (~28px CSS per slot + 64px Y-axis padding, capped at 100%), and the chart height bumps from 280px → 360px when there are 4 or fewer entries so the chart reads as "narrow + tall" instead of "wide + short" when data is sparse — matching the user-requested ratio.
