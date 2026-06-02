@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.75</title>
+<title>Stockfolio v0.7.76</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -385,15 +385,17 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .px-up{color:#6ee7b7}
 .px-down{color:#fca5a5}
 .px-down-strong{color:var(--red)}
-.settings-wrap{max-width:1200px}
+.settings-wrap{max-width:980px;margin:0 auto}
 .settings-wrap>h3{margin-bottom:14px}
-.settings-grid{columns:2;column-gap:14px}
-.settings-grid>div{break-inside:avoid;margin-bottom:14px;display:block}
-@media (max-width:760px){.settings-grid{columns:1}}
-/* Section headers between groups of related Settings cards. column-span:all
-   makes them stretch across both columns of the masonry-style settings-grid,
-   acting as visual section dividers. */
-.settings-section-header{column-span:all;-webkit-column-span:all;margin:18px 0 6px 0;padding:6px 4px 6px 4px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;break-inside:avoid;cursor:pointer;user-select:none;transition:color .12s, border-color .12s}
+/* v0.7.76: switched from CSS multi-column (`columns:2`) to single-column
+   flex. Multi-column's auto-balancing left big empty gaps next to tall
+   cards (Sound Settings has volume sliders + per-channel rows so it
+   towers over the short Appearance card that sat next to it). With a
+   single column, every panel stacks directly under the previous one —
+   no gaps, no awkward whitespace, easier to scroll through. */
+.settings-grid{display:flex;flex-direction:column;gap:12px}
+.settings-grid>div{margin-bottom:0}
+.settings-section-header{margin:14px 0 2px 0;padding:6px 4px 6px 4px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;cursor:pointer;user-select:none;transition:color .12s, border-color .12s}
 .settings-section-header:hover{color:var(--text2);border-bottom-color:var(--border2)}
 .settings-section-header:first-of-type{margin-top:0}
 .settings-section-header .ssh-icon{font-size:15px}
@@ -401,7 +403,7 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .settings-section-header.collapsed .ssh-chev{transform:rotate(-90deg)}
 .settings-section-header .ssh-desc{font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400;margin-left:auto;font-style:italic}
 @media(max-width:560px){.settings-section-header .ssh-desc{display:none}}
-.settings-toolbar{column-span:all;-webkit-column-span:all;display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:4px;break-inside:avoid}
+.settings-toolbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:4px}
 .settings-toolbar .btn{font-size:10.5px;padding:5px 10px}
 .settings-toolbar .label{margin-right:auto;font-size:10.5px;color:var(--muted);font-style:italic}
 .key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
@@ -1040,8 +1042,9 @@ body.text-xl .sc .scv{font-size:24px}
 
   <!-- PAYOUT LOG -->
   <div class="tab-content" id="content-paylog">
-    <div class="sg" style="max-width:500px">
+    <div class="sg" style="max-width:760px">
       <div class="sc"><div class="scl">&#128197; Next 90 Days</div><div class="scv green" id="p90">$0</div></div>
+      <div class="sc"><div class="scl">&#128181; Avg Monthly</div><div class="scv green" id="pMo">$0</div></div>
       <div class="sc"><div class="scl">&#128200; Annual Projected</div><div class="scv accent2" id="pAn">$0</div></div>
     </div>
     <div class="payout-chart-wrap" id="pChart"></div>
@@ -1399,7 +1402,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.75 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.76 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1492,7 +1495,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.75";
+var VERSION = "0.7.76";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3837,7 +3840,12 @@ function render(){
   entries.sort(function(a,b){return a.d.localeCompare(b.d)});
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
-  G('pAn').textContent=fm(allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0));
+  var _annualProj=allDvs.reduce(function(s,t){return s+(DV[t].a*(sh[t]||0))},0);
+  G('pAn').textContent=fm(_annualProj);
+  // Avg Monthly = annual projected ÷ 12. Uses the same forward-looking
+  // annualized estimate the Annual Projected card uses (DV[t].a × shares
+  // per ticker, summed) so the math reads consistently across the cards.
+  var pMo=G('pMo');if(pMo)pMo.textContent=fm(_annualProj/12);
 
   // Monthly payouts bar chart — Jan->Dec of current year, current month highlighted with left arrow.
   var nowDate=new Date();

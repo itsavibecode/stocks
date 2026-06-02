@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.75**
+**Current Version: v0.7.76**
 
 ---
 
 ## Changelog
+
+### v0.7.76 — 2026-05-15 — 🧹 Settings: single-column stack + Payout Log: Avg Monthly card
+- **Settings page no longer has empty whitespace next to tall cards.** Switched the layout from CSS multi-column (`columns:2`) to a single-column flex stack capped at `max-width:980px` centered on the page. Multi-column's auto-height-balancing was leaving a big gap next to Sound Settings (tall, with three volume sliders) since Appearance (short) was sitting in the other column. Cards now flow top-to-bottom under their section headers with consistent 12px gaps — no awkward voids, easier to scroll through, same content reachable in fewer screen pages on wide monitors.
+- **Removed obsolete `column-span:all` / `break-inside:avoid` rules** from section headers + toolbar — those were CSS-multi-column specific and unnecessary now.
+- **Payout Log: new 💵 Avg Monthly stat card** alongside Next 90 Days and Annual Projected, showing your annualized dividend income ÷ 12 (the same number Annual Projected uses, divided into monthly). Makes it one glance to see "this portfolio averages $X/month."
 
 ### v0.7.75 — 2026-05-15 — 📈 Dividends sub-tabs: Stocks / Increases / Specials
 - **Dividends tab now has three sub-tabs.** "💰 Stocks" (the original holdings table), "📈 Increases" (recent dividend hikes detected from `DV[t].np > DV[t].h[0].a`), and "🎁 Specials" (one-time special dividends flagged via `sp:true` in the payment history). Each sub-tab has a live count badge.
