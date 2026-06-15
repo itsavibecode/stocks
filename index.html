@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.76</title>
+<title>Stockfolio v0.7.77</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1402,7 +1402,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.76 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.77 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1495,7 +1495,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.76";
+var VERSION = "0.7.77";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -8428,14 +8428,36 @@ if (IS_DEMO) {
   G('newsStatus').innerHTML = '<span class="news-stale" style="color:var(--yellow);cursor:pointer" onclick="sTab(\'settings\')">⚠ No API key &mdash; click to add yours in Settings</span>';
 }
 
-// Live local clock — updates every second so news timestamps can be visually compared
+// Live local clock — updates every second so news timestamps can be visually compared.
+// v0.7.77: switched from 24-hour military time to 12-hour AM/PM via
+// toLocaleTimeString with hour12:true, and appended the local timezone
+// abbreviation (e.g. "EDT" / "PST") to the date line so the user can
+// verify the clock is in THEIR timezone, not server / UTC.
 function tickLocalClock(){
   var d=new Date();
-  var hh=String(d.getHours()).padStart(2,'0');
-  var mm=String(d.getMinutes()).padStart(2,'0');
-  var ss=String(d.getSeconds()).padStart(2,'0');
-  var t=G('hClockTime');if(t)t.textContent=hh+':'+mm+':'+ss;
-  var dd=G('hClockDate');if(dd)dd.textContent=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  var t=G('hClockTime');
+  if(t){
+    // 12-hour with seconds — "3:42:18 PM" (locale-aware: uses the user's
+    // preferred 12-hour formatting via the en-US locale; hour12:true
+    // forces AM/PM regardless of the user's system 24-hour preference).
+    t.textContent = d.toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true
+    });
+  }
+  var dd=G('hClockDate');
+  if(dd){
+    var dateStr = d.toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'});
+    // Extract timezone abbreviation (PDT / EST / CST / etc.) — gives the
+    // user a clear "this is my local time" confirmation. Falls back to
+    // omitting if formatToParts isn't supported (very old browsers).
+    var tzAbbr = '';
+    try {
+      var parts = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(d);
+      var tzPart = parts.find(function(p){ return p.type === 'timeZoneName'; });
+      if (tzPart) tzAbbr = ' · ' + tzPart.value;
+    } catch(e){}
+    dd.textContent = dateStr + tzAbbr;
+  }
   // Re-color the price-staleness indicator each tick so it crosses thresholds visibly
   if(typeof refreshPriceStatusFreshness==='function')refreshPriceStatusFreshness();
 }

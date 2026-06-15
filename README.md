@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.76**
+**Current Version: v0.7.77**
 
 ---
 
 ## Changelog
+
+### v0.7.77 — 2026-05-15 — 🕐 Header clock: 12-hour AM/PM + local timezone abbreviation
+- **Switched header clock from 24-hour military time to 12-hour AM/PM.** Was showing `14:07:10`, now shows `2:07:10 PM` via `toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })`. JavaScript's `Date` already uses the user's local timezone — this was just a formatting change.
+- **Appended local timezone abbreviation to the date line** (e.g. `Mon, Jun 15 · CDT`) so the user can verify at a glance that the clock is in their local timezone, not UTC or a server timezone. Extracted via `Intl.DateTimeFormat` `timeZoneName: 'short'`. Falls back to omitting the abbreviation on very old browsers that don't support `formatToParts`.
 
 ### v0.7.76 — 2026-05-15 — 🧹 Settings: single-column stack + Payout Log: Avg Monthly card
 - **Settings page no longer has empty whitespace next to tall cards.** Switched the layout from CSS multi-column (`columns:2`) to a single-column flex stack capped at `max-width:980px` centered on the page. Multi-column's auto-height-balancing was leaving a big gap next to Sound Settings (tall, with three volume sliders) since Appearance (short) was sitting in the other column. Cards now flow top-to-bottom under their section headers with consistent 12px gaps — no awkward voids, easier to scroll through, same content reachable in fewer screen pages on wide monitors.
