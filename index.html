@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.77</title>
+<title>Stockfolio v0.7.78</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1402,7 +1402,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.77 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.78 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1495,7 +1495,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.77";
+var VERSION = "0.7.78";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -6417,6 +6417,19 @@ function loadPrefs(){
   return{notifEnabled:true,soundMuted:false,soundChoice:'chime',theme:'dark',textSize:'normal',accounts:[]};
 }
 var _inSavePrefs = false;
+// Pref keys that the user can explicitly clear via a "Clear" button. When
+// these are MISSING from the local prefs object on a cloud save, we have
+// to send an explicit FieldValue.delete() for them — otherwise Firestore's
+// set+merge does a deep recursive merge on nested maps, the cleared field
+// silently persists in the cloud doc, and the next sign-in resurrects it
+// via the cloud-wins-on-conflict merge in loadFromCloud. This is the bug
+// users were hitting where cleared backup API keys would "come back."
+var _TRACKED_NULLABLE_PREFS = [
+  'finnhubKey', 'alphavantageKey', 'tiingoKey', 'polygonKey', 'twelvedataKey',
+  'snaptradeUserSecret', 'snaptradeUserId',
+  'divGoal', 'divGoalLabel',
+  'taxBracket', 'stateRate'
+];
 function savePrefs(p){
   if (IS_DEMO) {
     // Demo keeps prefs in-memory only — mutate the global cache so the
@@ -6432,9 +6445,35 @@ function savePrefs(p){
     try{maybeAutoTrimCloudDoc()}catch(e){}
     _inSavePrefs = false;
   }
-  // Also sync to cloud
+  // Cloud sync
   if(syncEnabled&&currentUser&&db){
-    db.collection('portfolios').doc(currentUser.uid).set({prefs:p},{merge:true}).catch(function(){});
+    // Build the cloud payload: copy of p, plus explicit FieldValue.delete()
+    // sentinels for every tracked-nullable key that isn't in p. That forces
+    // Firestore to remove the field from the doc — otherwise the recursive
+    // merge would leave the stale value sitting there and resurrect it on
+    // next sign-in. Non-tracked keys (theme, textSize, accounts, etc.) use
+    // normal merge semantics; their values are always present so deep-
+    // merge does the right thing.
+    var cloudPrefs = Object.assign({}, p);
+    try {
+      var FV = firebase.firestore.FieldValue;
+      _TRACKED_NULLABLE_PREFS.forEach(function(k){
+        if (cloudPrefs[k] === undefined || cloudPrefs[k] === null || cloudPrefs[k] === '') {
+          cloudPrefs[k] = FV.delete();
+        }
+      });
+    } catch(e) { /* if FieldValue isn't available, fall through with plain p */ }
+    db.collection('portfolios').doc(currentUser.uid).set(
+      {prefs: cloudPrefs}, {merge: true}
+    ).catch(function(e){
+      // No longer silent — surface cloud-save failures so the user (and
+      // we) know when the "synced" toast is lying. Worst case: user sees
+      // a console warning and a one-time toast they can dismiss.
+      console.warn('[Stockfolio] Prefs cloud-save failed:', e && e.message);
+      if (typeof showToast === 'function') {
+        showToast('Cloud sync failed — your change is saved locally. Try again or check your connection.', 'warn');
+      }
+    });
   }
 }
 function savePref(){

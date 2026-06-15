@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.77**
+**Current Version: v0.7.78**
 
 ---
 
 ## Changelog
+
+### v0.7.78 — 2026-05-15 — 🔐 Backup API keys: cloud sync actually works, clears propagate, errors surface
+- **Cleared backup keys no longer resurrect from cloud on next sign-in.** Root cause: `savePrefs` was using Firestore's `set({prefs:p}, {merge:true})`, which performs a deep recursive merge on nested maps. When a user clicked "Clear" on a backup key (AlphaVantage / Tiingo / Polygon / TwelveData), the local prefs object lost the field but the cloud doc kept the stale value because it wasn't explicitly in the new write. On the next sign-in, `loadFromCloud`'s cloud-wins-on-conflict merge re-introduced the cleared key. Fixed by sending explicit `firebase.firestore.FieldValue.delete()` sentinels for tracked-nullable fields (`finnhubKey`, `alphavantageKey`, `tiingoKey`, `polygonKey`, `twelvedataKey`, `snaptradeUserSecret`, `snaptradeUserId`, `divGoal`, `divGoalLabel`, `taxBracket`, `stateRate`) whenever they're missing from local prefs at save time.
+- **Cloud-save failures now surface to the user** instead of being swallowed by an empty `.catch(function(){})`. A warning toast and a console message fire when Firestore rejects the write, so the "saved and synced" toast can no longer silently lie.
+- **No new save/load behavior on the happy path** — non-tracked prefs (theme, textSize, accounts, ignoreList, lastSubTab, etc.) still use the same deep-merge semantics that have always worked. The fix is surgical to keys that can legitimately be empty.
 
 ### v0.7.77 — 2026-05-15 — 🕐 Header clock: 12-hour AM/PM + local timezone abbreviation
 - **Switched header clock from 24-hour military time to 12-hour AM/PM.** Was showing `14:07:10`, now shows `2:07:10 PM` via `toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })`. JavaScript's `Date` already uses the user's local timezone — this was just a formatting change.
