@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.78**
+**Current Version: v0.7.79**
 
 ---
 
 ## Changelog
+
+### v0.7.79 — 2026-05-15 — 📅 Monthly Dividend Digest email (default ON)
+- **New monthly email** sent on the 1st of each month at 12:00 UTC (7am ET) listing every upcoming dividend payout for the month with: pay date, ticker, current cached price + yield, your share count × per-share amount, per-row dollar total, and a grand total summary card at the top showing the expected income for the month across all paying tickers.
+- **Settings → 🔔 Notifications → 📅 Monthly Dividend Digest** card with one toggle (`prefs.monthlyDigestEnabled`) — **defaults ON** so existing users are auto-enrolled (opt-out, not opt-in). Independent of the daily reminder toggles — you can have either, both, or neither.
+- **"📨 Send test monthly digest" button** hits the new `/run-digest` worker endpoint (OWNER_UID-only) so you can preview what next month's email will look like without waiting for the 1st. Returns a summary toast with the payout count + total dollar expected.
+- **Worker side (stocks-worker v0.7.0):** new `runMonthlyDigest()` + `buildMonthlyDigestEmail()` + `/run-digest` endpoint + dual-cron scheduling. Same Firestore read path as the daily reminders — no extra reads or external API calls.
 
 ### v0.7.78 — 2026-05-15 — 🔐 Backup API keys: cloud sync actually works, clears propagate, errors surface
 - **Cleared backup keys no longer resurrect from cloud on next sign-in.** Root cause: `savePrefs` was using Firestore's `set({prefs:p}, {merge:true})`, which performs a deep recursive merge on nested maps. When a user clicked "Clear" on a backup key (AlphaVantage / Tiingo / Polygon / TwelveData), the local prefs object lost the field but the cloud doc kept the stale value because it wasn't explicitly in the new write. On the next sign-in, `loadFromCloud`'s cloud-wins-on-conflict merge re-introduced the cleared key. Fixed by sending explicit `firebase.firestore.FieldValue.delete()` sentinels for tracked-nullable fields (`finnhubKey`, `alphavantageKey`, `tiingoKey`, `polygonKey`, `twelvedataKey`, `snaptradeUserSecret`, `snaptradeUserId`, `divGoal`, `divGoalLabel`, `taxBracket`, `stateRate`) whenever they're missing from local prefs at save time.

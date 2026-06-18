@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.78</title>
+<title>Stockfolio v0.7.79</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1211,6 +1211,23 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
+      <!-- Monthly Digest — one email per month on the 1st listing every
+           upcoming dividend payout for the month with totals and current
+           price per ticker. Default enabled (opt-out). -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128197; Monthly Dividend Digest</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">One email on the 1st of each month listing every upcoming dividend payout for the month: ticker, current price, pay date, amount per share, your shares, total payout, and a grand total at the bottom. Sent via the worker cron at <span class="mono">12:00 UTC</span>.</p>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;cursor:pointer;margin-bottom:8px">
+          <input type="checkbox" id="sMonthlyDigest" onchange="saveMonthlyDigestPref()" style="accent-color:var(--accent);width:14px;height:14px">
+          <span>Enable monthly digest email</span>
+        </label>
+        <p style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Independent of the daily reminders above — you can have one without the other.</p>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)">
+          <button class="btn btn-outline" onclick="sendTestMonthlyDigest()" style="font-size:11px" title="Run the monthly-digest logic now without waiting for the 1st of the month. Sends only to OWNER_UID.">📨 Send test monthly digest</button>
+          <p style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5">Runs the digest immediately so you can see what next month's email will look like.</p>
+        </div>
+      </div>
+
       <!-- ──────── MONEY & TAXES ──────── -->
       <div class="settings-section-header" data-section="money" onclick="toggleSettingsSection('money')"><span class="ssh-chev">▾</span><span class="ssh-icon">💰</span><span>Money &amp; Taxes</span><span class="ssh-desc">income goal + tax bracket for projections</span></div>
 
@@ -1402,7 +1419,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.78 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.79 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1495,7 +1512,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.78";
+var VERSION = "0.7.79";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -1701,6 +1718,28 @@ function saveReminderPrefs(){
   updateReminderStatus();
   showToast('Reminder settings saved');
 }
+// Monthly digest pref — opt-out (default ON). One email on the 1st of each
+// month listing every upcoming dividend payout for the month, with totals
+// and current per-ticker prices. Sent by the worker cron at 12:00 UTC.
+function saveMonthlyDigestPref(){
+  var p=loadPrefs();
+  var el=G('sMonthlyDigest');
+  if(el) p.monthlyDigestEnabled = !!el.checked;
+  savePrefs(p);
+  showToast(p.monthlyDigestEnabled ? 'Monthly digest enabled' : 'Monthly digest disabled');
+}
+async function sendTestMonthlyDigest(){
+  if(!currentUser){ showToast('Sign in first','warn'); return; }
+  showToast('Building monthly digest…');
+  var data = await callWorker('/run-digest', {}, 'POST');
+  if(!data) return; // callWorker already showed a toast
+  var summary = '';
+  if(data.sent>0) summary = '📨 Monthly digest sent ('+(data.payoutCount||0)+' payouts, total '+(data.totalDollar||'')+')';
+  else if(data.skipped) summary = 'No upcoming payouts this month — digest skipped';
+  else summary = 'Digest run — '+JSON.stringify(data).slice(0,120);
+  showToast(summary);
+  logActivity('digest.test', 'Manual monthly digest run: '+summary);
+}
 function saveDivGoal(){
   var p=loadPrefs();
   var el=G('sDivGoal');
@@ -1761,6 +1800,10 @@ function loadReminderPrefsUI(){
   // Default both to true if undefined (existing users get both kinds of reminders)
   var incEx=G('sRemIncludeEx');if(incEx)incEx.checked=(p.remIncludeEx!==false);
   var incPd=G('sRemIncludePay');if(incPd)incPd.checked=(p.remIncludePay!==false);
+  // Monthly digest defaults to ON for all users (opt-out, not opt-in). The
+  // `!== false` check means undefined OR true → checked. Existing users
+  // who never touched the setting are auto-enrolled.
+  var md=G('sMonthlyDigest');if(md)md.checked=(p.monthlyDigestEnabled!==false);
   updateReminderStatus();
 }
 function updateReminderStatus(){
