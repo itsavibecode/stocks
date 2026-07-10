@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.79**
+**Current Version: v0.7.80**
 
 ---
 
 ## Changelog
+
+### v0.7.80 — 2026-05-15 — 🧹 SnapTrade auto-sync no longer nags with a no-change modal
+- **Fixed: the daily SnapTrade auto-sync opened the diff modal on every load even when nothing changed.** With "Auto-sync daily" enabled, the 24h auto-sync unconditionally opened the review modal — so users whose holdings already matched their brokerages got a wall of "NOOP · no change" rows with "Apply Selected (0)" that they had to Cancel out of.
+- **Now the auto-sync modal only opens when there's something to review.** New `_stCountActionableRows()` tallies ADD/UPDATE rows across all mapped accounts; if the count is zero, `startSnapTradeSync({skipIfNoChanges:true})` skips the modal and shows a quiet visual-only toast ("SnapTrade auto-sync: already up to date — no changes") with no sound and no inbox entry.
+- **The manual "📥 Sync" button is unchanged** — it always opens the modal (you clicked it deliberately, and may want to remap accounts even when share counts match).
+- The "Daily auto-sync running…" status toast is now silent/no-inbox too, so a routine no-op sync doesn't chime or clutter the notifications inbox. Settings still shows the "Last auto-sync" timestamp.
 
 ### v0.7.79 — 2026-05-15 — 📅 Monthly Dividend Digest email (default ON)
 - **New monthly email** sent on the 1st of each month at 12:00 UTC (7am ET) listing every upcoming dividend payout for the month with: pay date, ticker, current cached price + yield, your share count × per-share amount, per-row dollar total, and a grand total summary card at the top showing the expected income for the month across all paying tickers.

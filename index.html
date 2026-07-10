@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.79</title>
+<title>Stockfolio v0.7.80</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1419,7 +1419,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.79 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
+  <div class="footer">Stockfolio v0.7.80 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span></div>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1512,7 +1512,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.79";
+var VERSION = "0.7.80";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -7714,9 +7714,33 @@ function _stBuildDiffForAccount(acct,mappedAccountName){
 }
 
 var stSyncSession=null;
-function startSnapTradeSync(){
+// Count rows that would actually CHANGE the portfolio (ADD or UPDATE) across
+// every mapped account in the current session. NOOP rows (shares already
+// match) and skipped accounts don't count. Used to suppress the auto-sync
+// modal when there's genuinely nothing to review.
+function _stCountActionableRows(){
+  if(!stSyncSession) return 0;
+  var count=0;
+  stApiState.accounts.forEach(function(acct){
+    var choice=stSyncSession.choices[acct.id];
+    if(!choice||choice.action==='skip')return;
+    var diff=_stBuildDiffForAccount(acct,choice.target);
+    diff.forEach(function(r){
+      if(r.action==='ADD'||r.action==='UPDATE')count++;
+    });
+  });
+  return count;
+}
+// opts.skipIfNoChanges — used by the daily auto-sync path. When set, and the
+// computed diff has zero actionable rows, we DON'T open the modal (it would
+// just be a wall of NOOP rows the user has to Cancel out of on every load).
+// The manual "Sync" button calls this with no opts, so it always opens the
+// modal — the user explicitly asked, and may want to remap accounts even when
+// share counts already match.
+function startSnapTradeSync(opts){
+  opts=opts||{};
   if(!stApiState.accounts||stApiState.accounts.length===0){
-    showToast('No SnapTrade accounts loaded — refresh first','warn');
+    if(!opts.silent) showToast('No SnapTrade accounts loaded — refresh first','warn');
     return;
   }
   // Initialize session: per-account mapping decisions, pre-seeded from saved mappings
@@ -7730,6 +7754,13 @@ function startSnapTradeSync(){
       stSyncSession.choices[acct.id]={action:'create',target:_stAcctAutoName(acct)};
     }
   });
+  if(opts.skipIfNoChanges && _stCountActionableRows()===0){
+    stSyncSession=null;
+    // Quiet visual-only confirmation (no sound, no inbox entry) so a daily
+    // no-op sync doesn't nag. The Settings card still shows "Last auto-sync".
+    showToast('SnapTrade auto-sync: already up to date — no changes',null,{silent:true,noinbox:true});
+    return;
+  }
   showSyncModal();
 }
 function showSyncModal(){
@@ -7983,7 +8014,7 @@ function renderSnapTradeCard(){
     if(stApiState.lastFetched)summary+=' &middot; last sync '+new Date(stApiState.lastFetched).toLocaleTimeString();
     html+='<div style="margin-top:8px;font-size:10.5px;color:var(--muted)">'+summary+'</div>';
     // Auto-sync toggle
-    html+='<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="snapAutoSyncCb"'+(prefs.snaptradeAutoSync?' checked':'')+' onchange="toggleSnapAutoSync(this.checked)" style="accent-color:var(--accent);width:14px;height:14px"><span>Auto-sync daily</span><span class="muted" style="font-size:10px">— refreshes once per 24h on load and opens the diff modal for review (never auto-applies)</span></label>';
+    html+='<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;cursor:pointer;color:var(--text2)"><input type="checkbox" id="snapAutoSyncCb"'+(prefs.snaptradeAutoSync?' checked':'')+' onchange="toggleSnapAutoSync(this.checked)" style="accent-color:var(--accent);width:14px;height:14px"><span>Auto-sync daily</span><span class="muted" style="font-size:10px">— refreshes once per 24h on load and opens the diff modal only when there are changes to review (never auto-applies)</span></label>';
     if(prefs.snaptradeLastAutoSync){
       html+='<div style="margin-top:4px;font-size:10px;color:var(--muted);padding-left:22px">Last auto-sync: '+new Date(prefs.snaptradeLastAutoSync).toLocaleString()+'</div>';
     }
@@ -8084,7 +8115,9 @@ function toggleSnapAutoSync(checked){
 }
 
 // Daily auto-sync check — runs once on app load if toggle is on and >24h elapsed.
-// Refreshes accounts then opens the diff modal; never silent-applies.
+// Refreshes accounts then opens the diff modal ONLY IF there are actual changes
+// to review (ADD/UPDATE rows). If everything already matches, it stays quiet —
+// no more wall-of-NOOP modal on every load. Never silent-applies.
 function maybeRunAutoSync(){
   if(!currentUser||!stApiState.userSecret)return;
   var prefs=loadPrefs();
@@ -8095,10 +8128,12 @@ function maybeRunAutoSync(){
   // Mark first to avoid loops if refresh fails
   prefs.snaptradeLastAutoSync=Date.now();
   savePrefs(prefs);
-  showToast('Daily auto-sync running...');
+  // Passive background status — no sound, no inbox entry. If changes are found,
+  // startSnapTradeSync opens the modal; if not, it shows a quiet "up to date".
+  showToast('Daily SnapTrade auto-sync running…',null,{silent:true,noinbox:true});
   snapTradeRefresh().then(function(){
     if(stApiState.accounts.length>0){
-      setTimeout(startSnapTradeSync,800);
+      setTimeout(function(){ startSnapTradeSync({skipIfNoChanges:true}); },800);
     }
   });
 }
