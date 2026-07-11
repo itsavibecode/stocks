@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.81</title>
+<title>Stockfolio v0.7.82</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1422,7 +1422,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.81 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.82 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1517,7 +1517,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.81";
+var VERSION = "0.7.82";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5296,7 +5296,7 @@ function renderInsights(){
   html += '<span style="text-align:right">Annual Income</span>';
   html += '<span>Why</span>';
   html += '<span style="text-align:right">Suggested Add</span>';
-  html += '<span style="text-align:right">Score</span>';
+  html += '<span style="text-align:right">Score <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">Score (0&ndash;100) is a <strong>weighted blend</strong> of five factors, each scored 0&ndash;100 then multiplied by its weight and summed:<br>&bull; Yield &mdash; <strong>30%</strong><br>&bull; Payout safety (dividend rating + cash-flow coverage) &mdash; <strong>25%</strong><br>&bull; Tax efficiency (qualified vs. ordinary) &mdash; <strong>15%</strong><br>&bull; Sector diversification &mdash; <strong>15%</strong><br>&bull; Goal impact (income added per $1k) &mdash; <strong>15%</strong><br>Higher = a stronger fit to add to. Ranks re-sort automatically as prices &amp; data update.</span></span></span>';
   html += '</div>';
   // Ranked card list
   rows.forEach(function(r, i){
@@ -5320,6 +5320,7 @@ function renderInsights(){
     html += '<span class="ins-score"><span class="ins-score-num">'+r.score+'</span><span class="ins-score-bar"><span class="ins-score-fill" style="width:'+r.score+'%"></span></span></span>';
     // Detail row (revealed on click)
     html += '<div class="ins-detail">';
+    html += '<div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin-bottom:9px">Final <strong style="color:var(--text)">Score</strong> is a <strong style="color:var(--text)">weighted blend</strong> of these five factors — each scored 0&ndash;100, multiplied by its weight (shown), then summed:</div>';
     html += '<div class="ins-comp-grid">';
     // Safety bar label includes coverage when we have CF data so users can
     // see when a "Strong"-rated stock has weak coverage (rating + actual = 60/40 blend).
@@ -5327,15 +5328,18 @@ function renderInsights(){
     if(r.cf && r.cf.coverage > 0){
       safetyLabel += ' · '+r.cf.coverage.toFixed(1)+'× cov';
     }
+    // Each factor is scored 0–100; the final Score is the sum of factor ×
+    // weight. Weights shown in each label so the blend is self-explanatory
+    // (the column-header ⓘ tooltip can't be hovered on touch devices).
     var bars = [
-      ['Yield ('+r.yield.toFixed(2)+'%)', r.yPts, 'var(--accent2)'],
-      [safetyLabel, r.sPts, 'var(--green)'],
-      ['Tax efficiency', r.tPts, 'var(--purple)'],
-      ['Sector diversification ('+r.sector+')', r.secPts, 'var(--yellow)'],
-      ['Goal impact ($/$1k)', r.iPts, 'var(--accent)']
+      ['Yield ('+r.yield.toFixed(2)+'%)', r.yPts, 'var(--accent2)', '30%'],
+      [safetyLabel, r.sPts, 'var(--green)', '25%'],
+      ['Tax efficiency', r.tPts, 'var(--purple)', '15%'],
+      ['Sector diversification ('+r.sector+')', r.secPts, 'var(--yellow)', '15%'],
+      ['Goal impact ($/$1k)', r.iPts, 'var(--accent)', '15%']
     ];
     bars.forEach(function(b){
-      html += '<span class="ins-comp-label">'+b[0]+'</span>';
+      html += '<span class="ins-comp-label">'+b[0]+' <span style="color:var(--muted);font-weight:600;font-size:9.5px">&middot; '+b[3]+' weight</span></span>';
       html += '<div class="ins-comp-bar-bg"><div class="ins-comp-bar-fill" style="width:'+b[1]+'%;background:'+b[2]+'"></div></div>';
       html += '<span class="ins-comp-val">'+b[1]+'</span>';
     });

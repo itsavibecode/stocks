@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.81**
+**Current Version: v0.7.82**
 
 ---
 
 ## Changelog
+
+### v0.7.82 — 2026-07-11 — 💡 Insights: explain the weighted score
+- **Added an ⓘ tooltip to the "Score" column header** on the Insights tab explaining exactly how the composite is built: Score (0–100) = a weighted blend of five factors, each scored 0–100 then multiplied by its weight and summed — **Yield 30% · Payout safety 25%** (dividend rating + cash-flow coverage) **· Tax efficiency 15% · Sector diversification 15% · Goal impact 15%** (income added per $1k). Uses the app's existing delegated hover-tooltip.
+- **Expanded card now shows the weights too.** Each component bar's label now carries its weight (e.g. "Yield (3.42%) · 30% weight"), and a lead line above the bars states the score is a weighted blend of the five factors. This covers touch devices, where the column-header tooltip can't be hovered — the ranking math is now self-explanatory whether you hover on desktop or expand a card on mobile.
+- No change to the scoring logic itself — this is purely explanatory.
 
 ### v0.7.81 — 2026-07-11 — ⚖️ Legal pages: Privacy, Terms, Disclaimer + tidied 404
 - **Completed the legal-page set.** A prior draft of `privacy.html` existed locally but was never committed and referenced a `terms.html` + `disclaimer.html` that didn't exist. Added both, matching the privacy page's exact dark-theme styling, header, cross-nav, and footer:
