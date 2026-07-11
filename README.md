@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.7.80**
+**Current Version: v0.7.81**
 
 ---
 
 ## Changelog
+
+### v0.7.81 — 2026-07-11 — ⚖️ Legal pages: Privacy, Terms, Disclaimer + tidied 404
+- **Completed the legal-page set.** A prior draft of `privacy.html` existed locally but was never committed and referenced a `terms.html` + `disclaimer.html` that didn't exist. Added both, matching the privacy page's exact dark-theme styling, header, cross-nav, and footer:
+  - **`terms.html`** — Terms of Service: what Stockfolio is/isn't (not a broker/adviser), eligibility, your responsibilities (data accuracy, your own API keys, read-only SnapTrade), acceptable use, "as is" availability, warranty disclaimer, limitation of liability, governing law, and contact.
+  - **`disclaimer.html`** — the important one for a financial tool: **not investment/financial/tax/legal advice**, market data may be delayed or wrong, projections/tax estimates are illustrative only, past performance ≠ future results, SnapTrade is read-only and your broker's statements are authoritative, "use at your own risk."
+  - `privacy.html` is now committed (was untracked) with its date aligned to the set.
+- **App footer** now links to Privacy · Terms · Disclaimer under the version line.
+- **404 page tidied**: removed the "View on GitHub" button (keeps the source repo out of the UI per the site standard) — replaced with a "Try the demo" link — and added Privacy · Terms · Disclaimer links to its footer. The branded 404 with the live-ticker tape stays.
 
 ### v0.7.80 — 2026-05-15 — 🧹 SnapTrade auto-sync no longer nags with a no-change modal
 - **Fixed: the daily SnapTrade auto-sync opened the diff modal on every load even when nothing changed.** With "Auto-sync daily" enabled, the 24h auto-sync unconditionally opened the review modal — so users whose holdings already matched their brokerages got a wall of "NOOP · no change" rows with "Apply Selected (0)" that they had to Cancel out of.
