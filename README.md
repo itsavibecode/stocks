@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.83**
+**Current Version: v0.7.84**
 
 ---
 
 ## Changelog
+
+### v0.7.84 — 2026-07-11 — 🧮 Insights: show what the top picks add up to
+- **Clarified that "Suggested Add" is a modest per-stock illustration, not a gap-closing plan.** Each row's Suggested Add is a *fixed* sample buy of ~5% of your portfolio value (min $1,000) into that one stock, and the yearly figure is just what that single add would throw off — so the top few naturally don't sum to a large goal gap. That's expected, but it read as confusing.
+- **Goal Progress box now shows the combined figure:** "$X to go · the 5 picks below would add ≈ +$Y/yr combined (~Z% of the gap) at the suggested add size." So you can see at a glance how far the shown picks get you without doing the mental math.
+- **New ⓘ tooltip on the "Suggested Add" column** explaining it's a fixed ~5%/$1,000 per-stock amount, not sized to close the whole goal — add to several or scale up to close the gap faster.
+- No change to the scoring or the add-sizing math — purely making the existing numbers legible.
 
 ### v0.7.83 — 2026-07-11 — 🎯 Insights: focus on the top picks, not a 44-row leaderboard
 - **The Insights tab now shows the top 5 picks by default** instead of ranking every dividend holding. For a "where to expand" recommendation, a wall of 44 cards buries the signal — the point is *which few* to add to for efficient, safe growth. The full set is still ranked behind the scenes; you're just shown the best ones first.
