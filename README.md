@@ -1,10 +1,19 @@
 # Stockfolio
 
-**Current Version: v0.7.84**
+**Current Version: v0.7.85**
 
 ---
 
 ## Changelog
+
+### v0.7.85 — 2026-07-11 — 🧭 Insights: "Plan to goal" mode (allocate a budget across picks)
+- **New Mode selector on the Insights tab: "Nudge" vs "Plan to goal."** You choose which "add" figure the tab shows:
+  - **Nudge (~5% each)** — the original behavior: a fixed sample buy of ~5% of your portfolio (min $1,000) *per stock*, showing what that modest add throws off.
+  - **Plan to goal** — spreads a **total budget** across the shown picks, **weighted by each stock's score** (so the safer, more efficient picks get a bigger slice), and shows the exact shares + dollars + yearly income per pick.
+- **Auto-sizes the budget to close your gap.** In Plan mode with a dividend goal set, the budget field defaults (placeholder "auto ≈ …") to exactly the amount needed to close your remaining goal gap at the plan's blended yield. Leave it blank for auto, or type your own budget to see how far a specific amount gets you.
+- **Goal Progress box reflects the plan:** "$X to go · this plan invests **$BUDGET** across the 5 picks below → **+$Y/yr** (~Z% of the gap)."
+- The column header switches to **"Plan Allocation"** with a mode-aware tooltip; each card and its expanded detail show the plan's per-pick shares/dollars/income. Mode + budget persist in `prefs.insMode` / `prefs.insPlanBudget` and sync across devices.
+- Allocation is weighted by the composite score (which already blends yield, payout safety, tax, sector fit, and goal impact) — so "Plan to goal" leans toward safe, efficient growth rather than chasing raw yield.
 
 ### v0.7.84 — 2026-07-11 — 🧮 Insights: show what the top picks add up to
 - **Clarified that "Suggested Add" is a modest per-stock illustration, not a gap-closing plan.** Each row's Suggested Add is a *fixed* sample buy of ~5% of your portfolio value (min $1,000) into that one stock, and the yearly figure is just what that single add would throw off — so the top few naturally don't sum to a large goal gap. That's expected, but it read as confusing.

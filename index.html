@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.84</title>
+<title>Stockfolio v0.7.85</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1094,6 +1094,13 @@ body.text-xl .sc .scv{font-size:24px}
         <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);max-width:680px;line-height:1.55">Surfaces the <strong>top picks</strong> among the dividend stocks you already own — the ones that would most efficiently close the gap to your annual dividend goal while keeping payout safety high. Score blends yield, payout safety, tax efficiency, sector concentration, and goal-impact. Click any row to see the breakdown.</p>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer" title="How the 'add' amount is figured. Nudge = a fixed ~5%/$1k sample buy per stock. Plan to goal = spread a total budget across the picks (weighted by score) to close your goal gap.">Mode <select id="insMode" onchange="saveInsMode()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:var(--sans)">
+          <option value="nudge">Nudge (~5% each)</option>
+          <option value="plan">Plan to goal</option>
+        </select></label>
+        <span id="insPlanBudgetWrap" style="display:none;align-items:center;gap:5px;font-size:11px">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer" title="Total dollars to invest, spread across the shown picks by score. Leave blank to auto-size it to exactly close your remaining goal gap.">Budget $<input type="number" id="insPlanBudget" onchange="saveInsPlanBudget()" min="0" step="100" placeholder="auto" style="width:90px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:var(--mono)"></label>
+        </span>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer" title="How many of the top-ranked picks to show. The full list is still ranked behind the scenes — this just focuses the view on the best few.">Show <select id="insLimit" onchange="saveInsightsLimit()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:var(--sans)">
           <option value="5">Top 5</option>
           <option value="10">Top 10</option>
@@ -1427,7 +1434,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.84 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.85 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1522,7 +1529,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.84";
+var VERSION = "0.7.85";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5280,6 +5287,43 @@ function loadInsightsLimitUI(){
 // "Show all" / "Back to top 5" footer links — flip the selector + persist.
 function _insShowAll(){ var el=G('insLimit'); if(el){el.value='0';} saveInsightsLimit(); }
 function _insShowTop(n){ var el=G('insLimit'); if(el){el.value=String(n);} saveInsightsLimit(); }
+
+// ── "Suggested Add" MODE ──────────────────────────────────────────────
+// 'nudge'  = fixed per-stock illustration (~5% of portfolio / $1k each).
+// 'plan'   = allocate a total budget across the shown picks, weighted by
+//            score (favors the safe/efficient ones), to close the goal gap.
+// Persisted in prefs.insMode + prefs.insPlanBudget, synced cross-device.
+function _insMode(){ var p=loadPrefs(); return p.insMode==='plan' ? 'plan' : 'nudge'; }
+function saveInsMode(){
+  var el=G('insMode'); if(!el) return;
+  var p=loadPrefs(); p.insMode = (el.value==='plan') ? 'plan' : 'nudge'; savePrefs(p);
+  var wrap=G('insPlanBudgetWrap'); if(wrap) wrap.style.display = (p.insMode==='plan') ? 'inline-flex' : 'none';
+  renderInsights();
+}
+// Returns the plan budget: the user's override if set (>0), else the passed
+// default (amount needed to close the gap at the score-weighted blend).
+function _insPlanBudget(defaultNeeded){
+  var p=loadPrefs();
+  var b=parseFloat(p.insPlanBudget);
+  return (b && b>0) ? b : (defaultNeeded||0);
+}
+function saveInsPlanBudget(){
+  var el=G('insPlanBudget'); if(!el) return;
+  var p=loadPrefs();
+  var v=parseFloat(el.value);
+  p.insPlanBudget = (v && v>0) ? Math.round(v) : 0; // 0/blank = auto (needed-to-close)
+  savePrefs(p);
+  renderInsights();
+}
+// Sync the mode selector + budget input + budget visibility from prefs.
+function loadInsModeUI(){
+  var el=G('insMode'); var p=loadPrefs();
+  var mode = p.insMode==='plan' ? 'plan' : 'nudge';
+  if(el) el.value = mode;
+  var wrap=G('insPlanBudgetWrap'); if(wrap) wrap.style.display = (mode==='plan') ? 'inline-flex' : 'none';
+  var bEl=G('insPlanBudget');
+  if(bEl){ var b=parseFloat(p.insPlanBudget); bEl.value = (b && b>0) ? String(b) : ''; }
+}
 // Render the Insights tab content. Driven by render() (refreshes whenever
 // the rest of the portfolio re-renders) and by the filter checkboxes.
 function renderInsights(){
@@ -5290,13 +5334,50 @@ function renderInsights(){
     body.innerHTML = '<div class="muted" style="text-align:center;padding:30px;font-size:12.5px">No dividend stocks match the current filters. Add dividend tickers to your portfolio (or relax the filters above) to see expansion suggestions.</div>';
     return;
   }
-  // Compute the shown slice + its combined suggested-add income UP FRONT so
-  // the goal-progress block can report what the visible picks would add
-  // together (each row's "Suggested Add" is only a modest per-stock amount;
-  // users reasonably wonder how the few add up against the goal gap).
+  // Compute the shown slice UP FRONT so the goal-progress block can report
+  // what the visible picks would add together.
   var _limit = _insLimit();
   var _shown = (_limit > 0) ? rows.slice(0, _limit) : rows;
-  var _shownGain = _shown.reduce(function(s,r){ return s + (r.addAnnualGain||0); }, 0);
+  // Mode: 'nudge' (fixed ~5%/$1k per stock) or 'plan' (allocate a budget
+  // across the shown picks weighted by score to close the goal gap). We
+  // attach uiShares/uiGain/uiBudget to each shown row so the card + detail
+  // rendering below is mode-agnostic.
+  var _mode = _insMode();
+  var _planBudget = 0, _planNeeded = 0;
+  if (_mode === 'plan') {
+    // Score-weighted allocation. Proportions are fixed by score, so the
+    // plan's blended yield is independent of total budget — which lets us
+    // solve for the budget that exactly closes the gap.
+    var _sumScore = _shown.reduce(function(s,r){ return s + Math.max(1, r.score); }, 0) || 1;
+    var _blendY = _shown.reduce(function(s,r){
+      var w = Math.max(1, r.score) / _sumScore;
+      var y = r.price > 0 ? (r.perShareDiv / r.price) : 0; // decimal yield
+      return s + w * y;
+    }, 0);
+    _planNeeded = (data.goalGap > 0 && _blendY > 0) ? (data.goalGap / _blendY) : 0;
+    // Round the default "needed" budget up to a clean $100 so it reads nicely
+    if (_planNeeded > 0) _planNeeded = Math.ceil(_planNeeded / 100) * 100;
+    _planBudget = _insPlanBudget(_planNeeded);
+    // Fallback: no goal gap to target AND no user budget → spread ~10% of the
+    // portfolio so the plan still shows an actionable allocation instead of $0s.
+    if (_planBudget <= 0) _planBudget = Math.max(1000, Math.round((data.totalValue||0) * 0.10));
+    // Surface the effective auto figure as the input's placeholder so the user
+    // sees a sensible starting number when they haven't entered their own.
+    var _bEl = G('insPlanBudget');
+    if (_bEl) _bEl.placeholder = 'auto ≈ ' + Math.round(_planNeeded > 0 ? _planNeeded : _planBudget).toLocaleString();
+    _shown.forEach(function(r){
+      var w = Math.max(1, r.score) / _sumScore;
+      var alloc = _planBudget * w;
+      r.uiBudget = alloc;
+      r.uiShares = r.price > 0 ? alloc / r.price : 0;
+      r.uiGain = r.uiShares * r.perShareDiv;
+    });
+  } else {
+    _shown.forEach(function(r){
+      r.uiBudget = r.addBudget; r.uiShares = r.addShares; r.uiGain = r.addAnnualGain;
+    });
+  }
+  var _shownGain = _shown.reduce(function(s,r){ return s + (r.uiGain||0); }, 0);
   // Summary stats up top — Goal Status gets its own wider block with an
   // actual progress bar instead of a stat-style line of text.
   var html = '<div class="ins-summary">';
@@ -5315,7 +5396,13 @@ function renderInsights(){
     html += '</div>';
     html += '<div class="ins-goal-bar"><div class="'+fillCls+'" style="width:'+pct.toFixed(1)+'%"></div></div>';
     var _gapClosePct = data.goalGap>0 ? Math.min(100,(_shownGain/data.goalGap)*100) : 0;
-    var _notReachedFoot = '<strong>'+fm(data.goalGap)+'</strong> to go · the '+_shown.length+' pick'+(_shown.length!==1?'s':'')+' below would add ≈<strong style="color:var(--green)">'+fm(_shownGain)+'/yr</strong> combined (~'+_gapClosePct.toFixed(0)+'% of the gap) at the suggested add size';
+    var _notReachedFoot;
+    if (_mode === 'plan') {
+      var _planTotal = _shown.reduce(function(s,r){ return s + (r.uiBudget||0); }, 0);
+      _notReachedFoot = '<strong>'+fm(data.goalGap)+'</strong> to go · this plan invests <strong>'+fm(_planTotal)+'</strong> across the '+_shown.length+' pick'+(_shown.length!==1?'s':'')+' below → <strong style="color:var(--green)">+'+fm(_shownGain)+'/yr</strong> (~'+_gapClosePct.toFixed(0)+'% of the gap)';
+    } else {
+      _notReachedFoot = '<strong>'+fm(data.goalGap)+'</strong> to go · the '+_shown.length+' pick'+(_shown.length!==1?'s':'')+' below would add ≈<strong style="color:var(--green)">+'+fm(_shownGain)+'/yr</strong> combined (~'+_gapClosePct.toFixed(0)+'% of the gap) at the suggested add size';
+    }
     html += '<div class="ins-goal-foot">' + (reached ? '🎉 <strong>Goal reached</strong> — every additional dividend is gravy.' : _notReachedFoot) + '</div>';
   } else {
     html += '<div class="ins-goal-empty">';
@@ -5336,7 +5423,11 @@ function renderInsights(){
   html += '<span style="text-align:right">Yield</span>';
   html += '<span style="text-align:right">Annual Income</span>';
   html += '<span>Why</span>';
-  html += '<span style="text-align:right">Suggested Add <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">A sample buy of <strong>~5% of your portfolio value (min $1,000)</strong> in this stock, and the extra dividend it would throw off per year.<br><br>It\'s a <strong>fixed, modest illustration per stock</strong> — not sized to close your whole goal on its own. Add to several of these (or scale the amount up) to close the gap faster. The combined figure for the shown picks is in the Goal Progress box above.</span></span></span>';
+  var _addColLabel = (_mode==='plan') ? 'Plan Allocation' : 'Suggested Add';
+  var _addColTip = (_mode==='plan')
+    ? 'Your total budget spread across the shown picks, <strong>weighted by each stock\'s score</strong> (so safer, more efficient picks get more) — and the shares + yearly dividend each slice would add. Adjust the budget up top; leave it blank to auto-size it to exactly close your remaining goal gap.'
+    : 'A sample buy of <strong>~5% of your portfolio value (min $1,000)</strong> in this stock, and the extra dividend it would throw off per year.<br><br>It\'s a <strong>fixed, modest illustration per stock</strong> — not sized to close your whole goal on its own. Switch the mode up top to <strong>Plan to goal</strong> to spread a budget across the picks instead.';
+  html += '<span style="text-align:right">'+_addColLabel+' <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">'+_addColTip+'</span></span></span>';
   html += '<span style="text-align:right">Score <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">Score (0&ndash;100) is a <strong>weighted blend</strong> of five factors, each scored 0&ndash;100 then multiplied by its weight and summed:<br>&bull; Yield &mdash; <strong>30%</strong><br>&bull; Payout safety (dividend rating + cash-flow coverage) &mdash; <strong>25%</strong><br>&bull; Tax efficiency (qualified vs. ordinary) &mdash; <strong>15%</strong><br>&bull; Sector diversification &mdash; <strong>15%</strong><br>&bull; Goal impact (income added per $1k) &mdash; <strong>15%</strong><br>Higher = a stronger fit to add to. Ranks re-sort automatically as prices &amp; data update.</span></span></span>';
   html += '</div>';
   // Ranked card list — top-N slice (_shown) computed near the top so the
@@ -5359,7 +5450,7 @@ function renderInsights(){
       html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-zero">—</span></span>';
     }
     html += '<span class="ins-reason">'+r.reason+'</span>';
-    html += '<span class="ins-rec">+'+fmSh(Math.round(r.addShares))+' sh<br><span style="color:var(--green);font-weight:700">+'+fm(r.addAnnualGain)+'/yr</span></span>';
+    html += '<span class="ins-rec">+'+fmSh(Math.round(r.uiShares))+' sh<br><span style="color:var(--green);font-weight:700">+'+fm(r.uiGain)+'/yr</span></span>';
     html += '<span class="ins-score"><span class="ins-score-num">'+r.score+'</span><span class="ins-score-bar"><span class="ins-score-fill" style="width:'+r.score+'%"></span></span></span>';
     // Detail row (revealed on click)
     html += '<div class="ins-detail">';
@@ -5389,13 +5480,14 @@ function renderInsights(){
     html += '</div>';
     var goalLine = '';
     if(r.goalAmt>0 && r.goalGap>0){
-      var gapClose = Math.min(100, (r.addAnnualGain/r.goalGap)*100);
-      goalLine = ' That\'s <strong>'+gapClose.toFixed(1)+'% of your '+fm(r.goalGap)+' goal gap</strong> closed in one move.';
+      var gapClose = Math.min(100, (r.uiGain/r.goalGap)*100);
+      goalLine = ' That\'s <strong>'+gapClose.toFixed(1)+'% of your '+fm(r.goalGap)+' goal gap</strong>'+(_mode==='plan'?' from this pick alone.':' closed in one move.');
     }
     var posDescr = r.shares>0 ? 'You currently hold <strong>'+fmSh(r.shares)+' shares</strong> ('+r.posPct.toFixed(1)+'% of portfolio, '+fm(r.annualIncome)+'/yr)' : 'You don\'t hold any shares of this yet.';
     html += '<div class="ins-detail-text">';
     html += posDescr+'. ';
-    html += 'Adding ~<strong>'+fmSh(Math.round(r.addShares))+' shares</strong> at the current '+fm(r.price)+'/share ('+fm(r.addBudget)+' total) would generate an additional <strong style="color:var(--green)">'+fm(r.addAnnualGain)+'/year</strong>.'+goalLine;
+    var _addVerb = (_mode==='plan') ? 'This plan allocates' : 'Adding';
+    html += _addVerb+' ~<strong>'+fmSh(Math.round(r.uiShares))+' shares</strong> at the current '+fm(r.price)+'/share ('+fm(r.uiBudget)+' total) would generate an additional <strong style="color:var(--green)">'+fm(r.uiGain)+'/year</strong>.'+goalLine;
     // Company cash flow line — only shown when we have data. Format dollars
     // in millions for readability (most large caps report in thousands;
     // AlphaVantage gives raw, so we display as $XB / $XM).
@@ -6024,6 +6116,7 @@ function sTab(id){
   // fetches are gated to the explicit "Refresh fundamentals" button so we
   // don't burn the user's 25/day AV quota just by browsing tabs.
   if(id==='insights' && typeof loadInsightsLimitUI==='function'){ try{loadInsightsLimitUI()}catch(e){} }
+  if(id==='insights' && typeof loadInsModeUI==='function'){ try{loadInsModeUI()}catch(e){} }
   if(id==='insights' && typeof getFundamentals==='function'){
     try {
       tks.filter(isDiv).forEach(function(t){
@@ -8501,6 +8594,7 @@ if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedSta
 // Sync the Insights "Show top N" selector with the saved preference so the
 // first render (and the dropdown) reflect the user's choice, not the HTML default.
 if (typeof loadInsightsLimitUI === 'function') loadInsightsLimitUI();
+if (typeof loadInsModeUI === 'function') loadInsModeUI();
 // Restore last-viewed sub-tab per parent (currently just Dividends:
 // Stocks / Increases / Specials). Cloud-synced via the prefs merge.
 try {
