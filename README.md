@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.82**
+**Current Version: v0.7.83**
 
 ---
 
 ## Changelog
+
+### v0.7.83 — 2026-07-11 — 🎯 Insights: focus on the top picks, not a 44-row leaderboard
+- **The Insights tab now shows the top 5 picks by default** instead of ranking every dividend holding. For a "where to expand" recommendation, a wall of 44 cards buries the signal — the point is *which few* to add to for efficient, safe growth. The full set is still ranked behind the scenes; you're just shown the best ones first.
+- **New "Show" selector** in the Insights header: **Top 5** (default) · **Top 10** · **All**. Your choice persists in `prefs.insightsLimit` and syncs across devices.
+- **"Showing top 5 of 44 · Show all 44 →"** footer under the cards, with a one-click link to expand to the full list (and a "← Back to top 5" link when viewing all). No need to leave the tab.
+- Intro copy reworded to say it surfaces the **top picks** that most efficiently close your dividend-goal gap while keeping payout safety high. The summary stats still report the full count ("Stocks ranked: 44") so you know the whole portfolio was evaluated.
 
 ### v0.7.82 — 2026-07-11 — 💡 Insights: explain the weighted score
 - **Added an ⓘ tooltip to the "Score" column header** on the Insights tab explaining exactly how the composite is built: Score (0–100) = a weighted blend of five factors, each scored 0–100 then multiplied by its weight and summed — **Yield 30% · Payout safety 25%** (dividend rating + cash-flow coverage) **· Tax efficiency 15% · Sector diversification 15% · Goal impact 15%** (income added per $1k). Uses the app's existing delegated hover-tooltip.

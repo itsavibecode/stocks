@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.82</title>
+<title>Stockfolio v0.7.83</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1091,9 +1091,14 @@ body.text-xl .sc .scv{font-size:24px}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
       <div>
         <h3 style="margin:0;font-size:16px;font-weight:700">🎯 Insights — Where to Expand</h3>
-        <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);max-width:680px;line-height:1.55">Ranks the dividend stocks you already own by how efficiently each one would close the gap to your annual dividend goal. Score blends yield, payout safety, tax efficiency, sector concentration, and goal-impact. Click any row to see the breakdown.</p>
+        <p style="margin:4px 0 0;font-size:11.5px;color:var(--muted);max-width:680px;line-height:1.55">Surfaces the <strong>top picks</strong> among the dividend stocks you already own — the ones that would most efficiently close the gap to your annual dividend goal while keeping payout safety high. Score blends yield, payout safety, tax efficiency, sector concentration, and goal-impact. Click any row to see the breakdown.</p>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer" title="How many of the top-ranked picks to show. The full list is still ranked behind the scenes — this just focuses the view on the best few.">Show <select id="insLimit" onchange="saveInsightsLimit()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 6px;font-family:var(--sans)">
+          <option value="5">Top 5</option>
+          <option value="10">Top 10</option>
+          <option value="0">All</option>
+        </select></label>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insTaxOnly" onchange="renderInsights()"> Tax-advantaged only</label>
         <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer"><input type="checkbox" id="insHideTop" onchange="renderInsights()" checked> Hide already-large positions (&gt;15% of portfolio)</label>
         <button class="btn btn-outline" onclick="refreshAllFundamentals(true)" style="font-size:10.5px;padding:5px 10px" title="Re-fetch operating cash flow + dividend coverage from AlphaVantage. Throttles to ~1/13s to stay under the free-tier rate limit. Results write to a shared Firestore cache so future hits (you on mobile, you tomorrow) don't re-fetch.">↻ Refresh fundamentals</button>
@@ -1422,7 +1427,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.82 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.83 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1517,7 +1522,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.82";
+var VERSION = "0.7.83";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5248,6 +5253,33 @@ function buildInsightsRows(){
   rows.sort(function(a,b){return b.score-a.score});
   return { rows: rows, totalValue: totalValue, goalAmt: goalAmt, goalGap: goalGap, currentAnnualIncome: currentAnnualIncome };
 }
+// How many top-ranked Insights picks to show. Default 5 (the "where to
+// expand" view is meant to surface the best few, not a full leaderboard).
+// 0 = show all. Persisted in prefs.insightsLimit, synced cross-device.
+function _insLimit(){
+  // prefs is the source of truth (avoids an init-order dependency where the
+  // first render() runs before the selector is synced). The selector just
+  // writes to prefs via saveInsightsLimit().
+  var p = loadPrefs();
+  return (p.insightsLimit == null) ? 5 : p.insightsLimit;
+}
+function saveInsightsLimit(){
+  var el = G('insLimit'); if(!el) return;
+  var p = loadPrefs();
+  p.insightsLimit = parseInt(el.value, 10) || 0;
+  savePrefs(p);
+  renderInsights();
+}
+// Set the selector from the saved pref (called at init + on tab open so the
+// dropdown reflects the user's choice even before they touch it).
+function loadInsightsLimitUI(){
+  var el = G('insLimit'); if(!el) return;
+  var p = loadPrefs();
+  el.value = String((p.insightsLimit == null) ? 5 : p.insightsLimit);
+}
+// "Show all" / "Back to top 5" footer links — flip the selector + persist.
+function _insShowAll(){ var el=G('insLimit'); if(el){el.value='0';} saveInsightsLimit(); }
+function _insShowTop(n){ var el=G('insLimit'); if(el){el.value=String(n);} saveInsightsLimit(); }
 // Render the Insights tab content. Driven by render() (refreshes whenever
 // the rest of the portfolio re-renders) and by the filter checkboxes.
 function renderInsights(){
@@ -5298,8 +5330,14 @@ function renderInsights(){
   html += '<span style="text-align:right">Suggested Add</span>';
   html += '<span style="text-align:right">Score <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">Score (0&ndash;100) is a <strong>weighted blend</strong> of five factors, each scored 0&ndash;100 then multiplied by its weight and summed:<br>&bull; Yield &mdash; <strong>30%</strong><br>&bull; Payout safety (dividend rating + cash-flow coverage) &mdash; <strong>25%</strong><br>&bull; Tax efficiency (qualified vs. ordinary) &mdash; <strong>15%</strong><br>&bull; Sector diversification &mdash; <strong>15%</strong><br>&bull; Goal impact (income added per $1k) &mdash; <strong>15%</strong><br>Higher = a stronger fit to add to. Ranks re-sort automatically as prices &amp; data update.</span></span></span>';
   html += '</div>';
+  // Focused view: by default show only the top N picks — the "where to
+  // expand" use case wants the best few, not a 44-row leaderboard. The full
+  // set is still ranked in `rows`; the Show selector (insLimit) just controls
+  // how many cards render. 0 = show all.
+  var _limit = _insLimit();
+  var _shown = (_limit > 0) ? rows.slice(0, _limit) : rows;
   // Ranked card list
-  rows.forEach(function(r, i){
+  _shown.forEach(function(r, i){
     var rankCls = i<3?'top':'';
     html += '<div class="ins-card" id="ins-card-'+r.ticker+'" onclick="toggleInsightCard(\''+r.ticker+'\')">';
     html += '<span class="ins-rank '+rankCls+'">#'+(i+1)+'</span>';
@@ -5368,6 +5406,14 @@ function renderInsights(){
     html += '</div>'; // /ins-detail
     html += '</div>'; // /ins-card
   });
+  // "Showing top N of M" footer — only when the list is actually trimmed.
+  // The "Show all" link flips the selector to All and re-renders so power
+  // users can still see the full ranked set without leaving the tab.
+  if (_limit > 0 && rows.length > _limit) {
+    html += '<div style="text-align:center;margin-top:12px;font-size:11.5px;color:var(--muted)">Showing the top <strong style="color:var(--text)">'+_shown.length+'</strong> of <strong style="color:var(--text)">'+rows.length+'</strong> ranked · <a href="#" onclick="event.preventDefault();_insShowAll()" style="color:var(--accent2);font-weight:600">Show all '+rows.length+' &rarr;</a></div>';
+  } else if (_limit === 0 && rows.length > 10) {
+    html += '<div style="text-align:center;margin-top:12px;font-size:11.5px;color:var(--muted)">Showing all <strong style="color:var(--text)">'+rows.length+'</strong> ranked · <a href="#" onclick="event.preventDefault();_insShowTop(5)" style="color:var(--accent2);font-weight:600">&larr; Back to top 5</a></div>';
+  }
   body.innerHTML = html;
   // Re-apply the .expanded class to any cards the user had open before the
   // render. Without this they snap shut every time a fundamentals fetch
@@ -5972,6 +6018,7 @@ function sTab(id){
   // from the SHARED Firestore collection only (free reads). AlphaVantage
   // fetches are gated to the explicit "Refresh fundamentals" button so we
   // don't burn the user's 25/day AV quota just by browsing tabs.
+  if(id==='insights' && typeof loadInsightsLimitUI==='function'){ try{loadInsightsLimitUI()}catch(e){} }
   if(id==='insights' && typeof getFundamentals==='function'){
     try {
       tks.filter(isDiv).forEach(function(t){
@@ -8446,6 +8493,9 @@ updateRecheckTimeUI();
 // tab's section headers are present in the DOM (they're inline HTML,
 // always present, so this is safe immediately after init).
 if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedState();
+// Sync the Insights "Show top N" selector with the saved preference so the
+// first render (and the dropdown) reflect the user's choice, not the HTML default.
+if (typeof loadInsightsLimitUI === 'function') loadInsightsLimitUI();
 // Restore last-viewed sub-tab per parent (currently just Dividends:
 // Stocks / Increases / Specials). Cloud-synced via the prefs merge.
 try {
