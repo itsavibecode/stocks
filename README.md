@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.87**
+**Current Version: v0.7.88**
 
 ---
 
 ## Changelog
+
+### v0.7.88 — 2026-07-11 — 💵 Insights: show the dollar cost per pick
+- **Each Insights pick's add cell now shows the dollar cost of the suggested buy**, not just the shares + income. So the column reads e.g. "**+40 sh $8,050** · +$322/yr" — you can see exactly how much you'd need to invest for those shares, per stock, without expanding the card.
+- Especially useful in **Plan to goal** mode: each row now shows the shares, the allocated dollar cost (which sums to your total budget), and the yearly income that slice adds. The cost is the score-weighted allocation = shares × price, so it's precisely "the total needed to buy that many shares." Also shown in Nudge mode (the ~5%/$1k amount).
+- Column tooltip updated to note the three figures (shares · cost · yearly dividend).
 
 ### v0.7.87 — 2026-07-11 — 🏷️ Version badge under the logo
 - **The semantic version now shows in the header, under the "Stockfolio" name/logo** (small mono accent text, e.g. `v0.7.87`). Populated from the single `VERSION` constant at init so it's always accurate — no extra place to bump each release. The `.logo-ver` style already existed; this just wires it into the DOM.

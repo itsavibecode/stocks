@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.87</title>
+<title>Stockfolio v0.7.88</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -163,6 +163,7 @@ input,button,select{font-family:inherit}
 .ins-score-bar{width:90px;height:6px;background:var(--card3);border-radius:3px;overflow:hidden}
 .ins-score-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .25s}
 .ins-rec{font-size:11px;font-family:var(--mono);color:var(--text);text-align:right;font-weight:600}
+.ins-rec-cost{color:var(--muted);font-weight:400;font-size:10px}
 .ins-detail{grid-column:1/-1;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none}
 .ins-card.expanded .ins-detail{display:block}
 .ins-comp-grid{display:grid;grid-template-columns:140px 1fr 60px;gap:6px 12px;font-size:11px;align-items:center;margin-bottom:10px}
@@ -1437,7 +1438,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.87 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.88 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1532,7 +1533,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.87";
+var VERSION = "0.7.88";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5428,8 +5429,8 @@ function renderInsights(){
   html += '<span>Why</span>';
   var _addColLabel = (_mode==='plan') ? 'Plan Allocation' : 'Suggested Add';
   var _addColTip = (_mode==='plan')
-    ? 'Your total budget spread across the shown picks, <strong>weighted by each stock\'s score</strong> (so safer, more efficient picks get more) — and the shares + yearly dividend each slice would add. Adjust the budget up top; leave it blank to auto-size it to exactly close your remaining goal gap.'
-    : 'A sample buy of <strong>~5% of your portfolio value (min $1,000)</strong> in this stock, and the extra dividend it would throw off per year.<br><br>It\'s a <strong>fixed, modest illustration per stock</strong> — not sized to close your whole goal on its own. Switch the mode up top to <strong>Plan to goal</strong> to spread a budget across the picks instead.';
+    ? 'Your total budget spread across the shown picks, <strong>weighted by each stock\'s score</strong> (so safer, more efficient picks get more). Each row shows the <strong>shares to buy</strong>, the <strong>dollar cost of that buy</strong>, and the <strong>yearly dividend</strong> it adds. Adjust the budget up top; leave it blank to auto-size it to exactly close your remaining goal gap.'
+    : 'A sample buy of <strong>~5% of your portfolio value (min $1,000)</strong> in this stock — shown as the shares to buy, the dollar cost, and the extra dividend it would throw off per year.<br><br>It\'s a <strong>fixed, modest illustration per stock</strong> — not sized to close your whole goal on its own. Switch the mode up top to <strong>Plan to goal</strong> to spread a budget across the picks instead.';
   html += '<span style="text-align:right">'+_addColLabel+' <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">'+_addColTip+'</span></span></span>';
   html += '<span style="text-align:right">Score <span class="info-tag" style="text-transform:none;color:var(--accent2);font-weight:700;font-size:11px;vertical-align:middle">&#9432;<span class="info-tip" style="text-align:left;font-weight:400">Score (0&ndash;100) is a <strong>weighted blend</strong> of five factors, each scored 0&ndash;100 then multiplied by its weight and summed:<br>&bull; Yield &mdash; <strong>30%</strong><br>&bull; Payout safety (dividend rating + cash-flow coverage) &mdash; <strong>25%</strong><br>&bull; Tax efficiency (qualified vs. ordinary) &mdash; <strong>15%</strong><br>&bull; Sector diversification &mdash; <strong>15%</strong><br>&bull; Goal impact (income added per $1k) &mdash; <strong>15%</strong><br>Higher = a stronger fit to add to. Ranks re-sort automatically as prices &amp; data update.</span></span></span>';
   html += '</div>';
@@ -5458,7 +5459,11 @@ function renderInsights(){
       html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-zero">—</span>'+_shLine+'</span>';
     }
     html += '<span class="ins-reason">'+r.reason+'</span>';
-    html += '<span class="ins-rec">+'+fmSh(Math.round(r.uiShares))+' sh<br><span style="color:var(--green);font-weight:700">+'+fm(r.uiGain)+'/yr</span></span>';
+    // Suggested/Plan add cell: shares to buy, the $ cost of that buy (the
+    // amount you'd need to invest for those shares), and the annual income
+    // it adds. uiBudget is the allocation = shares × price, so it's exactly
+    // "the total needed to buy that many shares" the user asked for.
+    html += '<span class="ins-rec">+'+fmSh(Math.round(r.uiShares))+' sh <span class="ins-rec-cost">'+fm(r.uiBudget)+'</span><br><span style="color:var(--green);font-weight:700">+'+fm(r.uiGain)+'/yr</span></span>';
     html += '<span class="ins-score"><span class="ins-score-num">'+r.score+'</span><span class="ins-score-bar"><span class="ins-score-fill" style="width:'+r.score+'%"></span></span></span>';
     // Detail row (revealed on click)
     html += '<div class="ins-detail">';
