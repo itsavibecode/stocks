@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.86</title>
+<title>Stockfolio v0.7.87</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -870,6 +870,7 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
         <div>
           <div class="logo-title">Stockfolio</div>
+          <div class="logo-ver" id="logoVer"></div>
           <div class="logo-sub" id="hSub"></div>
         </div>
       </div>
@@ -1436,7 +1437,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.86 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.87 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1531,7 +1532,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.86";
+var VERSION = "0.7.87";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -8587,6 +8588,9 @@ if (IS_DEMO) {
 load();
 loadApiKey(); // load API key from prefs before any fetches; also seeds stApiState.userSecret
 loadThemePrefs();
+// Show the semver under the logo/name in the header — driven by the single
+// VERSION constant so it's always accurate (no extra manual bump location).
+(function(){ var lv=document.getElementById('logoVer'); if(lv) lv.textContent='v'+VERSION; })();
 ss['tN']={c:'date',d:'desc'};
 render();
 loadPrefUI();

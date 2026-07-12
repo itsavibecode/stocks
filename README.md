@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.86**
+**Current Version: v0.7.87**
 
 ---
 
 ## Changelog
+
+### v0.7.87 — 2026-07-11 — 🏷️ Version badge under the logo
+- **The semantic version now shows in the header, under the "Stockfolio" name/logo** (small mono accent text, e.g. `v0.7.87`). Populated from the single `VERSION` constant at init so it's always accurate — no extra place to bump each release. The `.logo-ver` style already existed; this just wires it into the DOM.
 
 ### v0.7.86 — 2026-07-11 — 📇 Insights: show current shares held on each pick
 - **Each Insights pick now shows how many shares you currently hold**, as a small line right under its Annual Income (the "current annual" figure). So next to *what this pick pays you now* and *what adding more would do*, you can see *how much of it you already own* — no need to expand the card.
