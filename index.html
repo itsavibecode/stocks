@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.85</title>
+<title>Stockfolio v0.7.86</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -155,6 +155,8 @@ input,button,select{font-family:inherit}
 .ins-cashflow-yr{font-size:11.5px;color:var(--green);font-weight:700}
 .ins-cashflow-mo{font-size:9.5px;color:var(--muted)}
 .ins-cashflow-zero{color:var(--muted);font-size:11px}
+.ins-cashflow-sh{font-size:9.5px;color:var(--text2);margin-top:1px}
+.ins-cashflow-sh.none{color:var(--muted);font-style:italic}
 .ins-reason{font-size:11.5px;color:var(--text2);line-height:1.45;min-width:0}
 .ins-score{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-family:var(--mono)}
 .ins-score-num{font-size:14px;font-weight:700;color:var(--accent)}
@@ -1434,7 +1436,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.85 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.86 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1529,7 +1531,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.85";
+var VERSION = "0.7.86";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5444,10 +5446,15 @@ function renderInsights(){
     // there's nothing flowing yet. Title attribute carries the breakdown.
     var monthlyAvg = r.annualIncome / 12;
     var cfTitle = r.shares>0 ? (fmSh(r.shares)+' shares × $'+r.perShareDiv.toFixed(2)+'/yr per share = '+fm(r.annualIncome)+'/yr') : 'No shares held — current cashflow is $0';
+    // Current shares held — shown under the annual income so you can see how
+    // much of each pick you already own right next to what it pays now.
+    var _shLine = r.shares>0
+      ? '<span class="ins-cashflow-sh">'+fmSh(r.shares)+' sh held</span>'
+      : '<span class="ins-cashflow-sh none">0 sh · new</span>';
     if(r.annualIncome > 0){
-      html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-yr">'+fm(r.annualIncome)+'/yr</span><span class="ins-cashflow-mo">'+fm(monthlyAvg)+'/mo avg</span></span>';
+      html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-yr">'+fm(r.annualIncome)+'/yr</span><span class="ins-cashflow-mo">'+fm(monthlyAvg)+'/mo avg</span>'+_shLine+'</span>';
     } else {
-      html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-zero">—</span></span>';
+      html += '<span class="ins-cashflow" title="'+cfTitle.replace(/"/g,'&quot;')+'"><span class="ins-cashflow-zero">—</span>'+_shLine+'</span>';
     }
     html += '<span class="ins-reason">'+r.reason+'</span>';
     html += '<span class="ins-rec">+'+fmSh(Math.round(r.uiShares))+' sh<br><span style="color:var(--green);font-weight:700">+'+fm(r.uiGain)+'/yr</span></span>';

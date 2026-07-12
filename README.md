@@ -1,10 +1,14 @@
 # Stockfolio
 
-**Current Version: v0.7.85**
+**Current Version: v0.7.86**
 
 ---
 
 ## Changelog
+
+### v0.7.86 — 2026-07-11 — 📇 Insights: show current shares held on each pick
+- **Each Insights pick now shows how many shares you currently hold**, as a small line right under its Annual Income (the "current annual" figure). So next to *what this pick pays you now* and *what adding more would do*, you can see *how much of it you already own* — no need to expand the card.
+- Picks you don't hold yet read **"0 sh · new"** (italic/muted) so a would-be new position is obvious at a glance. Held positions read **"N sh held."** Visible in both Nudge and Plan-to-goal modes, on desktop and mobile.
 
 ### v0.7.85 — 2026-07-11 — 🧭 Insights: "Plan to goal" mode (allocate a budget across picks)
 - **New Mode selector on the Insights tab: "Nudge" vs "Plan to goal."** You choose which "add" figure the tab shows:
