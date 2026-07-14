@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.89**
+**Current Version: v0.7.90**
 
 ---
 
 ## Changelog
+
+### v0.7.90 — 2026-07-11 — 🗞️ Mover cards slide down today's news on click
+- **Clicking the Biggest Gainer or Biggest Loser card now slides down that ticker's news** right below the cards — a smooth max-height reveal with the ticker's headlines, sources, timestamps, and "Read full article" links.
+- **No extra API call** — it renders from `nwH()` / `getNews()`, which read the already-fetched `liveNews` (falling back to the bundled `FALLBACK_NEWS`). The same news already shown in the News table, just surfaced for the clicked mover.
+- The clicked card gets an accent outline + its caret flips (▼ → ▲); click again (or the ✕ in the panel header) to close. If prices shift so the open ticker is no longer a shown mover, the panel closes automatically. Opening scrolls the panel into view.
 
 ### v0.7.89 — 2026-07-11 — 📈📉 News tab: Today's Biggest Gainer & Loser cards
 - **Two cards at the top of the News tab** show today's biggest gainer and biggest loser across your tracked tickers, by day-change percent. Each card shows the company logo, ticker + sector, the day-change % (color-coded), and current price.
