@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.88</title>
+<title>Stockfolio v0.7.89</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -213,6 +213,26 @@ input,button,select{font-family:inherit}
 @keyframes tk-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 body.compact .tk-ticker{height:28px}
 @media(max-width:640px){.tk-ticker{height:28px}.tk-ticker-item{font-size:10.5px;padding:0 10px}}
+/* Today's biggest gainer / loser cards at the top of the News tab. Data comes
+   from liveChanges[] (day-change %) — the same numbers the ticker tape uses. */
+.movers-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+@media(max-width:560px){.movers-row{grid-template-columns:1fr}}
+.mover-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;min-width:0}
+.mover-card.gain{border-left:3px solid var(--green)}
+.mover-card.lose{border-left:3px solid var(--red)}
+.mover-card.empty{grid-column:1/-1;justify-content:center;color:var(--muted);font-size:11.5px;font-style:italic;border-left:1px solid var(--border)}
+.mover-card.solo{grid-column:1/-1}
+.mover-logo{width:38px;height:38px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--card2)}
+.mover-logo img{width:100%;height:100%;object-fit:contain}
+.mover-body{min-width:0;flex:1}
+.mover-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mover-tk{font-family:var(--mono);font-weight:700;font-size:16px;line-height:1.1}
+.mover-tk .mover-sec{font-family:var(--sans);font-weight:400;font-size:10px;color:var(--muted);margin-left:6px}
+.mover-nums{text-align:right;flex-shrink:0}
+.mover-pct{font-family:var(--mono);font-weight:800;font-size:18px;line-height:1.1}
+.mover-card.gain .mover-pct{color:var(--green)}
+.mover-card.lose .mover-pct{color:var(--red)}
+.mover-px{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
 .header-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 12px;text-align:right}
 .stat-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
@@ -942,6 +962,9 @@ body.text-xl .sc .scv{font-size:24px}
         <span id="nRefreshTime" class="muted" style="font-size:9px;text-align:center;font-family:var(--mono)"></span>
       </div>
     </div>
+    <!-- Today's biggest gainer / loser cards — populated by renderNewsMovers()
+         from liveChanges[] (same day-change data as the ticker tape). -->
+    <div class="movers-row" id="newsMovers"></div>
     <div class="table-wrap dt"><table id="tN"><thead><tr>
       <th data-col="ticker" onclick="ds('tN','ticker')">Ticker <span class="sa">&#9660;</span></th>
       <th data-col="date" onclick="ds('tN','date')" class="sorted">Date <span class="sa">&#9660;</span></th>
@@ -1438,7 +1461,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.88 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.89 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1533,7 +1556,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.88";
+var VERSION = "0.7.89";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3801,6 +3824,8 @@ function render(){
   if(ti>0){G('aiB').style.display='';G('aiV').textContent=fm(ti)}else G('aiB').style.display='none';
   // Scrolling portfolio ticker (uses last cached prices, no extra API calls)
   renderPortfolioTicker();
+  // Today's biggest gainer / loser cards at the top of the News tab (same data)
+  if(typeof renderNewsMovers==='function') try{renderNewsMovers()}catch(e){}
   // Insights tab — recomputes ranking when portfolio / prices / DV change
   if(typeof renderInsights==='function') try{renderInsights()}catch(e){console.error('Insights render error:',e)}
   // Re-sync sticky offsets after any DOM changes — header height can grow
@@ -4976,6 +5001,44 @@ function renderPortfolioTicker(){
   // Re-measure since the ticker just toggled visibility — the table thead's
   // sticky-top depends on whether the ticker is shown.
   if(typeof syncStickyTop==='function') syncStickyTop();
+}
+// Today's biggest gainer + loser cards at the top of the News tab. Uses the
+// same day-change data (liveChanges[]) as the ticker tape — no extra fetch.
+// Best = highest %, worst = lowest %. Colors follow each stock's actual sign
+// (so on an all-green day the "Biggest Loser" card is the weakest, still green).
+function renderNewsMovers(){
+  var el = G('newsMovers'); if(!el) return;
+  var seen = {}, cands = [];
+  tks.forEach(function(t){
+    if(seen[t]) return; seen[t]=1;
+    var px = PR[t]||0;
+    var ch = (typeof liveChanges!=='undefined' && liveChanges[t]!=null) ? liveChanges[t] : null;
+    if(px>0 && ch!=null) cands.push({tk:t, ch:ch, px:px});
+  });
+  if(cands.length===0){
+    el.innerHTML = '<div class="mover-card empty">Today\'s biggest movers appear here once live prices refresh (needs a market-data API key in Settings).</div>';
+    return;
+  }
+  cands.sort(function(a,b){ return b.ch - a.ch; });
+  var gainer = cands[0], loser = cands[cands.length-1];
+  function card(m, label, extra){
+    var dir = m.ch >= 0 ? 'gain' : 'lose';
+    var sign = m.ch >= 0 ? '+' : '';
+    var sec = (DV[m.tk] && DV[m.tk].sc && DV[m.tk].sc!=='—') ? '<span class="mover-sec">'+DV[m.tk].sc+'</span>' : '';
+    var logoUrl = 'https://img.logo.dev/ticker/'+encodeURIComponent(m.tk)+'?token='+LOGO_DEV_TOKEN+'&size=76&format=png';
+    var h = '<div class="mover-card '+dir+(extra?' '+extra:'')+'">';
+    h += '<div class="mover-logo"><img src="'+logoUrl+'" alt="" onerror="this.style.display=\'none\'"></div>';
+    h += '<div class="mover-body"><div class="mover-label">'+label+'</div><div class="mover-tk">'+m.tk+sec+'</div></div>';
+    h += '<div class="mover-nums"><div class="mover-pct">'+sign+m.ch.toFixed(2)+'%</div><div class="mover-px">'+fm(m.px)+'</div></div>';
+    h += '</div>';
+    return h;
+  }
+  // Only one ticker has change data → a single full-width card.
+  if(cands.length===1 || gainer.tk===loser.tk){
+    el.innerHTML = card(gainer, '📊 Today\'s Mover', 'solo');
+    return;
+  }
+  el.innerHTML = card(gainer, '📈 Today\'s Biggest Gainer') + card(loser, '📉 Today\'s Biggest Loser');
 }
 function setTheme(t){document.body.classList.remove('light');if(t==='light')document.body.classList.add('light');var p=loadPrefs();p.theme=t;savePrefs(p);var el=G('sTheme');if(el)el.value=t;_syncQuickToggleStates()}
 function setTextSize(s){document.body.classList.remove('text-lg','text-xl');if(s==='lg')document.body.classList.add('text-lg');if(s==='xl')document.body.classList.add('text-xl');var p=loadPrefs();p.textSize=s;savePrefs(p);var el=G('sTextSize');if(el)el.value=s;_syncQuickToggleStates()}

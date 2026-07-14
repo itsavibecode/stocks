@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.88**
+**Current Version: v0.7.89**
 
 ---
 
 ## Changelog
+
+### v0.7.89 — 2026-07-11 — 📈📉 News tab: Today's Biggest Gainer & Loser cards
+- **Two cards at the top of the News tab** show today's biggest gainer and biggest loser across your tracked tickers, by day-change percent. Each card shows the company logo, ticker + sector, the day-change % (color-coded), and current price.
+- **Reuses data you already have** — the day-change values (`liveChanges[]`) are the same ones the header ticker tape uses, so there's **no extra API call**. Updates automatically whenever prices refresh (on load, the 10-min timer, or Refresh Prices).
+- Colors follow each stock's actual sign, so on an all-green day the "Biggest Loser" card (the weakest performer) still shows green rather than a misleading red. If only one ticker has change data, a single full-width "Today's Mover" card shows; with no data yet, a muted prompt to add an API key.
 
 ### v0.7.88 — 2026-07-11 — 💵 Insights: show the dollar cost per pick
 - **Each Insights pick's add cell now shows the dollar cost of the suggested buy**, not just the shares + income. So the column reads e.g. "**+40 sh $8,050** · +$322/yr" — you can see exactly how much you'd need to invest for those shares, per stock, without expanding the card.
