@@ -1,10 +1,17 @@
 # Stockfolio
 
-**Current Version: v0.7.90**
+**Current Version: v0.7.91**
 
 ---
 
 ## Changelog
+
+### v0.7.91 — 2026-07-11 — 📉 Dividends: new "Decreases" sub-tab (cut tracking)
+- **New 📉 Decreases sub-tab** on the Dividends page, sitting between Increases and Specials. Mirrors the Increases view but for **cuts** — when a ticker's next declared payment is *lower* than its most recent regular payment.
+- Shows per cut: ticker, from → to per-share, % change, annual /sh before & after, **your annual income loss**, ex-date, pay date, and the dividend-growth streak that just broke. Sorted **deepest cut first**. Summary stats: cuts detected, total annual loss, average cut, deepest cut.
+- **Leads with a risk callout** — a cut usually signals cash-flow stress, so the tab points you to check the payout ratio and coverage in Insights before adding. (Not investment advice.)
+- **Bug fix (affects Increases too):** the "before" amount was read from `DV[t].h[0]`, which could be a **one-time special dividend**. A special sitting at the front of the history made the next regular payment look like a massive phantom cut (e.g. MSFT's $3.00 special vs. its $0.91 regular = a fake −70%). Both Increases and Decreases now use a shared `_prevRegularPayment()` helper that skips `sp:true` entries.
+- Demo seeds two cuts (BAC −23.08%, VICI −16.28% = $37.20/yr of lost income) so the tab has data to show.
 
 ### v0.7.90 — 2026-07-11 — 🗞️ Mover cards slide down today's news on click
 - **Clicking the Biggest Gainer or Biggest Loser card now slides down that ticker's news** right below the cards — a smooth max-height reveal with the ticker's headlines, sources, timestamps, and "Read full article" links.
