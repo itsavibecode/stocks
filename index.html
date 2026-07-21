@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.92</title>
+<title>Stockfolio v0.7.93</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -424,6 +424,9 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pct-detail-row{display:grid;grid-template-columns:80px 1fr auto auto;gap:10px;align-items:center;font-size:10.5px;padding:2px 0;font-family:var(--mono)}
 @media(max-width:560px){.pct-detail-row{grid-template-columns:64px 1fr auto;gap:6px}.pct-detail-row .pct-detail-badge{display:none}}
 .pct-detail-tk{font-weight:700;color:var(--text)}
+/* Color key — same hue as the ticker's bar segment, so the expand doubles
+   as the legend for the segmented bar above. */
+.pct-seg-key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;flex-shrink:0}
 .pct-detail-date{color:var(--muted)}
 .pct-detail-badge{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
 .pct-detail-badge.paid{background:var(--card3);color:var(--muted)}
@@ -1499,7 +1502,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.92 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.93 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1594,7 +1597,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.92";
+var VERSION = "0.7.93";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -4156,7 +4159,7 @@ function render(){
       var det='';
       m.entries.slice().sort(function(a,b){return a.d.localeCompare(b.d)}).forEach(function(e){
         var badge = e.up ? '<span class="pct-detail-badge up">Upcoming</span>' : '<span class="pct-detail-badge paid">Paid</span>';
-        det+='<div class="pct-detail-row"><span class="pct-detail-date">'+e.d+'</span><span><span class="pct-detail-tk">'+e.tk+'</span> <span style="color:var(--muted)">'+fmSh(e.s)+' × $'+e.a+'</span></span>'+badge+'<span class="pct-detail-total">'+fm(e.tot)+'</span></div>';
+        det+='<div class="pct-detail-row"><span class="pct-detail-date">'+e.d+'</span><span><span class="pct-seg-key" style="background:'+_pctColor(e.tk)+'"></span><span class="pct-detail-tk">'+e.tk+'</span> <span style="color:var(--muted)">'+fmSh(e.s)+' × $'+e.a+'</span></span>'+badge+'<span class="pct-detail-total">'+fm(e.tot)+'</span></div>';
       });
       chartH+='<div class="pct-detail" id="pctd-'+k+'" style="display:'+(open?'':'none')+'">'+det+'</div>';
     }

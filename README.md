@@ -1,10 +1,13 @@
 # Stockfolio
 
-**Current Version: v0.7.92**
+**Current Version: v0.7.93**
 
 ---
 
 ## Changelog
+
+### v0.7.93 — 2026-07-11 — 🎨 Payout Log: color key in the month expand
+- **Each payment in a month's expand panel now shows a color swatch** matching that ticker's segment in the bar above — so the expand doubles as the legend for the segmented Monthly Payouts bars. Now that the ticker names are off the bars, clicking a month tells you which color is which.
 
 ### v0.7.92 — 2026-07-11 — 📊 Payout Log: segmented monthly bars + expandable months
 - **The Monthly Payouts bars are now segmented by ticker.** Each month's bar is split into colored segments sized by the % of that month's payout each ticker contributes — the bar's overall length still shows the month's total vs. the peak month. Per-ticker colors match the Dividends-by-Month chart (same hash), and hovering a segment shows that ticker's dollar amount and share of the month.
