@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.91</title>
+<title>Stockfolio v0.7.92</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -410,6 +410,25 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pct-amt.zero{color:var(--muted);font-weight:400}
 .pct-amt.past{color:var(--muted);font-weight:500}
 .pct-row.past .pct-month{color:var(--muted);opacity:.7}
+/* Segmented monthly-payout bars: outer width = month total vs peak; inner
+   segments = each ticker's % of that month, colored per-ticker (matches the
+   Dividends-by-Month chart hues). Past/future months dim the whole bar. */
+.pct-bar-outer{display:flex;height:100%;border-radius:4px;overflow:hidden;min-width:2px;transition:width .25s}
+.pct-bar-outer.past{opacity:.55}
+.pct-bar-outer.future{opacity:.9}
+.pct-seg{height:100%;min-width:0}
+.pct-arrow-cell.has-detail{cursor:pointer;color:var(--accent);transition:color .12s}
+.pct-arrow-cell.has-detail:hover{color:var(--accent2)}
+/* Expand panel under a month row — the individual paid + upcoming payments. */
+.pct-detail{margin:1px 0 8px 24px;border-left:2px solid var(--border);padding:4px 0 4px 12px}
+.pct-detail-row{display:grid;grid-template-columns:80px 1fr auto auto;gap:10px;align-items:center;font-size:10.5px;padding:2px 0;font-family:var(--mono)}
+@media(max-width:560px){.pct-detail-row{grid-template-columns:64px 1fr auto;gap:6px}.pct-detail-row .pct-detail-badge{display:none}}
+.pct-detail-tk{font-weight:700;color:var(--text)}
+.pct-detail-date{color:var(--muted)}
+.pct-detail-badge{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.pct-detail-badge.paid{background:var(--card3);color:var(--muted)}
+.pct-detail-badge.up{background:var(--green-dim);color:var(--green)}
+.pct-detail-total{font-weight:700;color:var(--text);text-align:right}
 .pl-past{margin-top:18px;border-top:1px dashed var(--border2);padding-top:14px}
 .pl-past>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);user-select:none;transition:background .15s}
 .pl-past>summary:hover{background:var(--card3)}
@@ -1480,7 +1499,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.91 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.92 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1575,7 +1594,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.91";
+var VERSION = "0.7.92";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3895,6 +3914,18 @@ function togM(el){
     }
   }
 }
+// Payout Log — which month rows are expanded to show their individual payments.
+// Direct DOM toggle for instant feedback; the set is consulted on the next
+// render() so the open state survives a rebuild.
+var _payoutExpandedMonths = {};
+function togglePayoutMonth(key){
+  var open = !_payoutExpandedMonths[key];
+  if(open) _payoutExpandedMonths[key] = 1; else delete _payoutExpandedMonths[key];
+  var d = document.getElementById('pctd-'+key);
+  var a = document.getElementById('pcta-'+key);
+  if(d) d.style.display = open ? '' : 'none';
+  if(a) a.textContent = open ? '▼' : '▶';
+}
 function restoreOpenPanels(){
   // Restore desktop expand row. For most tabs the rid is stable (d_AAPL,
   // a_AAPL, etc) and a direct ID lookup works. For NEWS rows, the rid is
@@ -4069,7 +4100,7 @@ function render(){
   var moTot={};
   for(var mi=1;mi<=12;mi++){
     var key=curYear+'-'+String(mi).padStart(2,'0');
-    moTot[key]={amt:0,label:new Date(curYear,mi-1,1).toLocaleDateString('en-US',{month:'short'}),byTk:{}};
+    moTot[key]={amt:0,label:new Date(curYear,mi-1,1).toLocaleDateString('en-US',{month:'short'}),byTk:{},entries:[]};
   }
   entries.forEach(function(e){
     if(e.s<=0)return;
@@ -4077,11 +4108,15 @@ function render(){
     if(moTot[k]){
       moTot[k].amt+=e.tot;
       moTot[k].byTk[e.tk]=(moTot[k].byTk[e.tk]||0)+e.tot;
+      moTot[k].entries.push(e);
     }
   });
   var moKeys=Object.keys(moTot).sort();
   var maxAmt=Math.max.apply(null,moKeys.map(function(k){return moTot[k].amt}).concat([1]));
-  var chartH='<div class="payout-chart-title">📊 Monthly Payouts <span class="pct-sub">'+curYear+' calendar · peak '+fm(maxAmt)+' · hover for tickers</span></div>';
+  // Per-ticker hue — same hash as the Dividends-by-Month chart so a ticker is
+  // the same color in both places.
+  var _pctColor=function(t){var h=0;for(var i=0;i<t.length;i++)h=((h*31)+t.charCodeAt(i))%360;return 'hsl('+h+',62%,56%)';};
+  var chartH='<div class="payout-chart-title">📊 Monthly Payouts <span class="pct-sub">'+curYear+' calendar · peak '+fm(maxAmt)+' · segments = each ticker\'s share · click a month for payments</span></div>';
   moKeys.forEach(function(k){
     var m=moTot[k];
     var pct=(m.amt/maxAmt*100);
@@ -4089,16 +4124,42 @@ function render(){
     var isPast=k<todayMo;
     var isCur=k===todayMo;
     var rowCls='pct-row'+(isCur?' pct-current':'')+(isPast?' past':'');
-    var arrow=isCur?'<span class="pct-arrow-cell">▶</span>':'<span class="pct-arrow-cell"></span>';
-    var barCls=isFuture?'future':(isPast?'past':'');
-    if(m.amt<=0)barCls=(barCls?barCls+' ':'')+'empty';
     var amtCls=m.amt<=0?'zero':(isPast?'past':'');
     var tkPairs=Object.keys(m.byTk).map(function(t){return[t,m.byTk[t]]}).sort(function(a,b){return b[1]-a[1]});
-    // Inline label of contributing tickers (faint), preserved hover tooltip with $ amounts per ticker
-    var tkLabel=tkPairs.map(function(p){return p[0]}).join(' · ');
+    var hasPayments=m.entries.length>0;
+    var open=!!_payoutExpandedMonths[k];
+    // Left arrow — clickable expand toggle on months that have payments.
+    var arrow = hasPayments
+      ? '<span class="pct-arrow-cell has-detail" id="pcta-'+k+'">'+(open?'▼':'▶')+'</span>'
+      : '<span class="pct-arrow-cell"></span>';
+    // Segmented bar: outer width = month total vs peak; each segment = a
+    // ticker's % of that month. Empty months show a flat empty bar.
+    var barBg;
+    if(m.amt<=0){
+      barBg='<div class="pct-bar-bg"><div class="pct-bar empty" style="width:0"></div></div>';
+    }else{
+      var segs='';
+      tkPairs.forEach(function(p){
+        var segPct=p[1]/m.amt*100;
+        var segTip=(p[0]+': '+fm(p[1])+' ('+segPct.toFixed(0)+'% of month)').replace(/"/g,'&quot;');
+        segs+='<div class="pct-seg" style="width:'+segPct.toFixed(2)+'%;background:'+_pctColor(p[0])+'" title="'+segTip+'"></div>';
+      });
+      var outerCls='pct-bar-outer'+(isPast?' past':(isFuture?' future':''));
+      barBg='<div class="pct-bar-bg"><div class="'+outerCls+'" style="width:'+pct.toFixed(1)+'%">'+segs+'</div></div>';
+    }
     var tip=m.label+' '+curYear+' — '+fm(m.amt)+(tkPairs.length?'\n'+tkPairs.map(function(p){return p[0]+': '+fm(p[1])}).join('\n'):' (no scheduled payouts)');
     var tipAttr=tip.replace(/"/g,'&quot;');
-    chartH+='<div class="'+rowCls+'" title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span><div class="pct-bar-bg"><div class="pct-bar '+barCls+'" style="width:'+pct.toFixed(1)+'%"></div>'+(tkLabel?'<span class="pct-bar-label">'+tkLabel+'</span>':'')+'</div><span class="pct-amt '+amtCls+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
+    var rowAttr = hasPayments ? ' onclick="togglePayoutMonth(\''+k+'\')" style="cursor:pointer"' : '';
+    chartH+='<div class="'+rowCls+'"'+rowAttr+' title="'+tipAttr+'">'+arrow+'<span class="pct-month">'+m.label+'</span>'+barBg+'<span class="pct-amt '+amtCls+'">'+(m.amt>0?fm(m.amt):'—')+'</span></div>';
+    // Expand panel — individual paid + upcoming payments for the month.
+    if(hasPayments){
+      var det='';
+      m.entries.slice().sort(function(a,b){return a.d.localeCompare(b.d)}).forEach(function(e){
+        var badge = e.up ? '<span class="pct-detail-badge up">Upcoming</span>' : '<span class="pct-detail-badge paid">Paid</span>';
+        det+='<div class="pct-detail-row"><span class="pct-detail-date">'+e.d+'</span><span><span class="pct-detail-tk">'+e.tk+'</span> <span style="color:var(--muted)">'+fmSh(e.s)+' × $'+e.a+'</span></span>'+badge+'<span class="pct-detail-total">'+fm(e.tot)+'</span></div>';
+      });
+      chartH+='<div class="pct-detail" id="pctd-'+k+'" style="display:'+(open?'':'none')+'">'+det+'</div>';
+    }
   });
   G('pChart').innerHTML=chartH;
   // Cards: future months (current month onwards) shown by default; past months in a collapsed <details>

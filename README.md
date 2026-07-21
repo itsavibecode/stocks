@@ -1,10 +1,15 @@
 # Stockfolio
 
-**Current Version: v0.7.91**
+**Current Version: v0.7.92**
 
 ---
 
 ## Changelog
+
+### v0.7.92 — 2026-07-11 — 📊 Payout Log: segmented monthly bars + expandable months
+- **The Monthly Payouts bars are now segmented by ticker.** Each month's bar is split into colored segments sized by the % of that month's payout each ticker contributes — the bar's overall length still shows the month's total vs. the peak month. Per-ticker colors match the Dividends-by-Month chart (same hash), and hovering a segment shows that ticker's dollar amount and share of the month.
+- **Click any month row (or its ▶ arrow) to expand it** and see that month's individual payments — each with its date, ticker, shares × per-share amount, dollar total, and a **Paid** / **Upcoming** badge. Sorted by date. The arrow flips ▶ → ▼ and the open state survives re-renders.
+- The faint ticker-name text that used to overlay the bar is dropped (unreadable over multi-colored segments) — the segment colors, hover tooltips, month-row tooltip, and the new expand panel all convey which tickers paid.
 
 ### v0.7.91 — 2026-07-11 — 📉 Dividends: new "Decreases" sub-tab (cut tracking)
 - **New 📉 Decreases sub-tab** on the Dividends page, sitting between Increases and Specials. Mirrors the Increases view but for **cuts** — when a ticker's next declared payment is *lower* than its most recent regular payment.
