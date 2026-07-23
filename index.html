@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.93</title>
+<title>Stockfolio v0.7.94</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -462,6 +462,10 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .settings-toolbar{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:4px}
 .settings-toolbar .btn{font-size:10.5px;padding:5px 10px}
 .settings-toolbar .label{margin-right:auto;font-size:10.5px;color:var(--muted);font-style:italic}
+/* Copyable CSV code block in Settings. Wraps rather than scrolling
+   horizontally (no h-scrollbars anywhere), vertical scroll past ~220px. */
+.csv-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:10.5px;line-height:1.65;color:var(--text2);max-height:220px;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-break:break-word;margin:0 0 10px}
+.csv-block.empty{color:var(--muted);font-style:italic}
 .key-pill{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;font-family:var(--mono)}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
@@ -1471,6 +1475,20 @@ body.text-xl .sc .scv{font-size:24px}
         </div>
       </div>
 
+      <!-- Combined holdings list — every ticker you actually hold shares in,
+           merged across all accounts, deduplicated. Copyable + downloadable. -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128203; My Holdings &mdash; Combined Ticker List</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Every ticker you hold shares in, <strong>combined across all accounts with duplicates merged</strong> &mdash; one row per ticker with total shares, which accounts hold it, price, and value. Copy it straight out of the box below or download it as a CSV.</p>
+        <div id="tickerCsvSummary" style="font-size:10.5px;color:var(--accent2);font-family:var(--mono);margin-bottom:8px">&mdash;</div>
+        <pre class="csv-block" id="tickerCsvBlock">&mdash;</pre>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline" onclick="copyTickerCsv()" style="font-size:11.5px" title="Copy the full CSV (with headers) to your clipboard">&#128203; Copy CSV</button>
+          <button class="btn btn-outline" onclick="copyTickerSymbols()" style="font-size:11.5px" title="Copy just the comma-separated symbols — handy for pasting into a screener or watchlist">&#128290; Copy symbols only</button>
+          <button class="btn btn-outline" onclick="exportTickerCsv()" style="font-size:11.5px" title="Download as a .csv file (opens in Excel / Google Sheets)">&#128190; Download CSV</button>
+        </div>
+      </div>
+
       <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--red)">&#9888;&#65039; Reset Local Data</div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Wipes browser data and reloads. Cloud data is unaffected — sign back in to restore. Use this if local state gets corrupted.</p>
@@ -1502,7 +1520,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.93 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.94 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1597,7 +1615,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.93";
+var VERSION = "0.7.94";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -6405,6 +6423,9 @@ function sTab(id){
   // values now match cloud. Also re-syncs sticky-top in case header
   // dimensions changed.
   if(id==='settings' && typeof loadPrefUI==='function'){ try{loadPrefUI()}catch(e){} }
+  // Refresh the combined-holdings CSV block each time Settings opens so it
+  // reflects any share edits made on other tabs.
+  if(id==='settings' && typeof renderTickerCsvBlock==='function'){ try{renderTickerCsvBlock()}catch(e){} }
   // On Insights tab open, opportunistically warm the fundamentals cache
   // from the SHARED Firestore collection only (free reads). AlphaVantage
   // fetches are gated to the explicit "Refresh fundamentals" button so we
@@ -7677,6 +7698,87 @@ function exportDividendCSV(){
   logActivity('data.export.dividends','Exported '+count+' dividend records');
 }
 
+// ═════════════════════════════════════════════════
+// COMBINED HOLDINGS LIST — every ticker with shares > 0, merged across all
+// accounts (a ticker held in 3 accounts appears ONCE with the combined share
+// count and all account names listed). Powers the copyable CSV block in
+// Settings → Data & Activity plus the copy/download buttons.
+// ═════════════════════════════════════════════════
+// Distinct account names holding a ticker, from its lots.
+function _acctsForTicker(t){
+  var seen = {};
+  (lots[t]||[]).forEach(function(l){ if(l && l.b && (l.s||0) > 0) seen[l.b] = 1; });
+  return Object.keys(seen).sort();
+}
+// Sorted, de-duplicated list of tickers the user actually holds.
+function _heldTickers(){
+  var seen = {}, out = [];
+  tks.forEach(function(t){
+    if((sh[t]||0) <= 0) return;
+    if(seen[t]) return;      // defensive — tks shouldn't contain dupes
+    seen[t] = 1; out.push(t);
+  });
+  return out.sort();
+}
+function _buildHoldingsCsvRows(){
+  var rows = [['Ticker','Shares','Accounts','Price','Value','Type']];
+  _heldTickers().forEach(function(t){
+    var s = sh[t]||0, px = PR[t]||0;
+    var accts = _acctsForTicker(t);
+    rows.push([
+      t,
+      fmSh(s),
+      accts.length ? accts.join('; ') : 'Unassigned',
+      px ? px.toFixed(2) : '',
+      (px*s).toFixed(2),
+      isDiv(t) ? 'Dividend' : 'Growth'
+    ]);
+  });
+  return rows;
+}
+// Fill the Settings code block + summary line. Called on Settings tab open.
+function renderTickerCsvBlock(){
+  var el = G('tickerCsvBlock'); if(!el) return;
+  var sum = G('tickerCsvSummary');
+  var rows = _buildHoldingsCsvRows();
+  if(rows.length <= 1){
+    el.textContent = 'No holdings yet — add shares to a ticker and this fills in automatically.';
+    el.classList.add('empty');
+    if(sum) sum.textContent = '0 tickers';
+    return;
+  }
+  el.classList.remove('empty');
+  el.textContent = rows.map(function(r){ return r.map(_csvCell).join(','); }).join('\n');
+  if(sum){
+    var acctSeen = {};
+    _heldTickers().forEach(function(t){ _acctsForTicker(t).forEach(function(a){ acctSeen[a]=1; }); });
+    var nT = rows.length-1, nA = Object.keys(acctSeen).length;
+    sum.textContent = nT+' unique ticker'+(nT!==1?'s':'')+' · '+nA+' account'+(nA!==1?'s':'')+' combined · duplicates merged';
+  }
+}
+function copyTickerCsv(){
+  var el = G('tickerCsvBlock'); if(!el) return;
+  if(el.classList.contains('empty')){ showToast('No holdings to copy','warn'); return; }
+  var txt = el.textContent||'';
+  navigator.clipboard.writeText(txt).then(function(){
+    showToast('Holdings CSV copied to clipboard');
+  }, function(){ showToast('Copy failed — select the text and copy manually','error'); });
+}
+function copyTickerSymbols(){
+  var list = _heldTickers();
+  if(!list.length){ showToast('No holdings to copy','warn'); return; }
+  navigator.clipboard.writeText(list.join(',')).then(function(){
+    showToast(list.length+' symbol'+(list.length!==1?'s':'')+' copied');
+  }, function(){ showToast('Copy failed','error'); });
+}
+function exportTickerCsv(){
+  var rows = _buildHoldingsCsvRows();
+  if(rows.length <= 1){ showToast('No holdings to export','error'); return; }
+  _downloadCSV('holdings-'+new Date().toISOString().slice(0,10)+'.csv', rows);
+  showToast('Exported '+(rows.length-1)+' tickers');
+  logActivity('data.export.holdings','Exported combined holdings list ('+(rows.length-1)+' tickers)');
+}
+
 function exportPortfolio(){
   var data={
     version:VERSION,
@@ -8892,6 +8994,8 @@ if (typeof applySettingsCollapsedState === 'function') applySettingsCollapsedSta
 // first render (and the dropdown) reflect the user's choice, not the HTML default.
 if (typeof loadInsightsLimitUI === 'function') loadInsightsLimitUI();
 if (typeof loadInsModeUI === 'function') loadInsModeUI();
+// Populate the combined-holdings CSV block so it's ready before Settings is opened.
+if (typeof renderTickerCsvBlock === 'function') renderTickerCsvBlock();
 // Restore last-viewed sub-tab per parent (currently just Dividends:
 // Stocks / Increases / Specials). Cloud-synced via the prefs merge.
 try {

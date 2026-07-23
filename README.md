@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.93**
+**Current Version: v0.7.94**
 
 ---
 
 ## Changelog
+
+### v0.7.94 — 2026-07-11 — 📋 Settings: copyable + downloadable combined holdings list
+- **New "My Holdings — Combined Ticker List" card** in Settings → 💾 Data & Activity. Lists every ticker you actually hold shares in, **merged across all accounts with duplicates removed** — a ticker held in three accounts shows up **once**, with the combined share count and all account names listed.
+- **Copyable code block** right in Settings showing the CSV (`Ticker, Shares, Accounts, Price, Value, Type`), plus a summary line ("12 unique tickers · 3 accounts combined · duplicates merged"). The block wraps rather than scrolling sideways.
+- **Three buttons:** 📋 **Copy CSV** (full CSV with headers to clipboard) · 🔢 **Copy symbols only** (just `AAPL,KO,MSFT,…` — for pasting into a screener or watchlist) · 💾 **Download CSV** (`holdings-YYYY-MM-DD.csv`, opens in Excel/Sheets).
+- Refreshes automatically whenever you open Settings, so share edits made on other tabs are always reflected.
 
 ### v0.7.93 — 2026-07-11 — 🎨 Payout Log: color key in the month expand
 - **Each payment in a month's expand panel now shows a color swatch** matching that ticker's segment in the bar above — so the expand doubles as the legend for the segmented Monthly Payouts bars. Now that the ticker names are off the bars, clicking a month tells you which color is which.
