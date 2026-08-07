@@ -1,10 +1,16 @@
 # Stockfolio
 
-**Current Version: v0.7.94**
+**Current Version: v0.7.95**
 
 ---
 
 ## Changelog
+
+### v0.7.95 — 2026-07-11 — 🔮 Payout Log: project recurring future payments
+- **Fixed empty future months in the Monthly Payouts chart.** It previously plotted only each stock's recorded past payments plus its *single next declared* pay date — so any month past that one payment (e.g. August) showed $0 even for quarterly payers that will clearly pay then. It looked like "no dividends in August" when really the chart just wasn't projecting.
+- **Now projects each stock's recurring payments forward** across the rest of the calendar year, stepping from its declared next pay date by its frequency (Quarterly → every 3 months, Monthly → every month, etc). Future months now reflect expected income.
+- Projected payments are **estimates** (they assume the payout continues at the current rate) and are flagged as such: in a month's expand panel they get a blue **Projected** badge, distinct from **Upcoming** (the actual declared next payment) and **Paid** (history). The chart subtitle notes future months are projected.
+- The "Next 90 Days" stat now includes projected payments in that window, making it a fuller expected-income figure. (Annual Projected / Avg Monthly were already annualized and are unchanged.)
 
 ### v0.7.94 — 2026-07-11 — 📋 Settings: copyable + downloadable combined holdings list
 - **New "My Holdings — Combined Ticker List" card** in Settings → 💾 Data & Activity. Lists every ticker you actually hold shares in, **merged across all accounts with duplicates removed** — a ticker held in three accounts shows up **once**, with the combined share count and all account names listed.

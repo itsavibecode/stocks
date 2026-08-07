@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.94</title>
+<title>Stockfolio v0.7.95</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -431,6 +431,7 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .pct-detail-badge{font-size:8px;padding:1px 6px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
 .pct-detail-badge.paid{background:var(--card3);color:var(--muted)}
 .pct-detail-badge.up{background:var(--green-dim);color:var(--green)}
+.pct-detail-badge.proj{background:var(--accent-dim);color:var(--accent2)}
 .pct-detail-total{font-weight:700;color:var(--text);text-align:right}
 .pl-past{margin-top:18px;border-top:1px dashed var(--border2);padding-top:14px}
 .pl-past>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;color:var(--text2);user-select:none;transition:background .15s}
@@ -1520,7 +1521,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.94 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.7.95 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1615,7 +1616,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.94";
+var VERSION = "0.7.95";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -4104,6 +4105,34 @@ function render(){
   var allDvs=tks.filter(isDiv);
   var today=new Date().toISOString().slice(0,10);var entries=[];
   allDvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})})});
+  // Project each ticker's RECURRING future payments across the rest of the
+  // calendar year, stepping forward from its declared next pay date by its
+  // frequency (Quarterly = every 3 months, Monthly = every 1, etc). Without
+  // this, months past a ticker's single next declared payment show empty even
+  // though it will keep paying — so e.g. August looked like $0. These are
+  // estimates (assume the payout continues at the current rate) → projected:true.
+  (function(){
+    var yr = new Date().getFullYear();
+    var yearEnd = yr + '-12-31';
+    allDvs.forEach(function(t){
+      var d = DV[t], s = sh[t]||0;
+      if (s<=0 || !d || !d.np || d.np<=0 || !d.pd || d.pd==='N/A') return;
+      var perYear = freqMultiplier(d.f);           // 12 / 4 / 2 / 1
+      if (!perYear) return;
+      var step = Math.round(12/perYear);           // months between payments
+      if (step < 1) return;
+      var base = new Date(d.pd + 'T12:00:00Z');
+      if (isNaN(base.getTime())) return;
+      for (var i=1; i<=24; i++){                    // cap iterations
+        var dt = new Date(base.getTime());
+        dt.setUTCMonth(dt.getUTCMonth() + step*i);
+        var iso = dt.toISOString().slice(0,10);
+        if (iso > yearEnd) break;                   // past this calendar year
+        if (iso < today) continue;                  // only future dates
+        entries.push({tk:t, d:iso, a:d.np, s:s, tot:d.np*s, up:true, projected:true});
+      }
+    });
+  })();
   entries.sort(function(a,b){return a.d.localeCompare(b.d)});
   var d90=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
   G('p90').textContent=fm(entries.filter(function(e){return e.d>=today&&e.d<=d90&&e.s>0}).reduce(function(s,e){return s+e.tot},0));
@@ -4137,7 +4166,7 @@ function render(){
   // Per-ticker hue — same hash as the Dividends-by-Month chart so a ticker is
   // the same color in both places.
   var _pctColor=function(t){var h=0;for(var i=0;i<t.length;i++)h=((h*31)+t.charCodeAt(i))%360;return 'hsl('+h+',62%,56%)';};
-  var chartH='<div class="payout-chart-title">📊 Monthly Payouts <span class="pct-sub">'+curYear+' calendar · peak '+fm(maxAmt)+' · segments = each ticker\'s share · click a month for payments</span></div>';
+  var chartH='<div class="payout-chart-title">📊 Monthly Payouts <span class="pct-sub">'+curYear+' calendar · peak '+fm(maxAmt)+' · future months projected from each stock\'s frequency · click a month for payments</span></div>';
   moKeys.forEach(function(k){
     var m=moTot[k];
     var pct=(m.amt/maxAmt*100);
@@ -4176,7 +4205,8 @@ function render(){
     if(hasPayments){
       var det='';
       m.entries.slice().sort(function(a,b){return a.d.localeCompare(b.d)}).forEach(function(e){
-        var badge = e.up ? '<span class="pct-detail-badge up">Upcoming</span>' : '<span class="pct-detail-badge paid">Paid</span>';
+        var badge = e.projected ? '<span class="pct-detail-badge proj" title="Estimated from this stock\'s payment frequency — not yet declared">Projected</span>'
+                  : (e.up ? '<span class="pct-detail-badge up">Upcoming</span>' : '<span class="pct-detail-badge paid">Paid</span>');
         det+='<div class="pct-detail-row"><span class="pct-detail-date">'+e.d+'</span><span><span class="pct-seg-key" style="background:'+_pctColor(e.tk)+'"></span><span class="pct-detail-tk">'+e.tk+'</span> <span style="color:var(--muted)">'+fmSh(e.s)+' × $'+e.a+'</span></span>'+badge+'<span class="pct-detail-total">'+fm(e.tot)+'</span></div>';
       });
       chartH+='<div class="pct-detail" id="pctd-'+k+'" style="display:'+(open?'':'none')+'">'+det+'</div>';
