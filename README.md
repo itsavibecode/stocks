@@ -1,10 +1,19 @@
 # Stockfolio
 
-**Current Version: v0.7.95**
+**Current Version: v0.8.0**
 
 ---
 
 ## Changelog
+
+### v0.8.0 — 2026-07-11 — ✅ Projected payouts now get confirmed automatically
+Projections added in v0.7.95 were estimates that nothing ever confirmed — the built-in tickers' dividend dates were frozen until a new app release, and the worker only *reads* cached data (it never fetches schedules). This closes that loop.
+
+- **New shared `/dividends/{ticker}` Firestore cache** holding each stock's officially **declared** ex/pay dates and amounts, sourced from AlphaVantage's free-tier `DIVIDENDS` endpoint. Same three-tier dedup pattern as `/fundamentals/` and `/benchmarks/`: in-memory → shared Firestore (free for everyone) → AlphaVantage. One user's fetch confirms that ticker for every user holding it. Field-allowlist rules keep portfolio/PII data out.
+- **Confirmation is a real merge, not a label change.** When a declared schedule arrives, the next declared payment replaces the projection (`pd` / `np` / `ex`), and payments that have since occurred roll into history so they render as **Paid**. Manually-flagged **special dividends are preserved** and never overwritten.
+- **Refreshes on its own, within the free tier.** Opening the Payout Log always does free shared-cache reads. At most **once per day** it additionally spends up to **5** AlphaVantage calls (of the 25/day free tier), prioritizing the tickers whose schedules are most stale — pay dates already in the past first, then soonest upcoming.
+- **📅 "Confirm dividend dates" button** on the Payout Log for an on-demand refresh, plus a status line: *"7 of 9 schedules confirmed · updated 7/11/2026 · rest projected."*
+- **Requires deploying `firestore.rules`** (adds the `/dividends/{ticker}` rule) before cross-user confirmation can write — see the note below.
 
 ### v0.7.95 — 2026-07-11 — 🔮 Payout Log: project recurring future payments
 - **Fixed empty future months in the Monthly Payouts chart.** It previously plotted only each stock's recorded past payments plus its *single next declared* pay date — so any month past that one payment (e.g. August) showed $0 even for quarterly payers that will clearly pay then. It looked like "no dividends in August" when really the chart just wasn't projecting.

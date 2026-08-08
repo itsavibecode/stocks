@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.7.95</title>
+<title>Stockfolio v0.8.0</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1123,6 +1123,10 @@ body.text-xl .sc .scv{font-size:24px}
       <div class="sc"><div class="scl">&#128181; Avg Monthly</div><div class="scv green" id="pMo">$0</div></div>
       <div class="sc"><div class="scl">&#128200; Annual Projected</div><div class="scv accent2" id="pAn">$0</div></div>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px">
+      <button class="btn btn-outline" onclick="refreshDividendSchedules()" style="font-size:10.5px;padding:5px 10px" title="Fetch each held dividend stock's officially declared ex/pay dates from AlphaVantage and confirm any projected payouts. Throttled to ~1 per 13s for the free-tier rate limit; the results are cached and shared, so you rarely need this — the calendar also refreshes itself once a day when you open this tab.">&#128197; Confirm dividend dates</button>
+      <span id="divSchedStatus" class="muted" style="font-size:10px;font-family:var(--mono)"></span>
+    </div>
     <div class="payout-chart-wrap" id="pChart"></div>
     <div id="pBd"></div>
   </div>
@@ -1521,7 +1525,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.7.95 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.8.0 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1616,7 +1620,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.7.95";
+var VERSION = "0.8.0";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2465,6 +2469,17 @@ var SPY_TTL_MS = 24 * 60 * 60 * 1000; // 24h — daily data, no point refreshing
 // Demo mode: skip localStorage so user's real SPY cache doesn't leak in.
 // DEMO_SPY_HIST gets seeded in load() instead.
 try { if(!IS_DEMO){ var _sh = localStorage.getItem('pf_spy_hist'); if(_sh) SPY_HIST = JSON.parse(_sh); } } catch(e){}
+// Declared dividend schedules — the source that CONFIRMS projected payouts.
+// Sourced from AlphaVantage's free-tier DIVIDENDS endpoint, cached in
+// localStorage 'pf_divsched' AND the shared Firestore /dividends/{ticker}
+// collection (so one user's fetch warms it for everyone, same dedup pattern
+// as /fundamentals/ and /benchmarks/). Shape per ticker:
+//   { symbol, payments:[{ex,pay,amt}], fetchedAt, source }
+// 7-day TTL: declared dates don't change often, but we want a newly declared
+// payment to surface within a week without burning the 25/day AV free tier.
+var DIVSCHED = {};
+var DIVSCHED_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+try { if(!IS_DEMO){ var _ds = localStorage.getItem('pf_divsched'); if(_ds) DIVSCHED = JSON.parse(_ds); } } catch(e){}
 // PR is a live Proxy: returns livePrices[t] if available, else FALLBACK_PR[t]
 var PR = new Proxy({}, { get: function(_, k){ return livePrices[k] !== undefined ? livePrices[k] : FALLBACK_PR[k]; } });
 var pricesLastFetched = 0;
@@ -6103,6 +6118,133 @@ function getFundamentals(ticker, opts){
     });
   });
 }
+// ═════════════════════════════════════════════════
+// DECLARED DIVIDEND SCHEDULES — what turns a "Projected" payout into a
+// real declared one. Same three-tier shared-cache pattern as fundamentals:
+//   in-memory DIVSCHED → shared Firestore /dividends/{ticker} → AlphaVantage
+// AlphaVantage's DIVIDENDS endpoint is on the FREE tier and returns the
+// full declared history + any already-declared future payment:
+//   { symbol, data:[{ex_dividend_date, payment_date, amount, ...}] }
+// We keep the last ~12 payments (plenty for history + the next declared one).
+// ═════════════════════════════════════════════════
+function _divSchedCacheValid(rec){
+  return rec && typeof rec.fetchedAt === 'number'
+      && (Date.now() - rec.fetchedAt) < DIVSCHED_TTL_MS
+      && Array.isArray(rec.payments);
+}
+function _saveDivSchedLocal(){
+  try { localStorage.setItem('pf_divsched', JSON.stringify(DIVSCHED)); } catch(e){}
+}
+function _divSchedReadFromFirestore(ticker){
+  if (!firebaseReady || !db) return Promise.resolve(null);
+  return db.collection('dividends').doc(ticker).get()
+    .then(function(snap){ return snap.exists ? snap.data() : null; })
+    .catch(function(e){ console.warn('dividends read failed for '+ticker+':', e); return null; });
+}
+// Write with the EXACT shape the Firestore rules allow — anything extra is
+// rejected, which keeps portfolio/PII data out of this shared collection.
+function _divSchedWriteToFirestore(ticker, rec){
+  if (!firebaseReady || !db || !currentUser) return Promise.resolve();
+  return db.collection('dividends').doc(ticker).set({
+    symbol: ticker,
+    payments: (rec.payments||[]).slice(0,12).map(function(p){
+      return { ex: p.ex||'', pay: p.pay||'', amt: (typeof p.amt==='number'?p.amt:0) };
+    }),
+    fetchedAt: Date.now(),
+    source: rec.source || 'alphavantage'
+  }).catch(function(e){ console.warn('dividends write failed for '+ticker+':', e); });
+}
+function _divSchedFetchFromAlphaVantage(ticker){
+  if (IS_DEMO) return Promise.resolve(null); // demo never hits the network
+  if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
+  return fetch('https://www.alphavantage.co/query?function=DIVIDENDS&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || !Array.isArray(data.data) || data.data.length === 0){
+        if(data && (data.Information || data.Note)) logApiError && logApiError('dividends', ticker, data.Information||data.Note);
+        return null;
+      }
+      var payments = data.data.map(function(p){
+        return {
+          ex:  (p.ex_dividend_date||'').slice(0,10),
+          pay: (p.payment_date||'').slice(0,10),
+          amt: parseFloat(p.amount)||0
+        };
+      }).filter(function(p){ return p.pay && p.amt>0; });
+      // Newest first so payments[0] is the most recent / next declared
+      payments.sort(function(a,b){ return (b.pay||'').localeCompare(a.pay||''); });
+      if(!payments.length) return null;
+      return { payments: payments.slice(0,12), source:'alphavantage' };
+    })
+    .catch(function(e){
+      if(typeof logApiError==='function') logApiError('dividends', ticker, e.message||'Failed');
+      return null;
+    });
+}
+// Public entry point — mirrors getFundamentals(). allowFetch defaults false so
+// browsing never burns the AlphaVantage free-tier 25/day quota.
+function getDividendSchedule(ticker, opts){
+  if(!ticker) return Promise.resolve(null);
+  ticker = ticker.toUpperCase();
+  opts = opts || {};
+  if(!opts.force && _divSchedCacheValid(DIVSCHED[ticker])) return Promise.resolve(DIVSCHED[ticker]);
+  return _divSchedReadFromFirestore(ticker).then(function(rec){
+    if(!opts.force && _divSchedCacheValid(rec)){
+      DIVSCHED[ticker] = rec; _saveDivSchedLocal();
+      _applyDivSchedule(ticker, rec);
+      return rec;
+    }
+    if(!opts.allowFetch) return rec || null;
+    return _divSchedFetchFromAlphaVantage(ticker).then(function(fresh){
+      if(!fresh) return rec || null;
+      fresh.fetchedAt = Date.now();
+      DIVSCHED[ticker] = fresh; _saveDivSchedLocal();
+      _divSchedWriteToFirestore(ticker, fresh);
+      _applyDivSchedule(ticker, fresh);
+      return fresh;
+    });
+  });
+}
+// Merge a fetched schedule into DV[ticker] — this is the CONFIRMATION step.
+// - Any payment with a pay date >= today becomes the declared next payment
+//   (DV.pd / DV.np / DV.ex), replacing whatever projection was showing.
+// - Past payments are merged into DV.h (history) so they render as "Paid",
+//   deduped by date, newest-first, capped at 8 entries.
+// Returns true if anything actually changed (so callers can re-render/save).
+function _applyDivSchedule(ticker, rec){
+  var d = DV[ticker];
+  if(!d || !rec || !Array.isArray(rec.payments) || !rec.payments.length) return false;
+  var today = new Date().toISOString().slice(0,10);
+  var changed = false;
+  // Next declared payment = earliest payment dated today or later
+  var future = rec.payments.filter(function(p){ return p.pay >= today; })
+                           .sort(function(a,b){ return a.pay.localeCompare(b.pay); });
+  if(future.length){
+    var nx = future[0];
+    if(d.pd !== nx.pay){ d.pd = nx.pay; changed = true; }
+    if(nx.amt && d.np !== nx.amt){ d.np = nx.amt; changed = true; }
+    if(nx.ex && d.ex !== nx.ex){ d.ex = nx.ex; changed = true; }
+  }
+  // Merge past payments into history, keeping any manually-flagged specials
+  var past = rec.payments.filter(function(p){ return p.pay < today; });
+  if(past.length){
+    if(!Array.isArray(d.h)) d.h = [];
+    var byDate = {};
+    d.h.forEach(function(e){ if(e && e.d) byDate[e.d] = e; });
+    past.forEach(function(p){
+      if(byDate[p.pay]){
+        if(byDate[p.pay].a !== p.amt && !byDate[p.pay].sp){ byDate[p.pay].a = p.amt; changed = true; }
+      } else {
+        byDate[p.pay] = { d:p.pay, a:p.amt };
+        changed = true;
+      }
+    });
+    d.h = Object.keys(byDate).map(function(k){ return byDate[k]; })
+            .sort(function(a,b){ return (b.d||'').localeCompare(a.d||''); })
+            .slice(0,8);
+  }
+  return changed;
+}
 // ─────────────────────────────────────────────────────────────────
 // SPY BENCHMARK HISTORY — daily-close prices used to overlay a second
 // line on the Portfolio Value Over Time chart, showing how the S&P 500
@@ -6249,6 +6391,119 @@ function _spyCloseOn(date, spyDates){
     if(spyDates[ds]) return spyDates[ds];
   }
   return null;
+}
+
+// ═════════════════════════════════════════════════
+// DIVIDEND SCHEDULE WARMING — how projections get CONFIRMED over time.
+// On Payout Log open we read the shared Firestore cache for free (no AV
+// call), which picks up any schedule another user/device already fetched.
+// Then, at most once per day, we spend a few AlphaVantage calls on the
+// tickers whose data is most stale/urgent — soonest pay date first — so
+// the calendar stays current without blowing the free-tier 25/day quota.
+// ═════════════════════════════════════════════════
+var DIVSCHED_DAILY_FETCH_CAP = 5;   // AV calls per day (of the 25/day free tier)
+function _divSchedLastSweep(){
+  var p = loadPrefs();
+  return p.divSchedLastSweep || 0;
+}
+// Tickers ranked by how much they need a refresh: held dividend payers whose
+// cached schedule is missing/stale, soonest declared-or-projected pay date first.
+function _divSchedRefreshQueue(){
+  var today = new Date().toISOString().slice(0,10);
+  return tks.filter(function(t){
+    if(!isDiv(t) || (sh[t]||0) <= 0) return false;
+    return !_divSchedCacheValid(DIVSCHED[t]);
+  }).sort(function(a,b){
+    var pa = (DV[a] && DV[a].pd) || '9999-12-31';
+    var pb = (DV[b] && DV[b].pd) || '9999-12-31';
+    // Already-passed pay dates are the most urgent (that's a stale schedule)
+    var ka = pa < today ? '0000-'+pa : pa;
+    var kb = pb < today ? '0000-'+pb : pb;
+    return ka.localeCompare(kb);
+  });
+}
+// Called when the Payout Log tab opens.
+function warmDividendSchedules(){
+  if (IS_DEMO) return;
+  var queue = _divSchedRefreshQueue();
+  if(!queue.length) return;
+  var changedAny = false;
+  // Phase 1 — free shared-cache reads for every stale ticker.
+  var reads = queue.map(function(t){
+    return getDividendSchedule(t, { allowFetch:false }).then(function(rec){
+      if(rec && _applyDivSchedule(t, rec)) changedAny = true;
+    });
+  });
+  Promise.all(reads).then(function(){
+    if(changedAny) _persistDvAfterScheduleUpdate();
+    // Phase 2 — spend a small AV budget, at most once per day.
+    if(!ALPHAVANTAGE_KEY) return;
+    var last = _divSchedLastSweep();
+    if(Date.now() - last < 24*60*60*1000) return;
+    var still = _divSchedRefreshQueue();
+    if(!still.length) return;
+    var p = loadPrefs(); p.divSchedLastSweep = Date.now(); savePrefs(p);
+    var batch = still.slice(0, DIVSCHED_DAILY_FETCH_CAP), i = 0, fetched = 0;
+    (function next(){
+      if(i >= batch.length){
+        if(fetched){
+          _persistDvAfterScheduleUpdate();
+          showToast('Dividend calendar updated — '+fetched+' ticker'+(fetched!==1?'s':'')+' confirmed', '', {silent:true, noinbox:true});
+        }
+        return;
+      }
+      var t = batch[i++];
+      getDividendSchedule(t, { allowFetch:true }).then(function(rec){
+        if(rec) fetched++;
+        setTimeout(next, 13000); // AV free tier: 5 req/min
+      });
+    })();
+  });
+}
+// Status line under the Payout Log stat cards — how many held dividend
+// tickers have a confirmed (cached) declared schedule vs. are still relying
+// on projection, plus how fresh the newest confirmation is.
+function renderDivSchedStatus(){
+  var el = G('divSchedStatus'); if(!el) return;
+  var held = tks.filter(function(t){ return isDiv(t) && (sh[t]||0) > 0; });
+  if(!held.length){ el.textContent=''; return; }
+  var confirmed = held.filter(function(t){ return _divSchedCacheValid(DIVSCHED[t]); });
+  var newest = 0;
+  confirmed.forEach(function(t){ var f=DIVSCHED[t].fetchedAt||0; if(f>newest) newest=f; });
+  var txt = confirmed.length+' of '+held.length+' schedules confirmed';
+  if(newest) txt += ' · updated '+new Date(newest).toLocaleDateString();
+  if(confirmed.length < held.length) txt += ' · rest projected';
+  el.textContent = txt;
+}
+// Persist DV changes made by schedule confirmation + repaint.
+function _persistDvAfterScheduleUpdate(){
+  try{ localStorage.setItem('pf_dv_custom', JSON.stringify(getDVCustom())); }catch(e){}
+  if(typeof saveDvToCloud==='function') saveDvToCloud();
+  if(typeof render==='function') render();
+  if(typeof renderDivSchedStatus==='function') renderDivSchedStatus();
+}
+// Manual "Refresh dividend calendar" button on the Payout Log tab.
+function refreshDividendSchedules(){
+  if (IS_DEMO) { showToast('Demo mode — dividend calendar refresh disabled','info'); return; }
+  if (!ALPHAVANTAGE_KEY) { showToast('Add an AlphaVantage key in Settings to refresh the dividend calendar','warn'); return; }
+  var divTks = tks.filter(function(t){ return isDiv(t) && (sh[t]||0) > 0; });
+  if(!divTks.length){ showToast('No held dividend tickers to refresh'); return; }
+  var batch = divTks.slice(0, DIVSCHED_DAILY_FETCH_CAP);
+  showToast('Confirming dividend dates for '+batch.length+' ticker'+(batch.length!==1?'s':'')+'… (~'+(batch.length*13)+'s)');
+  var i = 0, confirmed = 0;
+  (function next(){
+    if(i >= batch.length){
+      _persistDvAfterScheduleUpdate();
+      showToast(confirmed ? ('Dividend calendar updated — '+confirmed+' confirmed') : 'No new declared dates found');
+      logActivity('data.divsched','Refreshed dividend calendar ('+confirmed+' confirmed)');
+      return;
+    }
+    var t = batch[i++];
+    getDividendSchedule(t, { force:true, allowFetch:true }).then(function(rec){
+      if(rec) confirmed++;
+      setTimeout(next, 13000);
+    });
+  })();
 }
 
 // Bulk refresh — used by the "Refresh fundamentals" button. Throttles to
@@ -6460,6 +6715,10 @@ function sTab(id){
   // from the SHARED Firestore collection only (free reads). AlphaVantage
   // fetches are gated to the explicit "Refresh fundamentals" button so we
   // don't burn the user's 25/day AV quota just by browsing tabs.
+  // Payout Log — warm declared dividend schedules so projected payouts get
+  // confirmed. Free Firestore reads always; a small AV budget once per day.
+  if(id==='paylog' && typeof warmDividendSchedules==='function'){ try{warmDividendSchedules()}catch(e){} }
+  if(id==='paylog' && typeof renderDivSchedStatus==='function'){ try{renderDivSchedStatus()}catch(e){} }
   if(id==='insights' && typeof loadInsightsLimitUI==='function'){ try{loadInsightsLimitUI()}catch(e){} }
   if(id==='insights' && typeof loadInsModeUI==='function'){ try{loadInsModeUI()}catch(e){} }
   if(id==='insights' && typeof getFundamentals==='function'){
