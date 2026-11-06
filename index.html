@@ -2,8 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-<title>Stockfolio v0.8.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<!-- Home-screen app support (iOS + Android). iOS ignores the inline SVG
+     favicon below when installing, so a real 180x180 PNG is required.
+     standalone + black-translucent make the app render edge-to-edge UNDERNEATH
+     the iOS status bar, which is why every viewport-edge-pinned element in the
+     CSS carries env(safe-area-inset-*) padding. Those two halves ship together:
+     keeping these metas while dropping the insets puts the header under the
+     system clock. theme-color is the header background per theme, not the
+     accent, so the browser/system chrome blends with the sticky header. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stockfolio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060b14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
+<title>Stockfolio v0.8.1</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -33,17 +49,20 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;min-height:100vh;min-height:100dvh;overflow-x:hidden}
+/* Bottom inset clears the iOS home-indicator bar. box-sizing:border-box is
+   global (see the * rule above), so this does not push past 100dvh. */
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;min-height:100vh;min-height:100dvh;overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom,0px)}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 input,button,select{font-family:inherit}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .fade-up{animation:fadeUp .3s ease both}
 
-.container{max-width:1520px;margin:0 auto;padding:0 20px}
+/* Landscape notch: left/right insets so content never slides under the cutout. */
+.container{max-width:1520px;margin:0 auto;padding:0 calc(20px + env(safe-area-inset-right,0px)) 0 calc(20px + env(safe-area-inset-left,0px))}
 /* Toasts pinned top-center so warn/error notifications can't be missed in the
    bottom-right corner. translateY(-10px) hidden state slides down on show. */
-.save-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-10px);background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:700;z-index:1200;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);line-height:1.4;white-space:normal}
+.save-toast{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) translateY(-10px);background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-size:12.5px;font-weight:700;z-index:1200;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.35);line-height:1.4;white-space:normal}
 .save-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* AUTH BAR */
@@ -74,7 +93,12 @@ input,button,select{font-family:inherit}
 .demo-banner .demo-msg{color:var(--muted);font-size:11px}
 @media(max-width:560px){.demo-banner .demo-msg{display:none}}
 
-.header{background:var(--bg);border-bottom:1px solid var(--border);padding:12px 0;position:sticky;top:0;z-index:100}
+/* Safe-area: in standalone/black-translucent mode this header sits under the
+   iOS status bar. The top inset pads its CONTENT down while the background
+   still extends under the clock (the native look). syncStickyTop() measures
+   offsetHeight, so the ticker tape, mobile tabs and sticky table headers that
+   anchor off --sticky-top/--thead-top inherit this automatically. */
+.header{background:var(--bg);border-bottom:1px solid var(--border);padding:calc(12px + env(safe-area-inset-top,0px)) 0 12px;position:sticky;top:0;z-index:100}
 .header-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
 .logo-block{display:flex;align-items:center;gap:10px}
 /* Stockfolio mark — folio outline with rising bar-chart inside. The base
@@ -471,7 +495,7 @@ tr.dr.imminent-payout td:first-child{box-shadow:inset 3px 0 0 var(--green)}
 .key-pill.active{background:var(--green-dim);color:var(--green);border:1px solid #34d39940}
 .key-pill.inactive{background:var(--yellow-dim);color:var(--yellow);border:1px solid #fbbf2440}
 .key-pill.empty{display:none}
-.sync-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto}
+.sync-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:calc(30px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(30px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px));overflow-y:auto}
 .sync-modal{background:var(--card);border:1px solid var(--border);border-radius:14px;width:100%;max-width:760px;display:flex;flex-direction:column;max-height:calc(100vh - 60px)}
 .sync-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .sync-head h3{font-size:15px;font-weight:700}
@@ -695,7 +719,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
 .rss-close:hover{background:var(--orange);color:#fff;border-color:var(--orange);transform:rotate(90deg)}
 .rss-panel pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:10px;font-family:var(--mono);color:var(--accent2);overflow:auto;max-height:220px;line-height:1.5}
 
-.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 .modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;width:420px;max-width:92vw;max-height:85vh;overflow-y:auto;animation:fadeUp .2s ease both}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:12px}
 .mi{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;margin-bottom:10px}
@@ -778,7 +802,7 @@ tbody td:last-child{border-radius:0 6px 6px 0}
      scrolled away, you can always add a ticker. Sits 16px from corners
      and is large enough to thumb-tap (52x52). Hidden by default and
      enabled via .has-fab on the body; we toggle that on mobile via JS. */
-  .mobile-fab{display:flex!important;position:fixed;bottom:20px;right:16px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;font-weight:300;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(37,99,235,.45);z-index:90;align-items:center;justify-content:center;padding:0;transition:transform .12s, box-shadow .12s}
+  .mobile-fab{display:flex!important;position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));right:calc(16px + env(safe-area-inset-right,0px));width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;font-weight:300;line-height:1;cursor:pointer;box-shadow:0 6px 18px rgba(37,99,235,.45);z-index:90;align-items:center;justify-content:center;padding:0;transition:transform .12s, box-shadow .12s}
   .mobile-fab:active{transform:scale(.94);box-shadow:0 3px 9px rgba(37,99,235,.4)}
   .mobile-fab[hidden]{display:none!important}
 
@@ -1525,7 +1549,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.8.0 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.8.1 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1620,7 +1644,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.8.0";
+var VERSION = "0.8.1";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════

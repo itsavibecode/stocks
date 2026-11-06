@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.8.0**
+**Current Version: v0.8.1**
 
 ---
 
 ## Changelog
+
+### v0.8.1 — 2026-11-06 — 📲 Add to Home Screen (iOS + Android)
+Stockfolio is responsive and clearly gets used on a phone, but it had none of the home-screen plumbing — no app icon, no install metadata, no safe-area handling. Installing it put an illegible page-thumbnail on the home screen, and once launched the sticky header would have rendered underneath the iPhone status bar.
+
+- **Installs properly now.** Added a real 180×180 `apple-touch-icon.png` (iOS ignores the inline SVG favicon when installing), plus a `manifest.json` with 192/512 icons so Android offers a proper install prompt too. The icons are the candlestick mark on the brand blue-to-teal gradient.
+- **Runs as a standalone app** — `apple-mobile-web-app-capable`, a short `apple-mobile-web-app-title` ("Stockfolio", no version number), and a `black-translucent` status bar for the edge-to-edge look. `theme-color` follows the active light/dark theme so the system chrome blends into the header.
+- **Safe-area insets on every edge-pinned element**, which is exactly what `black-translucent` requires: the sticky header, page container, body bottom, toasts, the mobile add button, and both overlays. The ticker tape, mobile tabs and sticky table headers inherit it automatically, since they anchor off the JS-measured header height.
+- Every inset uses an `env(..., 0px)` fallback, so desktop and in-browser rendering is unchanged.
 
 ### v0.8.0 — 2026-07-11 — ✅ Projected payouts now get confirmed automatically
 Projections added in v0.7.95 were estimates that nothing ever confirmed — the built-in tickers' dividend dates were frozen until a new app release, and the worker only *reads* cached data (it never fetches schedules). This closes that loop.
