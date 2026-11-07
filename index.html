@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#060b14" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<title>Stockfolio v0.8.1</title>
+<title>Stockfolio v0.8.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -837,6 +837,28 @@ tbody td:last-child{border-radius:0 6px 6px 0}
    purely cosmetic. (Was 30x30 — borderline for thumb-only mobile use.) */
 @media(min-width:641px){.hdr-quick{min-width:32px;min-height:32px}}
 
+/* Add-to-Home-Screen nudge. Bottom-pinned, so it carries the bottom/left/right
+   safe-area insets. While it is up, .mobile-fab is pushed above it so the two
+   never overlap (the banner is z-index 95, the FAB 90). */
+.a2hs-banner{position:fixed;left:0;right:0;bottom:0;z-index:95;background:var(--card);border-top:1px solid var(--border);box-shadow:0 -6px 20px rgba(0,0,0,.35);padding:12px calc(14px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px;transform:translateY(115%);transition:transform .3s ease}
+.a2hs-banner.show{transform:translateY(0)}
+.a2hs-banner .a2hs-ico{flex:none;width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:19px}
+.a2hs-banner .a2hs-txt{min-width:0;flex:1}
+.a2hs-banner .a2hs-t1{font-size:12.5px;font-weight:700;line-height:1.3}
+/* --text2, not --muted: --muted on the card background measures 3.54:1 in the
+   dark theme, under the 4.5:1 WCAG AA floor for normal text. --text2 is 11.38:1
+   dark / 10.31:1 light. */
+.a2hs-banner .a2hs-t2{font-size:10.5px;color:var(--text2);line-height:1.4;margin-top:2px}
+.a2hs-banner .a2hs-x{flex:none;background:none;border:none;color:var(--text2);font-size:21px;line-height:1;cursor:pointer;padding:0 4px}
+body.a2hs-open .mobile-fab{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+@media(max-width:420px){.a2hs-banner .a2hs-t2{display:none}}
+/* A2HS instruction modal steps */
+.a2hs-step{display:flex;gap:11px;margin-bottom:13px;align-items:flex-start}
+/* Number uses --text, not --accent2: accent2 on card3 is only 3.11:1 in the
+   light theme. Keeping the accent for the gradient icon and the Add button
+   also leaves one deliberate accent rather than spraying it. */
+.a2hs-step .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--card3);color:var(--text);font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center}
+.a2hs-step .b{font-size:12.5px;line-height:1.55;min-width:0;padding-top:2px}
 /* THEME + TEXT SIZE */
 body.light{--bg:#f0f2f5;--card:#fff;--card2:#f5f7fa;--card3:#eaecf0;--border:#d1d5db;--border2:#bfc5ce;--text:#1a1a2e;--text2:#374151;--muted:#6b7280;--accent:#2563eb;--accent2:#0891b2;--accent-dim:#2563eb25;--green:#059669;--green-dim:#05966920;--red:#dc2626;--red-dim:#dc262620;--yellow:#d97706;--yellow-dim:#d9770620;--purple:#7c3aed;--purple-dim:#7c3aed20;--gold:#b45309;--orange:#ea580c}
 /* LIGHT THEME OVERRIDES — places where the dark-theme values are hardcoded
@@ -1285,6 +1307,14 @@ body.text-xl .sc .scv{font-size:24px}
         <div id="sSoundChannels" style="display:flex;flex-direction:column;gap:12px"></div>
       </div>
 
+      <!-- Add to Home Screen. Always rendered (not hidden by platform) so it's
+           findable by anyone who had trouble installing; renderA2HSCard()
+           swaps the body for the current platform/install state. -->
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px">&#128242; Add to Home Screen</div>
+        <div id="a2hsCard"></div>
+      </div>
+
       <!-- ──────── NOTIFICATIONS ──────── -->
       <div class="settings-section-header" data-section="notifications" onclick="toggleSettingsSection('notifications')"><span class="ssh-chev">▾</span><span class="ssh-icon">🔔</span><span>Notifications</span><span class="ssh-desc">dividend ex-date / pay-date reminders</span></div>
 
@@ -1549,9 +1579,22 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.8.1 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.8.2 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
+</div>
+
+<!-- First-visit install nudge. Hidden by default; maybeShowA2HSBanner()
+     reveals it only on a device that can actually install, when not already
+     running standalone and not previously dismissed. -->
+<div class="a2hs-banner" id="a2hsBanner" style="display:none" role="region" aria-label="Add Stockfolio to your home screen">
+  <div class="a2hs-ico">📊</div>
+  <div class="a2hs-txt">
+    <div class="a2hs-t1">Add Stockfolio to your home screen</div>
+    <div class="a2hs-t2">Opens full-screen like a real app, with no browser bars.</div>
+  </div>
+  <button class="btn" onclick="installApp()" style="flex:none;font-size:11.5px;padding:7px 14px">Add</button>
+  <button class="a2hs-x" onclick="dismissA2HSBanner()" title="Not now. You can still add it any time from Settings → Appearance" aria-label="Dismiss">&times;</button>
 </div>
 
 <!-- Mobile-only floating Add button. The top-of-page +Add lives in the
@@ -1644,7 +1687,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.8.1";
+var VERSION = "0.8.2";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -5237,6 +5280,154 @@ function render(){
 function gRSS(){var it='';tks.forEach(function(t){getNews(t).forEach(function(n){it+='    <item>\n      <title>['+t+'] '+xm(n.t)+'</title>\n      <link>'+n.u+'</link>\n      <description>'+xm(n.sm||n.t)+'</description>\n      <pubDate>'+new Date(n.d+'T12:00:00Z').toUTCString()+'</pubDate>\n      <category>'+t+'</category>\n    </item>\n'})});return'<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>Portfolio Command Center News</title>\n    <link>'+location.href+'</link>\n    <lastBuildDate>'+new Date().toUTCString()+'</lastBuildDate>\n'+it+'  </channel>\n</rss>'}
 function xm(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 // ═════════════════════════════════════════════════
+// ═════════════════════════════════════════════════
+// ADD TO HOME SCREEN
+// Two very different platforms:
+//  - Android/desktop Chrome fire `beforeinstallprompt`, which we stash so our
+//    own button can trigger the real native install dialog.
+//  - iOS Safari has NO install API at all, so the only thing we can do is walk
+//    the user through Share → Add to Home Screen by hand.
+// Both paths funnel through installApp().
+// ═════════════════════════════════════════════════
+var _deferredInstall = null;   // stashed beforeinstallprompt event
+var _a2hsBannerShown = false;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();          // suppress Chrome's own mini-infobar
+  _deferredInstall = e;        // ...and drive it from our button instead
+  renderA2HSCard();
+  maybeShowA2HSBanner();       // may now be installable when it wasn't at boot
+});
+window.addEventListener('appinstalled', function(){
+  _deferredInstall = null;
+  try{ localStorage.setItem('pf_a2hs_dismissed','1'); }catch(e){}
+  hideA2HSBanner();
+  renderA2HSCard();
+  showToast('Stockfolio installed. Look for it on your home screen');
+});
+function isIOSDevice(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS reports as Mac
+}
+function isAndroidDevice(){ return /Android/i.test(navigator.userAgent); }
+function isStandaloneApp(){
+  return (window.matchMedia && matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true;
+}
+// The Settings button + the banner's Add button both land here.
+function installApp(){
+  if(isStandaloneApp()){ showToast('You\'re already running the installed app'); return; }
+  if(_deferredInstall){
+    _deferredInstall.prompt();
+    _deferredInstall.userChoice.then(function(c){
+      if(!c || c.outcome !== 'accepted') showToast('No problem, you can add it later from Settings','info');
+      _deferredInstall = null;
+      renderA2HSCard();
+    }).catch(function(){});
+    hideA2HSBanner();
+    return;
+  }
+  a2hsModal();  // iOS, or any browser that never offered a native prompt
+}
+// Manual walkthrough. Steps differ per platform, so a user who taps the button
+// on a browser we can't drive still gets accurate instructions.
+function a2hsModal(){
+  var ov = document.getElementById('a2hsOv');
+  if(ov){ ov.remove(); return; }
+  var shareIcon = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--accent2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px" role="img" aria-label="Share icon: a square with an arrow pointing up out of it"><path d="M16 8h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M12 15V3"/><path d="m8.5 6 3.5-3.5L15.5 6"/></svg>';
+  var menuIcon = '<span style="font-family:var(--mono);font-weight:700;color:var(--accent2)">⋮</span>';
+  var step = function(n, html){
+    return '<div class="a2hs-step"><span class="n">'+n+'</span><div class="b">'+html+'</div></div>';
+  };
+  var body = '', note = '';
+  if(isIOSDevice()){
+    body = step(1,'Open this page in <strong>Safari</strong>. (Inside another app\'s browser? Tap its menu and choose <strong>Open in Safari</strong> first, or the option won\'t appear.)')
+         + step(2,'Tap the <strong>Share</strong> button '+shareIcon+' at the bottom of the screen.')
+         + step(3,'Scroll down the share sheet and tap <strong>Add to Home Screen</strong>.')
+         + step(4,'Tap <strong>Add</strong> in the top-right. The Stockfolio icon lands on your home screen.');
+    note = 'Using Chrome on iPhone? Same steps, but its Share button sits in the top-right corner.';
+  } else if(isAndroidDevice()){
+    body = step(1,'Tap the <strong>'+menuIcon+' menu</strong> in the top-right of Chrome.')
+         + step(2,'Tap <strong>Add to Home screen</strong> (some versions call it <strong>Install app</strong>).')
+         + step(3,'Confirm with <strong>Install</strong> / <strong>Add</strong>.');
+    note = 'If you don\'t see the option, make sure you\'re in Chrome rather than an in-app browser.';
+  } else {
+    body = step(1,'In Chrome or Edge, look for the <strong>install icon</strong> at the right-hand end of the address bar.')
+         + step(2,'Click it, then confirm <strong>Install</strong>.');
+    note = 'Firefox and Safari on desktop don\'t support installing web apps, so bookmark the page instead.';
+  }
+  ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'a2hsOv';
+  ov.style.zIndex = '1450';
+  ov.style.display = 'flex';
+  ov.onclick = function(e){ if(e.target===ov) closeA2HSModal(); };
+  var h = '<div class="modal" onclick="event.stopPropagation()" style="width:430px;max-width:94vw;max-height:88vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px">';
+  h += '<h3 style="margin:0;font-size:15px">📲 Add to Home Screen</h3>';
+  h += '<button onclick="closeA2HSModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 2px;line-height:1" aria-label="Close">&times;</button></div>';
+  h += '<p style="font-size:11.5px;color:var(--muted);margin:0 0 14px">Puts a Stockfolio icon on your home screen that opens full-screen, with no browser bars.</p>';
+  h += body;
+  h += '<p style="font-size:10.5px;color:var(--muted);margin:2px 0 0;line-height:1.5">'+note+'</p>';
+  h += '</div>';
+  ov.innerHTML = h;
+  document.body.appendChild(ov);
+  // R-32: a dialog must be closable from the keyboard, and focus has to
+  // land inside it so Tab doesn't wander the page behind the overlay.
+  document.addEventListener('keydown', _a2hsEsc);
+  var fb = ov.querySelector('button');
+  if(fb) setTimeout(function(){ try{ fb.focus(); }catch(e){} }, 0);
+}
+function closeA2HSModal(){
+  var el = document.getElementById('a2hsOv');
+  if(el) el.remove();
+  document.removeEventListener('keydown', _a2hsEsc);
+}
+function _a2hsEsc(e){ if(e.key === 'Escape') closeA2HSModal(); }
+// Settings card body — reflects the real current state rather than assuming.
+function renderA2HSCard(){
+  var el = G('a2hsCard'); if(!el) return;
+  var p = '<p style="font-size:11px;color:var(--muted);margin:0 0 10px">';
+  if(isStandaloneApp()){
+    el.innerHTML = p+'You\'re running Stockfolio as an installed app right now, so there\'s nothing to do.</p>';
+    return;
+  }
+  var can = !!_deferredInstall;
+  var blurb = can
+    ? 'Your browser can install Stockfolio directly. One tap and it\'s on your home screen.'
+    : (isIOSDevice()
+        ? 'iPhone and iPad can\'t install a web app automatically, so this walks you through the three taps it takes.'
+        : 'Install Stockfolio so it opens full-screen like a native app.');
+  el.innerHTML = p + blurb + '</p>'
+    + '<button class="btn" onclick="installApp()" style="font-size:11.5px" title="'
+    + (can ? 'Opens your browser\'s built-in install prompt' : 'Shows the exact steps for this device')
+    + '">📲 '+(can ? 'Install Stockfolio' : 'Show me how')+'</button>'
+    + '<p style="font-size:10px;color:var(--muted);margin:8px 0 0;line-height:1.5">Your data stays tied to your account, not the icon, so installing changes nothing about sync or sign-in.</p>';
+}
+// First-visit nudge. Deliberately conservative: never in demo mode, never when
+// already installed, never twice, and only where an install is actually possible.
+function maybeShowA2HSBanner(){
+  if(_a2hsBannerShown || IS_DEMO || isStandaloneApp()) return;
+  var dismissed = false;
+  try{ dismissed = localStorage.getItem('pf_a2hs_dismissed') === '1'; }catch(e){}
+  if(dismissed) return;
+  if(!(_deferredInstall || isIOSDevice() || isAndroidDevice())) return; // desktop: no nagging
+  var b = G('a2hsBanner'); if(!b) return;
+  _a2hsBannerShown = true;
+  b.style.display = 'flex';
+  document.body.classList.add('a2hs-open');
+  requestAnimationFrame(function(){ b.classList.add('show'); });
+}
+function hideA2HSBanner(){
+  var b = G('a2hsBanner'); if(!b) return;
+  b.classList.remove('show');
+  document.body.classList.remove('a2hs-open');
+  setTimeout(function(){ b.style.display='none'; }, 320);
+}
+function dismissA2HSBanner(){
+  try{ localStorage.setItem('pf_a2hs_dismissed','1'); }catch(e){}
+  hideA2HSBanner();
+  showToast('Hidden. Add it any time from Settings → Appearance','info');
+}
 // THEME + TEXT SIZE
 // ═════════════════════════════════════════════════
 // Build / update the marquee ticker that sits below the header. Uses PR
@@ -6735,6 +6926,7 @@ function sTab(id){
   // Refresh the combined-holdings CSV block each time Settings opens so it
   // reflects any share edits made on other tabs.
   if(id==='settings' && typeof renderTickerCsvBlock==='function'){ try{renderTickerCsvBlock()}catch(e){} }
+  if(id==='settings' && typeof renderA2HSCard==='function'){ try{renderA2HSCard()}catch(e){} }
   // On Insights tab open, opportunistically warm the fundamentals cache
   // from the SHARED Firestore collection only (free reads). AlphaVantage
   // fetches are gated to the explicit "Refresh fundamentals" button so we
@@ -9309,6 +9501,10 @@ if (typeof loadInsightsLimitUI === 'function') loadInsightsLimitUI();
 if (typeof loadInsModeUI === 'function') loadInsModeUI();
 // Populate the combined-holdings CSV block so it's ready before Settings is opened.
 if (typeof renderTickerCsvBlock === 'function') renderTickerCsvBlock();
+// Add-to-Home-Screen: paint the Settings card now, and give the install nudge
+// a few seconds so it never competes with first paint or a sign-in redirect.
+if (typeof renderA2HSCard === 'function') renderA2HSCard();
+if (typeof maybeShowA2HSBanner === 'function') setTimeout(maybeShowA2HSBanner, 4000);
 // Restore last-viewed sub-tab per parent (currently just Dividends:
 // Stocks / Increases / Specials). Cloud-synced via the prefs merge.
 try {

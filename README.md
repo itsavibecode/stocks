@@ -1,10 +1,18 @@
 # Stockfolio
 
-**Current Version: v0.8.1**
+**Current Version: v0.8.2**
 
 ---
 
 ## Changelog
+
+### v0.8.2 — 2026-11-06 — 📲 Install helper in Settings + first-visit nudge
+v0.8.1 made Stockfolio installable but gave you no way to actually trigger it, which matters most on iPhone where Safari never offers to install anything on its own.
+
+- **Settings → Appearance now has an "Add to Home Screen" card.** It adapts to the device: on Android and desktop Chrome it fires the browser's real install prompt, and on iPhone (where no install API exists) it opens a short walkthrough of the Share → Add to Home Screen steps. If you're already running the installed app, it says so instead.
+- **A dismissible first-visit banner** suggests installing, with an Add button and an X. It only appears where an install is actually possible, never in demo mode, never once you've installed, and never again after you dismiss it. The floating add button slides up while it's open so the two don't overlap.
+- The walkthrough gives different steps for iPhone, Android and desktop rather than one set of instructions that is wrong on two of them.
+- Accessibility fixes found while building this: the dialog now closes with Escape and moves focus into itself on open, and the banner's secondary text, dismiss button and step numbers were recolored after a contrast check (the muted grey measured 3.54:1 on dark, below the 4.5:1 minimum; the step numbers measured 3.11:1 on light).
 
 ### v0.8.1 — 2026-11-06 — 📲 Add to Home Screen (iOS + Android)
 Stockfolio is responsive and clearly gets used on a phone, but it had none of the home-screen plumbing — no app icon, no install metadata, no safe-area handling. Installing it put an illegible page-thumbnail on the home screen, and once launched the sticky header would have rendered underneath the iPhone status bar.
