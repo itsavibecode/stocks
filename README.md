@@ -1,10 +1,20 @@
 # Stockfolio
 
-**Current Version: v0.8.2**
+**Current Version: v0.8.3**
 
 ---
 
 ## Changelog
+
+### v0.8.3 — 2026-11-13 — 🐛 Fix phantom dividend cuts + one shared API budget
+Two bugs, both introduced by the v0.8.0 dividend-schedule fetch.
+
+**Phantom dividend cuts (ABBV, AXP, RTX, PFE).** AlphaVantage returns the literal text `"None"` as the payment date on older records. The parser treated that as a real date, and because `"None"` sorts above any real date, those decade-old rows floated to the top of the list and pushed every current payment out. The app then read a 2020 or 2021 record as the *next* declared payment, so a stock whose dividend had actually grown looked like it had been cut. ABBV, an aristocrat that has never cut, was showing a 20% cut.
+- Dates are now required to be real calendar dates before anything trusts them, at four separate points: when parsing, when merging into a stock, when reading the cache, and before writing to the shared cache (so one browser can't publish bad rows to everyone else).
+- A repair pass on startup clears any bad dates already stored and discards cached schedules written by the old parser, so they get refetched correctly.
+- Increases and Decreases now stay silent for a stock without a valid declared pay date. Showing nothing beats calling an aristocrat a cut.
+
+**AlphaVantage rate-limit errors.** Five separate features call AlphaVantage (price fallback, news, fundamentals, dividend schedules, SPY history) and none knew about the others, so two firing at once tripped the "1 request per second" limit and together they could quietly eat the 25-per-day allowance. All five now share one queue that spaces requests out and counts against a single daily budget, and the Payout Log shows how many calls are left today. When the budget runs out, prices fall through to your other providers instead of stalling.
 
 ### v0.8.2 — 2026-11-06 — 📲 Install helper in Settings + first-visit nudge
 v0.8.1 made Stockfolio installable but gave you no way to actually trigger it, which matters most on iPhone where Safari never offers to install anything on its own.

@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#060b14" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<title>Stockfolio v0.8.2</title>
+<title>Stockfolio v0.8.3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1579,7 +1579,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.8.2 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.8.3 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1687,7 +1687,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.8.2";
+var VERSION = "0.8.3";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -2752,7 +2752,7 @@ function fetchNewsFinnhub(ticker){
 }
 function fetchNewsAlphaVantage(ticker){
   if(!ALPHAVANTAGE_KEY)return Promise.resolve(null);
-  return fetch('https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers='+ticker+'&limit=5&apikey='+ALPHAVANTAGE_KEY)
+  return _avFetch('https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers='+ticker+'&limit=5&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
       if(!data||!Array.isArray(data.feed)||data.feed.length===0)return null;
@@ -2856,7 +2856,7 @@ function fetchPriceFinnhub(ticker){
 }
 function fetchPriceAlphaVantage(ticker){
   if(!ALPHAVANTAGE_KEY)return Promise.resolve(null);
-  return fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+ALPHAVANTAGE_KEY)
+  return _avFetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){return r.json()})
     .then(function(data){
       var q=data&&data['Global Quote'];
@@ -3409,6 +3409,7 @@ function getDividendIncreases(){
     // read as a huge phantom cut/hike, so skip them.
     var prev = _prevRegularPayment(d);
     if (prev == null || prev <= 0) return;
+    if (!_isIsoDate(d.pd)) return; // same data-trust guard as decreases
     if (d.np <= prev) return; // not an increase (flat or cut)
     var mult = freqMultiplier(d.f);
     out.push({
@@ -3442,6 +3443,10 @@ function getDividendDecreases(){
     if (!d || !d.np || !d.h || d.h.length === 0) return;
     var prev = _prevRegularPayment(d);
     if (prev == null || prev <= 0) return;
+    // A cut claim needs a real declared pay date behind it. Without one we
+    // cannot tell a genuine cut from stale or garbled provider data, and
+    // labelling a dividend aristocrat a cut is far worse than showing nothing.
+    if (!_isIsoDate(d.pd)) return;
     if (d.np >= prev) return; // not a cut (flat or increase)
     var mult = freqMultiplier(d.f);
     out.push({
@@ -6268,13 +6273,60 @@ function _fundWriteToFirestore(ticker, rec){
   return db.collection('fundamentals').doc(ticker).set(payload)
     .catch(function(e){ console.warn('fundamentals write failed for '+ticker+':', e); });
 }
+// ═════════════════════════════════════════════════
+// ALPHAVANTAGE REQUEST GATE
+// Five features call AlphaVantage (price fallback, news, fundamentals,
+// dividend schedules, SPY history) and none of them knew about the others.
+// The free tier allows roughly 1 request/second and 25 per day, so two
+// features firing together tripped the burst limit, and collectively they
+// could eat the daily allowance without anyone noticing. Every AV request
+// now goes through this gate: serialized with a minimum gap, and counted
+// against one shared daily budget that resets at UTC midnight.
+// ═════════════════════════════════════════════════
+var AV_MIN_GAP_MS = 1300;   // free tier is ~1 req/sec; leave margin
+var AV_DAILY_BUDGET = 24;   // free tier is 25/day; hold one back
+var _avChain = Promise.resolve();
+var _avLastAt = 0;
+function _avUsage(){
+  var today = new Date().toISOString().slice(0,10);
+  try{
+    var raw = JSON.parse(localStorage.getItem('pf_av_usage')||'{}');
+    if(raw.day !== today) return { day:today, n:0 };
+    return { day:raw.day, n:raw.n||0 };
+  }catch(e){ return { day:today, n:0 }; }
+}
+function avRemaining(){ return Math.max(0, AV_DAILY_BUDGET - _avUsage().n); }
+function _avBump(){
+  var u = _avUsage(); u.n++;
+  try{ localStorage.setItem('pf_av_usage', JSON.stringify(u)); }catch(e){}
+}
+// Serialized, rate-limited AlphaVantage fetch. Resolves with the Response so
+// callers keep their existing .then(r => r.json()) shape. Rejects (rather
+// than firing a doomed request) once the daily budget is gone, which lets
+// the price chain fall through to the next provider instead of stalling.
+function _avFetch(url){
+  if(avRemaining() <= 0){
+    return Promise.reject(new Error('AlphaVantage daily limit reached ('+AV_DAILY_BUDGET+'/day on the free tier). Resets at UTC midnight.'));
+  }
+  var run = _avChain.then(function(){
+    var wait = Math.max(0, AV_MIN_GAP_MS - (Date.now() - _avLastAt));
+    return new Promise(function(res){ setTimeout(res, wait); }).then(function(){
+      if(avRemaining() <= 0) throw new Error('AlphaVantage daily limit reached. Resets at UTC midnight.');
+      _avLastAt = Date.now();
+      _avBump();
+      return fetch(url);
+    });
+  });
+  _avChain = run.then(function(){}, function(){}); // one failure must not stall the queue
+  return run;
+}
 // AlphaVantage CASH_FLOW response shape: { annualReports:[{fiscalDateEnding,
 // operatingCashflow, capitalExpenditures, dividendPayout, ...}], ... }.
 // We use the most-recent annual report (TTM-ish — annual is a year of data).
 // Returns { ocf, fcf, divPaid, coverage, period, source } or null.
 function _fundFetchFromAlphaVantage(ticker){
   if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
-  return fetch('https://www.alphavantage.co/query?function=CASH_FLOW&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
+  return _avFetch('https://www.alphavantage.co/query?function=CASH_FLOW&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || !Array.isArray(data.annualReports) || data.annualReports.length === 0){
@@ -6342,10 +6394,23 @@ function getFundamentals(ticker, opts){
 //   { symbol, data:[{ex_dividend_date, payment_date, amount, ...}] }
 // We keep the last ~12 payments (plenty for history + the next declared one).
 // ═════════════════════════════════════════════════
+function _isIsoDate(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+// Schema marker carried in the record's `source`. Bumping it invalidates
+// every cached schedule, local and shared, without touching firestore.rules
+// (whose allowlist already permits `source`). v1 records were written by the
+// parser that trusted AlphaVantage's "None" payment_date, so they are poison
+// and must be refetched rather than trusted.
+var DIVSCHED_SCHEMA = 'alphavantage-v2';
 function _divSchedCacheValid(rec){
-  return rec && typeof rec.fetchedAt === 'number'
-      && (Date.now() - rec.fetchedAt) < DIVSCHED_TTL_MS
-      && Array.isArray(rec.payments);
+  if(!rec || typeof rec.fetchedAt !== 'number') return false;
+  if(rec.source !== DIVSCHED_SCHEMA) return false;               // pre-fix record
+  if((Date.now() - rec.fetchedAt) >= DIVSCHED_TTL_MS) return false;
+  if(!Array.isArray(rec.payments) || !rec.payments.length) return false;
+  // Belt and braces: one bad date invalidates the record.
+  return rec.payments.every(function(p){
+    return p && _isIsoDate(p.pay) && typeof p.amt === 'number' && p.amt > 0
+        && (!p.ex || _isIsoDate(p.ex));
+  });
 }
 function _saveDivSchedLocal(){
   try { localStorage.setItem('pf_divsched', JSON.stringify(DIVSCHED)); } catch(e){}
@@ -6362,34 +6427,47 @@ function _divSchedWriteToFirestore(ticker, rec){
   if (!firebaseReady || !db || !currentUser) return Promise.resolve();
   return db.collection('dividends').doc(ticker).set({
     symbol: ticker,
-    payments: (rec.payments||[]).slice(0,12).map(function(p){
-      return { ex: p.ex||'', pay: p.pay||'', amt: (typeof p.amt==='number'?p.amt:0) };
+    // Only ISO-dated rows reach the shared cache, so one client cannot
+    // publish AlphaVantage's "None" rows to every other user.
+    payments: (rec.payments||[]).filter(function(p){
+      return p && _isIsoDate(p.pay) && typeof p.amt === 'number' && p.amt > 0;
+    }).slice(0,12).map(function(p){
+      return { ex: _isIsoDate(p.ex) ? p.ex : '', pay: p.pay, amt: p.amt };
     }),
     fetchedAt: Date.now(),
-    source: rec.source || 'alphavantage'
+    source: DIVSCHED_SCHEMA
   }).catch(function(e){ console.warn('dividends write failed for '+ticker+':', e); });
 }
 function _divSchedFetchFromAlphaVantage(ticker){
   if (IS_DEMO) return Promise.resolve(null); // demo never hits the network
   if(!ALPHAVANTAGE_KEY) return Promise.resolve(null);
-  return fetch('https://www.alphavantage.co/query?function=DIVIDENDS&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
+  return _avFetch('https://www.alphavantage.co/query?function=DIVIDENDS&symbol='+encodeURIComponent(ticker)+'&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || !Array.isArray(data.data) || data.data.length === 0){
         if(data && (data.Information || data.Note)) logApiError && logApiError('dividends', ticker, data.Information||data.Note);
         return null;
       }
+      // AlphaVantage returns the literal STRING "None" for payment_date on
+      // older records. "None" is truthy and sorts ABOVE every real date
+      // ("N" > "2"), so an unvalidated parse floated those rows to the top,
+      // the slice() then dropped every real payment, and _applyDivSchedule
+      // treated a 2020 record as the next declared one. That is what showed
+      // ABBV/AXP/RTX/PFE as dividend cuts with 2020-2021 ex-dates. Every
+      // date is now required to be a real ISO day before it is trusted.
       var payments = data.data.map(function(p){
+        var ex  = String(p.ex_dividend_date||'').slice(0,10);
+        var pay = String(p.payment_date||'').slice(0,10);
         return {
-          ex:  (p.ex_dividend_date||'').slice(0,10),
-          pay: (p.payment_date||'').slice(0,10),
+          ex:  _isIsoDate(ex)  ? ex  : '',
+          pay: _isIsoDate(pay) ? pay : '',
           amt: parseFloat(p.amount)||0
         };
       }).filter(function(p){ return p.pay && p.amt>0; });
       // Newest first so payments[0] is the most recent / next declared
-      payments.sort(function(a,b){ return (b.pay||'').localeCompare(a.pay||''); });
+      payments.sort(function(a,b){ return b.pay.localeCompare(a.pay); });
       if(!payments.length) return null;
-      return { payments: payments.slice(0,12), source:'alphavantage' };
+      return { payments: payments.slice(0,12), source: DIVSCHED_SCHEMA };
     })
     .catch(function(e){
       if(typeof logApiError==='function') logApiError('dividends', ticker, e.message||'Failed');
@@ -6431,17 +6509,24 @@ function _applyDivSchedule(ticker, rec){
   if(!d || !rec || !Array.isArray(rec.payments) || !rec.payments.length) return false;
   var today = new Date().toISOString().slice(0,10);
   var changed = false;
+  // Only ISO-dated payments are trusted. Without this a non-date like
+  // AlphaVantage's "None" compares as >= today and gets written in as the
+  // next declared payment, which is what produced the phantom cuts.
+  var clean = rec.payments.filter(function(p){
+    return p && _isIsoDate(p.pay) && typeof p.amt === 'number' && p.amt > 0;
+  });
+  if(!clean.length) return false;
   // Next declared payment = earliest payment dated today or later
-  var future = rec.payments.filter(function(p){ return p.pay >= today; })
-                           .sort(function(a,b){ return a.pay.localeCompare(b.pay); });
+  var future = clean.filter(function(p){ return p.pay >= today; })
+                    .sort(function(a,b){ return a.pay.localeCompare(b.pay); });
   if(future.length){
     var nx = future[0];
     if(d.pd !== nx.pay){ d.pd = nx.pay; changed = true; }
     if(nx.amt && d.np !== nx.amt){ d.np = nx.amt; changed = true; }
-    if(nx.ex && d.ex !== nx.ex){ d.ex = nx.ex; changed = true; }
+    if(_isIsoDate(nx.ex) && d.ex !== nx.ex){ d.ex = nx.ex; changed = true; }
   }
   // Merge past payments into history, keeping any manually-flagged specials
-  var past = rec.payments.filter(function(p){ return p.pay < today; });
+  var past = clean.filter(function(p){ return p.pay < today; });
   if(past.length){
     if(!Array.isArray(d.h)) d.h = [];
     var byDate = {};
@@ -6508,7 +6593,7 @@ function _spyFetchFromAlphaVantage(){
   // the app started tracking. For users with history that pre-dates SPY's
   // 100-day window, the chart's SPY overlay starts from the first date
   // SPY has data for (partial overlay — see _renderHistoryChartHTML).
-  return fetch('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&outputsize=compact&apikey='+ALPHAVANTAGE_KEY)
+  return _avFetch('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=SPY&outputsize=compact&apikey='+ALPHAVANTAGE_KEY)
     .then(function(r){ return r.json(); })
     .then(function(data){
       var series = data && data['Time Series (Daily)'];
@@ -6688,7 +6773,41 @@ function renderDivSchedStatus(){
   var txt = confirmed.length+' of '+held.length+' schedules confirmed';
   if(newest) txt += ' · updated '+new Date(newest).toLocaleDateString();
   if(confirmed.length < held.length) txt += ' · rest projected';
+  // Surface the shared AlphaVantage budget so a stalled refresh reads as
+  // "out of quota today" rather than looking broken.
+  if(typeof avRemaining === 'function' && ALPHAVANTAGE_KEY){
+    txt += ' · ' + avRemaining() + '/' + AV_DAILY_BUDGET + ' API calls left today';
+  }
   el.textContent = txt;
+}
+// One-time repair for data the pre-v2 parser poisoned. It wrote AlphaVantage's
+// "None" string into DV.pd and pulled an old amount/ex-date along with it,
+// which surfaced as phantom dividend cuts. Clears any non-ISO pd/ex and drops
+// history rows with bad dates, then purges the stale local schedule cache so
+// the corrected parser refetches. Shared Firestore records are rejected by the
+// DIVSCHED_SCHEMA check in _divSchedCacheValid.
+function repairPoisonedDivDates(){
+  var fixed = 0;
+  Object.keys(DV || {}).forEach(function(t){
+    var d = DV[t]; if(!d) return;
+    if(d.pd && d.pd !== 'N/A' && !_isIsoDate(d.pd)){ d.pd = 'N/A'; fixed++; }
+    if(d.ex && d.ex !== 'N/A' && !_isIsoDate(d.ex)){ d.ex = 'N/A'; fixed++; }
+    if(Array.isArray(d.h)){
+      var before = d.h.length;
+      d.h = d.h.filter(function(e){ return e && _isIsoDate(e.d); });
+      if(d.h.length !== before) fixed++;
+    }
+  });
+  // Drop any locally cached schedule that predates the fix.
+  try{
+    var dirty = false;
+    Object.keys(DIVSCHED || {}).forEach(function(t){
+      if(DIVSCHED[t] && DIVSCHED[t].source !== DIVSCHED_SCHEMA){ delete DIVSCHED[t]; dirty = true; }
+    });
+    if(dirty) _saveDivSchedLocal();
+  }catch(e){}
+  if(fixed) console.warn('[divsched] repaired '+fixed+' poisoned date field(s) from the pre-v2 parser');
+  return fixed;
 }
 // Persist DV changes made by schedule confirmation + repaint.
 function _persistDvAfterScheduleUpdate(){
@@ -9503,6 +9622,8 @@ if (typeof loadInsModeUI === 'function') loadInsModeUI();
 if (typeof renderTickerCsvBlock === 'function') renderTickerCsvBlock();
 // Add-to-Home-Screen: paint the Settings card now, and give the install nudge
 // a few seconds so it never competes with first paint or a sign-in redirect.
+// Scrub any dates the pre-v2 dividend parser poisoned before anything renders.
+if (typeof repairPoisonedDivDates === 'function') { try{ repairPoisonedDivDates(); }catch(e){} }
 if (typeof renderA2HSCard === 'function') renderA2HSCard();
 if (typeof maybeShowA2HSBanner === 'function') setTimeout(maybeShowA2HSBanner, 4000);
 // Restore last-viewed sub-tab per parent (currently just Dividends:
