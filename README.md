@@ -1,10 +1,19 @@
 # Stockfolio
 
-**Current Version: v0.8.3**
+**Current Version: v0.8.4**
 
 ---
 
 ## Changelog
+
+### v0.8.4 — 2026-11-13 — 🎁 Special dividends are detected automatically
+Costco declared a $30 per share special dividend on November 10 (payable December 4), and it did not show up in the Specials sub-tab. It turned out nothing in the app had ever detected a special on real holdings: the only two flagged examples lived in the demo data, so for an actual portfolio that tab could never show anything.
+
+- **Specials are now found on their own.** Any payment at least 2.5x a stock's usual amount is treated as a one-off rather than a raise. Real dividend increases are a few percent, while specials are multiples, so the two don't get confused. Verified against Costco ($30 vs a $1.47 regular), a year-end bonus ($3.00 vs $0.83), and a genuine 3.7% hike that correctly stays an increase.
+- **Specials that haven't been paid yet now appear**, with an Upcoming badge and an Incoming total, instead of only showing up after the money arrived.
+- **A special no longer corrupts the regular dividend figures.** It's kept separate from the normal quarterly amount, so yield, projections and the next-payment date all stay right.
+
+This last point also closed a bug that would have hit in early December: an undetected $30 special would first have been reported as a 1,900% dividend increase, then as a 95% cut when the next ordinary $1.47 payment arrived. The Payout Log also includes a declared special on its pay date, without ever repeating it as if it recurred.
 
 ### v0.8.3 — 2026-11-13 — 🐛 Fix phantom dividend cuts + one shared API budget
 Two bugs, both introduced by the v0.8.0 dividend-schedule fetch.

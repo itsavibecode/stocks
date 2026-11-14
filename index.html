@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#060b14" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f0f2f5" media="(prefers-color-scheme: light)">
-<title>Stockfolio v0.8.3</title>
+<title>Stockfolio v0.8.4</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
 <!-- The static feed.xml is intentionally a deprecation notice (RSS panel
      now generates a live feed from your portfolio in-browser). rss.xml was
@@ -1579,7 +1579,7 @@ body.text-xl .sc .scv{font-size:24px}
     </div>
   </div>
 
-  <div class="footer">Stockfolio v0.8.3 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
+  <div class="footer">Stockfolio v0.8.4 &middot; Auto-saves &middot; Sign in to sync across devices<span id="footerDemoSep"> &middot; <a href="#" onclick="event.preventDefault();enterDemoMode()" class="footer-demo-link" id="footerDemoLink" title="Open a realistic sample portfolio — none of your real data is touched">🎬 Try demo</a></span>
     <div class="footer-legal"><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="disclaimer.html">Disclaimer</a></div>
   </div>
 </div>
@@ -1687,7 +1687,7 @@ body.text-xl .sc .scv{font-size:24px}
 // ═════════════════════════════════════════════════
 // VERSION
 // ═════════════════════════════════════════════════
-var VERSION = "0.8.3";
+var VERSION = "0.8.4";
 var APP_NAME = "Stockfolio";
 
 // ═════════════════════════════════════════════════
@@ -3475,7 +3475,22 @@ function getSpecialDividends(){
   tks.forEach(function(t){
     if (!sh[t] || sh[t] <= 0) return;
     var d = DV[t];
-    if (!d || !d.h) return;
+    if (!d) return;
+    // Declared but not yet paid (d.us). Shown first so a special you are
+    // about to receive is not buried under ones already banked.
+    if (d.us && d.us.d) {
+      out.push({
+        ticker: t,
+        amount: d.us.a || 0,
+        payDate: d.us.d,
+        exDate: d.us.ex || '',
+        shares: sh[t],
+        total: (d.us.a || 0) * sh[t],
+        note: 'Declared, not yet paid',
+        upcoming: true
+      });
+    }
+    if (!d.h) return;
     d.h.forEach(function(entry){
       if (!entry || !entry.sp) return;
       out.push({
@@ -3485,12 +3500,16 @@ function getSpecialDividends(){
         exDate: entry.ed || entry.d || '',
         shares: sh[t],
         total: (entry.a || 0) * sh[t],
-        note: entry.note || ''
+        note: entry.note || '',
+        upcoming: false
       });
     });
   });
-  // Sort by pay-date descending \u2014 most recent first
-  out.sort(function(a,b){ return (b.payDate || '').localeCompare(a.payDate || ''); });
+  // Upcoming first, then most recent paid.
+  out.sort(function(a,b){
+    if(!!a.upcoming !== !!b.upcoming) return a.upcoming ? -1 : 1;
+    return (b.payDate || '').localeCompare(a.payDate || '');
+  });
   return out;
 }
 // Render the Increases sub-tab body
@@ -3601,23 +3620,25 @@ function _renderDividendDecreasesHTML(){
 function _renderSpecialDividendsHTML(){
   var rows = getSpecialDividends();
   if (rows.length === 0) {
-    return '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;line-height:1.6">No special dividends recorded.<br><span style="font-size:11px">Special / one-time dividends appear here when a payment in a ticker\'s history is flagged as <code>sp:true</code>. Built-in tickers don\'t typically have these \u2014 they show up for irregular payouts like Costco\'s 2024 special or year-end bonuses from specific companies.</span></div>';
+    return '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;line-height:1.6">No special dividends found.<br><span style="font-size:11px">One-off payouts, like Costco\'s periodic specials or a year-end bonus, are detected automatically once a stock\'s declared schedule has been confirmed: any payment at least '+SPECIAL_MULT+'x the usual amount is treated as a special rather than a raise. If a stock you hold has one coming, open the Payout Log and press <strong>Confirm dividend dates</strong> to pull its schedule.</span></div>';
   }
-  var totalReceived = rows.reduce(function(s,r){ return s + r.total; }, 0);
+  var totalReceived = rows.reduce(function(s,r){ return r.upcoming ? s : s + r.total; }, 0);
+  var totalUpcoming = rows.reduce(function(s,r){ return r.upcoming ? s + r.total : s; }, 0);
   var html = '';
   html += '<div class="sg" id="dSpecStats" style="margin-bottom:14px"><div class="sc"><div class="scl">Special Dividends</div><div class="scv" style="color:var(--purple)">'+rows.length+'</div></div>';
   html += '<div class="sc"><div class="scl">Total Received</div><div class="scv" style="color:var(--green)">'+fm(totalReceived)+'</div></div>';
+  if(totalUpcoming > 0) html += '<div class="sc"><div class="scl">Incoming</div><div class="scv" style="color:var(--accent2)">'+fm(totalUpcoming)+'</div></div>';
   var byTk = {};
   rows.forEach(function(r){ byTk[r.ticker] = (byTk[r.ticker] || 0) + r.total; });
   var topTk = Object.keys(byTk).sort(function(a,b){return byTk[b]-byTk[a]})[0];
   if(topTk) html += '<div class="sc"><div class="scl">Top Payer</div><div class="scv" style="color:var(--accent)">'+topTk+'</div></div>';
   html += '</div>';
   html += '<div class="table-wrap dt"><table><thead><tr>';
-  html += '<th>Ticker</th><th>Amount /sh</th><th>Shares</th><th>Total Received</th><th>Ex-Date</th><th>Pay Date</th><th>Note</th>';
+  html += '<th>Ticker</th><th>Amount /sh</th><th>Shares</th><th>Total</th><th>Ex-Date</th><th>Pay Date</th><th>Note</th>';
   html += '</tr></thead><tbody>';
   rows.forEach(function(r){
     html += '<tr>';
-    html += '<td class="mono fw7">'+r.ticker+' <span class="badge badge-purple" style="font-size:9px">\ud83c\udf81 Special</span></td>';
+    html += '<td class="mono fw7">'+r.ticker+' <span class="badge badge-purple" style="font-size:9px">\ud83c\udf81 Special</span>'+(r.upcoming?' <span class="badge badge-green" style="font-size:9px">Upcoming</span>':'')+'</td>';
     html += '<td class="mono">$'+r.amount.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</td>';
     html += '<td class="mono">'+fmSh(r.shares)+'</td>';
     html += '<td class="mono green fw7">'+fm(r.total)+'</td>';
@@ -3630,7 +3651,7 @@ function _renderSpecialDividendsHTML(){
   html += '<div class="mc">';
   rows.forEach(function(r){
     html += '<div class="mk">';
-    html += '<div class="mkh"><div><span class="mkt">'+r.ticker+'</span> <span class="badge badge-purple" style="font-size:9.5px">\ud83c\udf81 Special</span></div><span class="mkp green">'+fm(r.total)+'</span></div>';
+    html += '<div class="mkh"><div><span class="mkt">'+r.ticker+'</span> <span class="badge badge-purple" style="font-size:9.5px">\ud83c\udf81 Special</span>'+(r.upcoming?' <span class="badge badge-green" style="font-size:9.5px">Upcoming</span>':'')+'</div><span class="mkp green">'+fm(r.total)+'</span></div>';
     html += '<div class="mkr"><span class="l">Amount /sh</span><span class="v mono">$'+r.amount.toFixed(4).replace(/0+$/,'').replace(/\.$/,'.00')+'</span></div>';
     html += '<div class="mkr"><span class="l">Shares</span><span class="v mono">'+fmSh(r.shares)+'</span></div>';
     if(r.exDate) html += '<div class="mkr"><span class="l">Ex-Date</span><span class="v mono">'+r.exDate+'</span></div>';
@@ -4191,7 +4212,10 @@ function render(){
   // PAYOUT LOG (uses all dividend tickers, not filtered)
   var allDvs=tks.filter(isDiv);
   var today=new Date().toISOString().slice(0,10);var entries=[];
-  allDvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})})});
+  allDvs.forEach(function(t){var d=DV[t],s=sh[t]||0;if(d.pd&&d.pd!=='N/A')entries.push({tk:t,d:d.pd,a:d.np,s:s,tot:d.np*s,up:d.pd>=today});(d.h||[]).forEach(function(p){entries.push({tk:t,d:p.d,a:p.a,s:s,tot:p.a*s,up:p.d>=today})});
+    // Declared special, one-off: real money on a real date, so it belongs in
+    // the chart, but it must never be projected forward as a recurring payment.
+    if(d.us&&d.us.d&&d.us.a>0)entries.push({tk:t,d:d.us.d,a:d.us.a,s:s,tot:d.us.a*s,up:d.us.d>=today,special:true});});
   // Project each ticker's RECURRING future payments across the rest of the
   // calendar year, stepping forward from its declared next pay date by its
   // frequency (Quarterly = every 3 months, Monthly = every 1, etc). Without
@@ -6395,6 +6419,15 @@ function getFundamentals(ticker, opts){
 // We keep the last ~12 payments (plenty for history + the next declared one).
 // ═════════════════════════════════════════════════
 function _isIsoDate(v){ return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+// A payment this many times the median is treated as a one-off special rather
+// than a raise. Real hikes are a few percent; specials are multiples.
+var SPECIAL_MULT = 2.5;
+function _medianAmount(payments){
+  var a = payments.map(function(p){ return p.amt; }).filter(function(n){ return n > 0; }).sort(function(x,y){ return x-y; });
+  if(!a.length) return 0;
+  var m = Math.floor(a.length/2);
+  return a.length % 2 ? a[m] : (a[m-1]+a[m])/2;
+}
 // Schema marker carried in the record's `source`. Bumping it invalidates
 // every cached schedule, local and shared, without touching firestore.rules
 // (whose allowlist already permits `source`). v1 records were written by the
@@ -6516,15 +6549,38 @@ function _applyDivSchedule(ticker, rec){
     return p && _isIsoDate(p.pay) && typeof p.amt === 'number' && p.amt > 0;
   });
   if(!clean.length) return false;
-  // Next declared payment = earliest payment dated today or later
+  // AlphaVantage does not label special dividends, so detect them by size.
+  // A payment at or above SPECIAL_MULT times the median is a one-off, not a
+  // raise: Costco's $30 special against a $1.47 regular is 20x, while even an
+  // aggressive genuine hike is well under 2x. Getting this wrong is costly in
+  // both directions: an unflagged special reads as a huge "increase" now and
+  // then as a ~95% "cut" on the next regular payment, which is the same
+  // failure _prevRegularPayment() already guards against for seeded specials.
+  var med = _medianAmount(clean);
+  var isSpecial = function(amt){ return med > 0 && clean.length >= 3 && amt >= med * SPECIAL_MULT; };
+  // Next declared REGULAR payment. A special must not overwrite pd/np, which
+  // describe the ordinary cadence the projections and yield math rely on.
   var future = clean.filter(function(p){ return p.pay >= today; })
                     .sort(function(a,b){ return a.pay.localeCompare(b.pay); });
-  if(future.length){
-    var nx = future[0];
-    if(d.pd !== nx.pay){ d.pd = nx.pay; changed = true; }
-    if(nx.amt && d.np !== nx.amt){ d.np = nx.amt; changed = true; }
-    if(_isIsoDate(nx.ex) && d.ex !== nx.ex){ d.ex = nx.ex; changed = true; }
+  var nextRegular = null, upcomingSpecial = null;
+  future.forEach(function(p){
+    if(isSpecial(p.amt)){ if(!upcomingSpecial) upcomingSpecial = p; }
+    else if(!nextRegular){ nextRegular = p; }
+  });
+  if(nextRegular){
+    if(d.pd !== nextRegular.pay){ d.pd = nextRegular.pay; changed = true; }
+    if(nextRegular.amt && d.np !== nextRegular.amt){ d.np = nextRegular.amt; changed = true; }
+    if(_isIsoDate(nextRegular.ex) && d.ex !== nextRegular.ex){ d.ex = nextRegular.ex; changed = true; }
   }
+  // Declared-but-unpaid special, kept apart from the regular cadence so the
+  // Specials sub-tab and the Payout Log can show it before it is paid.
+  var usBefore = d.us ? d.us.d + ':' + d.us.a : '';
+  if(upcomingSpecial){
+    d.us = { d:upcomingSpecial.pay, a:upcomingSpecial.amt, ex:(_isIsoDate(upcomingSpecial.ex)?upcomingSpecial.ex:'') };
+  } else if(d.us && d.us.d < today){
+    delete d.us;  // it has been paid; it now lives in history
+  }
+  if((d.us ? d.us.d + ':' + d.us.a : '') !== usBefore) changed = true;
   // Merge past payments into history, keeping any manually-flagged specials
   var past = clean.filter(function(p){ return p.pay < today; });
   if(past.length){
@@ -6536,6 +6592,7 @@ function _applyDivSchedule(ticker, rec){
         if(byDate[p.pay].a !== p.amt && !byDate[p.pay].sp){ byDate[p.pay].a = p.amt; changed = true; }
       } else {
         byDate[p.pay] = { d:p.pay, a:p.amt };
+        if(isSpecial(p.amt)){ byDate[p.pay].sp = true; byDate[p.pay].note = 'Special dividend (detected)'; }
         changed = true;
       }
     });
